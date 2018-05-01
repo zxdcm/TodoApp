@@ -1,0 +1,8 @@
+#env folders and files
+/venv
+/.idea
+__*
+
+
+*.db
+
