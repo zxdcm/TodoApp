@@ -9,4 +9,4 @@ if __name__ == '__main__':
     except:
         pass
     for folder in test_func_get_folders():
-        print(folder.name)
+        print(f'{folder.name}')
