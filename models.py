@@ -1,36 +1,49 @@
 from peewee import Model, SqliteDatabase, CharField, ForeignKeyField, DateTimeField
-from playhouse.sqlite_ext import *
-from utils import EnumField, STATUS
+from utils import EnumField, STATUS, PRIORITY
 
-db = SqliteDatabase('todoapp.db')
+
+DATABASE = 'todoapp.db'
+db_connection = SqliteDatabase(DATABASE)
+
+
+class Database():
+
+    def __init__(self, connectionstring):
+        pass
+        #database = SqliteDatabase(DATABASE)
+
+    @staticmethod
+    def create_tables():
+        with db_connection:
+            db_connection.create_tables([Folder, Task, Group,
+                                         Event, User, UserToGroups,
+                                         FolderTaskEvents])
+
+    @staticmethod
+    def set_up_connection():
+        db_connection.connect(reuse_if_open=True)
 
 
 class ModelBase(Model):
     class Meta:
-        database = db
+        database = db_connection
 
 
 class User(ModelBase):
+
     username = CharField(unique=True)
     password_hash = None
     password_salt = None
     email = CharField(unique=True)
 
+
 class Folder(ModelBase):
 
-    def __init__(self, name, owner):
-        self.name = name
-        self.owner = owner
-
-    name = CharField()
+    name = CharField(unique='True')
     owner = ForeignKeyField(User, backref='folders')
 
 
 class Group(ModelBase):
-
-    def __init__(self, name, owner):
-        self.name = name
-        self.owner = owner
 
     name = CharField()
     owner = ForeignKeyField(User, backref='groups')
@@ -38,27 +51,11 @@ class Group(ModelBase):
 
 class Event(ModelBase):
 
-    def __init__(self, name, owner):
-        self.name = name
-        self.owner = owner
-
     name = CharField()
     owner = ForeignKeyField(User, backref='events')
 
 
 class Task(ModelBase):
-
-    def __init__(self, name, description,
-                 owner, parent_task, status,
-                 start_date, end_date, assigned=None, Group=None):
-        self.name = name
-        self.description = description
-        self.owner = owner
-        self.status = status
-        self.start_date = start_date
-        self.end_date = end_date
-        self.assigned = assigned
-        self.group = self.group
 
     name = CharField()
     description = CharField()
@@ -69,15 +66,10 @@ class Task(ModelBase):
     assigned = ForeignKeyField(User, null=True)
     start_date = DateTimeField()
     end_date = DateTimeField()
+    priority = EnumField(PRIORITY)
 
 
 class Cyclicity(ModelBase):
-
-    def __init__(self, period, duration, event, task):
-        self.period = period
-        self.duration = duration
-        self.event = event
-        self.task = task
 
     period = DateTimeField()
     duration = DateTimeField()
@@ -86,11 +78,6 @@ class Cyclicity(ModelBase):
 
 
 class Notification(ModelBase):
-
-    def __init__(self, date, task, event):
-        self.date = date
-        self.task = task
-        self.event = event
 
     date = DateTimeField()
     event = ForeignKeyField(Event, null=True)
@@ -108,25 +95,6 @@ class FolderTaskEvents(ModelBase):
     event = ForeignKeyField(Event, null=True)
 
 
-
 class Comment(ModelBase):
     pass
 
-
-def create_tables():
-    with db:
-        db.create_tables([Folder, Group, Event, Task,
-                          Cyclicity, Notification, UserToGroups,
-                          FolderTaskEvents])
-
-
-def test_func_create_folder(name):
-    folder = Folder.create(
-        name = name,
-        owner = None,
-    )
-
-
-def test_func_get_folders():
-    return (Folder
-            .select())

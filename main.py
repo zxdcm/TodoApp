@@ -1,12 +1,14 @@
 
-
-from models import test_func_create_folder, create_tables, test_func_get_folders
-
+from services import AppService
 
 if __name__ == '__main__':
+    user = AppService.create_user(name='username', email='user')
     try:
-        create_tables()
+        user.save()
     except:
-        pass
-    for folder in test_func_get_folders():
-        print(f'{folder.name}')
+        user = AppService.get_user('user')
+    api = AppService(user)
+    api.create_folder('Test Folder')
+    for item in api.get__user_folders():
+        print(item.name)
+    print(api.get_folder_by_id(1).name)
