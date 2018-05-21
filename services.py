@@ -1,67 +1,52 @@
-from models import *
-from peewee import IntegrityError, DatabaseError
 
+from models import Database, User, Task, Folder
+from sqlalchemy import exc
+from datetime import datetime
 
 class AppService():
 
-    def __init__(self, user=None):
-        Database.create_tables()
-        Database.set_up_connection()
-        self.current_user = user
+    def __init__(self, email):
 
-    def create_folder(self, name):
-        try:
-            with db_connection.atomic():
-                Folder.create(name='test', owner=self.current_user)
-        except IntegrityError:
-            print('Such folder already exists')
-        except DatabaseError:
-            pass
+        self.session = Database.set_up_connection()
+        self.current_user = self.session.query(User).filter(User.email == email).first()
 
-    def create_task(self, name, description, end_date, start_date):
-        try:
-            with db_connection.atomic():
-                Task.create(name=name, description=description,
-                            end_date=end_date, start_date=start_date,
-                            owner=self.current_user)
-        except IntegrityError:
-            print("Must be uniq")
-        except DatabaseError:
-            pass
+    def create_folder(self, name, owner):
+        folder = Folder(name, owner)
+        self.session.add(folder)
+        self.session.commit()
+        return folder
 
-    def get__user_folders(self):
+    def create_task(self, name, description='',  start_date=datetime.now(), end_date=None,
+                    parent_task=None, group=None):
+        task = Task(name, self.current_user.id, description, # fix models
+                    start_date, end_date, parent_task,
+                    group)
+        self.session.add(task)
+        self.session.commit()
+        return task
+
+    def get_user_folders(self):
         return self.current_user.folders
 
     def get_user_tasks(self):
         return self.current_user.tasks
 
-    def get__user_events(self):
-        return self.current_user.events
-
-    @staticmethod
-    def get_folder_by_id(id):
-        return Folder.get_by_id(id)
-
-    @staticmethod
-    def get_task_by_id(id):
-        return Task.get_by_id(id)
-
-    @staticmethod
+    @staticmethod # temp func. need to rework with context manager
     def create_user(name, email):
+        session = Database.set_up_connection()
         try:
-            with db_connection.atomic():
-                return User.create(name=name, email=email)
-        except IntegrityError:
-            print('Username and email must be uniq')
-        except DatabaseError:
-            pass
+            user = User(name, email)
+            session.add(user)
+            session.commit()
+            session.close()
+        except exc.IntegrityError:
+            print('Database error')
 
-    @staticmethod # temp property
-    def get_user(email):
-        try:
-            with db_connection.atomic():
-                return User.get(User.email == email)
-        except IntegrityError:
-            print('Username and email must be uniq')
-        except DatabaseError:
-            pass
+    def __get_user__(self, email):
+        return self.session.query(User).filter(User.email == email).first()
+
+
+    def save_updates(self):
+        'Allows to commit updates made out of the lib'
+        self.session.commit()
+
