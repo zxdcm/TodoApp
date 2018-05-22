@@ -1,9 +1,11 @@
 
-from models import Database, User, Task, Folder
+from models import Database, User, Task, \
+    Folder, Group, Notification, Cyclicity
 from sqlalchemy import exc
 from datetime import datetime
 
-class AppService():
+
+class AppService:
 
     def __init__(self, email):
 
@@ -17,21 +19,56 @@ class AppService():
         return folder
 
     def create_task(self, name, description='',  start_date=datetime.now(), end_date=None,
-                    parent_task=None, group=None):
-        task = Task(name, self.current_user.id, description, # fix models
+                    parent_task=None, group=None, assigned=None):
+        task = Task(name, self.current_user, description, # fix models
                     start_date, end_date, parent_task,
-                    group)
+                    group, None)
         self.session.add(task)
         self.session.commit()
         return task
+
+    def create_group(self, name, owner):
+        group = Group(name, owner)
+        self.session.add(group)
+        self.session.commit()
+        return group
+
+    def create_notification(self, task, date=datetime.now()):
+        notification = Notification(task, date)
+        self.session.add(notification)
+        self.session.commit()
+        return notification
+
+    def create_cyclicity(self, task, period, duration):
+        cyclicity = Cyclicity(task, period, duration)
+        self.session.add(cyclicity)
+        self.session.commit()
+        return cyclicity
 
     def get_user_folders(self):
         return self.current_user.folders
 
     def get_user_tasks(self):
-        return self.current_user.tasks
+        return self.session.query(
+            User).filter(Task.owner.id == self.current_user)
 
-    @staticmethod # temp func. need to rework with context manager
+    def get_user_assigned_tasks(self):
+        return self.session.query(
+            Task).filter(Task.assigned == self.current_user)
+
+    def get_user_groups(self):
+        return self.session.query(
+            Task).filter(Group.owner == self.current_user or
+                         Group.members.contains(self.current_user)
+                         )
+
+    def get_task_by_id(self, task_id):
+        return self.session.query(
+            Task).filter(Task.id == task_id)
+        pass
+
+
+    @staticmethod   # temp func. need to rework with context manager
     def create_user(name, email):
         session = Database.set_up_connection()
         try:
@@ -42,11 +79,7 @@ class AppService():
         except exc.IntegrityError:
             print('Database error')
 
-    def __get_user__(self, email):
-        return self.session.query(User).filter(User.email == email).first()
-
-
+    # Allows to commit updates made out of the lib
     def save_updates(self):
-        'Allows to commit updates made out of the lib'
         self.session.commit()
 
