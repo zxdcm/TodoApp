@@ -1,5 +1,3 @@
-from utils import STATUS, PRIORITY
-from datetime import datetime
 from sqlalchemy import (
     Column,
     Integer,
@@ -10,7 +8,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy import  create_engine
+from sqlalchemy import create_engine
 
 Base = declarative_base()
 DATABASE = 'todoapp.db'
@@ -27,19 +25,21 @@ class Database:
         session = sessionmaker(bind=engine)
         Base.metadata.create_all(engine)
         return session()
-        #db_connection.connect(reuse_if_open=True)
+        # db_connection.connect(reuse_if_open=True)
 
 
 # link other tables later
-user_group_association_table = Table('user_groups', Base.metadata,
-                                     Column('user_id', Integer, ForeignKey('users.id')),
-                                     Column('group_id', Integer, ForeignKey('groups.id'))
-                                     )
+user_group_association_table = Table(
+    'user_groups', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('group_id', Integer, ForeignKey('groups.id'))
+)
 
-task_folder_association_table = Table('task_folders', Base.metadata,
-                                      Column('task_id', Integer, ForeignKey('tasks.id')),
-                                      Column('folder_id', Integer, ForeignKey('folders.id'))
-                                      )
+task_folder_association_table = Table(
+    'task_folders', Base.metadata,
+    Column('task_id', Integer, ForeignKey('tasks.id')),
+    Column('folder_id', Integer, ForeignKey('folders.id'))
+)
 
 
 class User(Base):
@@ -53,6 +53,7 @@ class User(Base):
 
     folders = relationship('Folder', back_populates='owner')
     managed_groups = relationship('Group', back_populates='owner')
+    # tasks = relationship('Task', back_populates='owner')
 
     def __init__(self, username, email):
         self.username = username
@@ -103,7 +104,7 @@ class Task(Base):
     name = Column(String)
     description = Column(String)
     group = Column(Integer, ForeignKey('groups.id'), nullable=True)
-    #status = EnumField(STATUS) # fix
+    # status = EnumField(STATUS) # fix
     start_date = Column(DateTime)
 
     end_date = Column(DateTime, nullable=True)
@@ -120,6 +121,18 @@ class Task(Base):
     #  uselist param allows to set one to one relation
     cyclicity = relationship("Cyclicity", uselist=False, back_populates='task')
 
+    def __str__(self):
+        return (
+            f'''
+                ID : {self.id}
+                Name: {self.name}
+                Owner: {self.owner.username}
+                Description: {self.description}
+                Start Date: {self.start_date}
+                End Date: {self.end_date}
+            '''
+        )
+
     def __init__(self, name, owner, description,
                  start_date, end_date,
                  parent_task, group, assigned):
@@ -132,8 +145,9 @@ class Task(Base):
         self.assigned = assigned
         self.group = group
 
-
 # rename class and fix in readme
+
+
 class Cyclicity(Base):
     __tablename__ = 'cyclicities'
     id = Column(Integer, primary_key=True)
@@ -141,7 +155,7 @@ class Cyclicity(Base):
 
     period = Column(DateTime)
     duration = Column(DateTime)
-    task = relationship('Task', back_populates='task')
+    task = relationship('Task', back_populates='cyclicity')
 
     def __init__(self, task, period, duration):
         self.period = period
@@ -163,4 +177,3 @@ class Notification(Base):
 #
 # class Comment(ModelBase):
 #     pass
-
