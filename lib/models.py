@@ -12,6 +12,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 import enum
 
+
 Base = declarative_base()
 DATABASE = 'todoapp.db'
 
@@ -31,10 +32,22 @@ class Database:
 
 
 # link other tables later
-user_group_association_table = Table(
-    'user_groups', Base.metadata,
+# user_group_association_table = Table(
+#     'user_groups', Base.metadata,
+#     Column('user_id', Integer, ForeignKey('users.id')),
+#     Column('group_id', Integer, ForeignKey('groups.id'))
+# )
+
+user_task_observer_association_table = Table(
+    'task_users_observers', Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id')),
-    Column('group_id', Integer, ForeignKey('groups.id'))
+    Column('task_id', Integer, ForeignKey('tasks.id'))
+)
+
+user_task_full_association_table = Table(
+    'task_users_fulls', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('task_id', Integer, ForeignKey('tasks.id'))
 )
 
 task_folder_association_table = Table(
@@ -68,13 +81,16 @@ class User(Base):
     password_salt = Column(String)
     email = Column(String, unique=True)
 
-    # folders = relationship('Folder', back_populates='owner')
+    # folders = relationship('Folder', back_populates='user')
     # managed_groups = relationship('Group', back_populates='owner')
-    # tasks = relationship('Task', back_populates='owner')
+    #tasks = relationship('Task', back_populates='owner')
 
     def __init__(self, username, email):
         self.username = username
         self.email = email
+
+    def __str__(self):
+        return self.username
 
 
 class Folder(Base):
@@ -83,7 +99,7 @@ class Folder(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
 
     name = Column(String)
-    user = relationship('User', back_populates='folders')
+    # user = relationship('User', back_populates='folders')
     # tasks = relationship(
     #     'Task',
     #     secondary=task_folder_association_table,
@@ -98,12 +114,7 @@ class Group(Base):
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-
     name = Column(String)
-    owner = relationship('User', foreign_keys=[user_id],
-                         back_populates='managed_groups')
-
-    # add members later
 
     def __init__(self, name, user_id):
         self.name = name
@@ -121,8 +132,10 @@ class Task(Base):
     description = Column(String)
     group = Column(Integer, ForeignKey('groups.id'), nullable=True)
 
-    priority = Column(Enum(TaskPriority), default=TaskPriority.NONE)
-    status = Column(Enum(TaskStatus, default=TaskStatus.CREATED))
+    priority = Column(Enum(TaskPriority), default=TaskPriority.NONE,
+                      nullable=False)
+    status = Column(Enum(TaskStatus), default=TaskStatus.CREATED,
+                    nullable=False)
 
     start_date = Column(DateTime)
     end_date = Column(DateTime, nullable=True)
@@ -130,10 +143,13 @@ class Task(Base):
     owner = relationship('User', foreign_keys=user_id)
     assigned = relationship('User', foreign_keys=assigned_id)
 
+    observers = relationship('User',
+                             secondary=user_task_observer_association_table)
+
     folders = relationship(
         'Folder',
         secondary=task_folder_association_table,
-        back_populates='tasks'
+        # back_populates='tasks'
     )
 
     notifications = relationship('Notification', back_populates='task')
