@@ -44,8 +44,8 @@ user_task_observer_association_table = Table(
     Column('task_id', Integer, ForeignKey('tasks.id'))
 )
 
-user_task_full_association_table = Table(
-    'task_users_fulls', Base.metadata,
+user_task_editors_association_table = Table(
+    'task_users_editors', Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id')),
     Column('task_id', Integer, ForeignKey('tasks.id'))
 )
@@ -99,6 +99,7 @@ class Folder(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
 
     name = Column(String)
+    tasks = relationship('Task', secondary=task_folder_association_table)
     # user = relationship('User', back_populates='folders')
     # tasks = relationship(
     #     'Task',
@@ -145,12 +146,14 @@ class Task(Base):
 
     observers = relationship('User',
                              secondary=user_task_observer_association_table)
+    editors = relationship('User',
+                           secondary=user_task_editors_association_table)
 
-    folders = relationship(
-        'Folder',
-        secondary=task_folder_association_table,
-        # back_populates='tasks'
-    )
+    # folders = relationship(
+    #     'Folder',
+    #     secondary=task_folder_association_table,
+    #     back_populates='tasks'
+    # )
 
     notifications = relationship('Notification', back_populates='task')
 
