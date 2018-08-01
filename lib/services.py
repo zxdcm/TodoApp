@@ -9,7 +9,7 @@ from .models import (
     TaskPriority,
     TaskStatus,
     Period,
-    user_task_full_association_table,
+    user_task_editors_association_table,
     user_task_observer_association_table
 )
 
@@ -60,6 +60,22 @@ class AppService:
             raise UserNotFound('User with given id not found')
         return user
 
+    def get_user_by_email(self, email):
+        user = self.session.query(User).filter_by(email=email).one_or_none()
+        if user is None:
+            raise UserNotFound('User with given id not found')
+        return user
+
+    def user_can_write_task(self, user_id, task_id):
+        self.get_user_by_id(user_id)
+        rights = self.session.query(
+            user_task_editors_association_table).filter_by(
+                user_id=user_id, task_id=task_id).one_or_none()
+        if rights is None:
+            raise AccessError(
+                'The user doesnt have permission to write the task')
+        return True
+
     def user_can_read_task(self, user_id, task_id):
         """Check user permissions on task with given id.
 
@@ -80,7 +96,7 @@ class AppService:
         if rights is None:
             raise AccessError(
                 'The user doesnt have permission to access the task')
-        return rights
+        return True
 
     def create_task(self, user_id, name, description,  start_date,
                     priority=None, status=None,
@@ -126,18 +142,25 @@ class AppService:
                     end_date=end_date, parent_task_id=parent_task_id,
                     assigned_id=assigned_id, group_id=group_id)
         task.observers.append(user)
+        task.editors.append(user)
         self.session.add(task)
         self.session.commit()
         return task
+
+    def update_task(self, user_id, task_id, args):
+        self.user_can_write_task(user_id=user_id, task_id=task_id)
+        self.session.query(Task).filter_by(id=task_id).update(args)
+        return self.session.query(Task).get(task_id)
 
     def get_task(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
         return self.session.query(Task).filter_by(id=task_id).one()
 
-    def set_read_rights(self, user_owner_id, task_id, user_receiver_id):
+    def share_task(self, user_owner_id, task_id, user_receiver_id):
         task = self.get_task(user_owner_id, task_id)
         receiver = self.get_user_by_id(user_receiver_id)
         task.observers.append(receiver)
+        self.session.commit()
 
     def get_own_tasks(self, user_id) -> List[Task]:
         """Method allows to get all tasks created by user.
