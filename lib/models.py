@@ -111,15 +111,17 @@ class Folder(Base):
         self.user_id = user_id
 
 
-class Group(Base):
-    __tablename__ = 'groups'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    name = Column(String)
-
-    def __init__(self, name, user_id):
-        self.name = name
-        self.user_id = user_id
+# due to add of user rights this model dont need anymore
+# class Group(Base):
+#     pass
+    # __tablename__ = 'groups'
+    # id = Column(Integer, primary_key=True)
+    # user_id = Column(Integer, ForeignKey('users.id'))
+    # name = Column(String)
+    #
+    # def __init__(self, name, user_id):
+    #     self.name = name
+    #     self.user_id = user_id
 
 
 class Task(Base):
@@ -131,7 +133,7 @@ class Task(Base):
 
     name = Column(String)
     description = Column(String)
-    group = Column(Integer, ForeignKey('groups.id'), nullable=True)
+    # group = Column(Integer, ForeignKey('groups.id'), nullable=True)
 
     priority = Column(Enum(TaskPriority), default=TaskPriority.NONE,
                       nullable=False)
