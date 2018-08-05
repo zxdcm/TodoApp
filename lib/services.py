@@ -3,7 +3,6 @@ from .models import (
     User,
     Task,
     Folder,
-    Group,
     Notification,
     Repeat,
     TaskPriority,
@@ -55,26 +54,26 @@ class AppService:
             User object or UserNotFound exception
 
         """
-        user = self.session.query(User).filter_by(id=user_id).one_or_none()
+        user = self.session.query(User).get(user_id)
         if user is None:
             raise UserNotFound('User with given id not found')
         return user
 
-    def get_user_by_email(self, email):
+    def get_user_by_email(self, email) -> User:
         user = self.session.query(User).filter_by(email=email).one_or_none()
         if user is None:
-            raise UserNotFound('User with given id not found')
+            raise UserNotFound('User with given email not found')
         return user
 
     def user_can_write_task(self, user_id, task_id):
-        self.get_user_by_id(user_id)
-        rights = self.session.query(
-            user_task_editors_association_table).filter_by(
-                user_id=user_id, task_id=task_id).one_or_none()
-        if rights is None:
-            raise AccessError(
-                'The user doesnt have permission to write the task')
-        return True
+        user = self.get_user_by_id(user_id)
+        task = self.session.query(Task).get(task_id)
+        if task:
+            if (task.user_id == user_id or user in task.editors or
+                    task.assigned_id == user_id):
+                return True
+            raise AccessError('User doesnt have permissions to write the task')
+        raise TaskNotFound('Task with given id doesnt exist')
 
     def user_can_read_task(self, user_id, task_id):
         """Check user permissions on task with given id.
@@ -89,14 +88,14 @@ class AppService:
         Bool or AccessError exception
 
         """
-        self.get_user_by_id(user_id)
-        rights = self.session.query(
-            user_task_observer_association_table).filter_by(
-                user_id=user_id, task_id=task_id).one_or_none()
-        if rights is None:
-            raise AccessError(
-                'The user doesnt have permission to access the task')
-        return True
+        user = self.get_user_by_id(user_id)
+        task = self.session.query(Task).get(task_id)
+        if task:
+            if (task.user_id == user_id or user in task.observers or
+                    task.assigned_id == user_id):
+                return True
+            raise AccessError('User doesnt have permissions to read the task')
+        raise TaskNotFound('Task with given id doesnt exist')
 
     def create_task(self, user_id, name, description,  start_date,
                     priority=None, status=None,
@@ -128,21 +127,19 @@ class AppService:
             Task object
 
         """
-        user = self.get_user_by_id(user_id)
-        if priority is not None:
+        self.get_user_by_id(user_id)
+        if priority:
             priority = TaskPriority[priority.upper()]
 
-        if status is not None:
+        if status:
             status = TaskStatus[status.upper()]
 
-        if parent_task_id is not None:
-            self.get_task(user_id, parent_task_id)
+        if parent_task_id:
+            self.get_task_by_id(user_id, parent_task_id)
         task = Task(user_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
                     assigned_id=assigned_id, group_id=group_id)
-        task.observers.append(user)
-        task.editors.append(user)
         self.session.add(task)
         self.session.commit()
         return task
@@ -150,16 +147,39 @@ class AppService:
     def update_task(self, user_id, task_id, args):
         self.user_can_write_task(user_id=user_id, task_id=task_id)
         self.session.query(Task).filter_by(id=task_id).update(args)
+        self.session.commit()
         return self.session.query(Task).get(task_id)
 
-    def get_task(self, user_id, task_id) -> Task:
+    def get_task_by_id(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
-        return self.session.query(Task).filter_by(id=task_id).one()
+        return self.session.query(Task).get(task_id)
 
-    def share_task(self, user_owner_id, task_id, user_receiver_id):
-        task = self.get_task(user_owner_id, task_id)
+    def share_task_on_read(self, user_owner_id, task_id, user_receiver_id):
+        self.user_can_write_task(user_owner_id, task_id)
         receiver = self.get_user_by_id(user_receiver_id)
+        task = self.session.query(Task).get(task_id)
         task.observers.append(receiver)
+        self.session.commit()
+
+    def share_task_on_write(self, user_owner_id, task_id, user_receiver_id):
+        self.user_can_write_task(user_owner_id, task_id)
+        receiver = self.get_user_by_id(user_receiver_id)
+        task = self.session.query(Task).get(task_id)
+        task.editors.append(receiver)
+        self.session.commit()
+
+    def unshare_task_on_read(self, user_owner_id, task_id, user_receiver_id):
+        self.user_can_write_task(user_owner_id, task_id)
+        receiver = self.get_user_by_id(user_receiver_id)
+        task = self.session.query(Task).get(task_id)
+        task.observers.remove(receiver)
+        self.session.commit()
+
+    def unshare_task_on_write(self, user_owner_id, task_id, user_receiver_id):
+        self.user_can_write_task(user_owner_id, user_receiver_id)
+        receiver = self.get_user_by_id(user_receiver_id)
+        task = self.session.query(Task).get(task_id)
+        task.editors.remove(receiver)
         self.session.commit()
 
     def get_own_tasks(self, user_id) -> List[Task]:
@@ -178,8 +198,8 @@ class AppService:
         self.get_user_by_id(user_id)
         return self.session.query(Task).filter_by(user_id=user_id)
 
-    def get_all_tasks(self, user_id) -> List[Task]:
-        """Method allows to get all tasks.
+    def get_observable_tasks(self, user_id) -> List[Task]:
+        """Method allows to get all observable tasks.
 
         Returns
         -------
@@ -193,10 +213,17 @@ class AppService:
                 user_id=user_id
         ).all()
 
-        # maybe rework later
-        # everyone who has access to task can perform this action.
+    # rename
+    def get_writeble_tasks(self, user_id) -> List[Task]:
+        self.get_user_by_id(user_id)
+        return self.session.query(Task).join(
+            user_task_editors_association_table).filter_by(
+                user_id=user_id
+        ).all()
+
     def delete_task(self, user_id, task_id):
-        task = self.get_task(user_id, task_id)
+        self.user_can_write_task(user_id, task_id)
+        task = self.session.query(Task).get(task_id)
         self.session.delete(task)
 
     def create_folder(self, user_id, name) -> Folder:
@@ -220,26 +247,6 @@ class AppService:
         self.session.commit()
         return folder
 
-    def create_group(self, user_id, name) -> Group:
-        """Allows to create group
-
-        Parameters
-        ----------
-        user_id : int
-            id of user who create group
-        name : str
-
-        Returns
-        -------
-        Group
-            Group object
-
-        """
-        group = Group(user_id=user_id, name=name)
-        self.session.add(group)
-        self.session.commit()
-        return group
-
     def create_notification(self, task_id, date) -> Notification:
         """Allows to create notification.
 
@@ -262,7 +269,7 @@ class AppService:
         return notification
 
     def create_repeat(self, task_id, period, duration) -> Repeat:
-        if period is not None:
+        if period:
             period = Period[period.upper()]
 
         repeat = Repeat(task_id=task_id, period=period,
@@ -291,12 +298,6 @@ class AppService:
     # def get_user_assigned_tasks(self) -> List[Task]:
     #     return self.session.query(
     #         Task).filter(Task.assigned == self.current_user).all()
-
-    # def get_user_groups(self) -> List[Group]:
-    #     return self.session.query(
-    #         Task).filter(Group.owner == self.current_user or
-    #                      Group.members.contains(self.current_user)
-    #                      ).all()
 
     # def add_system_folder(self, name):
     #     if name not in self.sysfolders:
