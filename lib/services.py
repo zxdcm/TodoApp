@@ -15,7 +15,11 @@ from .models import (
 from sqlalchemy import orm, exc
 from datetime import datetime
 from typing import List
-from .exceptions import AccessError, UserNotFound, TaskNotFound
+from .exceptions import (AccessError,
+                         UserNotFound,
+                         TaskNotFound,
+                         FolderNotFound,
+                         FolderExist)
 
 
 class AppService:
@@ -97,7 +101,7 @@ class AppService:
             raise AccessError('User doesnt have permissions to read the task')
         raise TaskNotFound('Task with given id doesnt exist')
 
-    def create_task(self, user_id, name, description,  start_date,
+    def create_task(self, user_id, name, description=None,  start_date=None,
                     priority=None, status=None,
                     end_date=None, parent_task_id=None,
                     assigned_id=None, group_id=None) -> Task:
@@ -144,11 +148,13 @@ class AppService:
         self.session.commit()
         return task
 
-    def update_task(self, user_id, task_id, args):
+    def update_task(self, user_id, task_id, args: dict):
+        if 'priority' in args:
+            args['priority'] = TaskPriority[args['priority'].upper()]
         self.user_can_write_task(user_id=user_id, task_id=task_id)
         self.session.query(Task).filter_by(id=task_id).update(args)
         self.session.commit()
-        return self.session.query(Task).get(task_id)
+        # return self.session.query(Task).get(task_id)
 
     def get_task_by_id(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
@@ -198,6 +204,11 @@ class AppService:
         self.get_user_by_id(user_id)
         return self.session.query(Task).filter_by(user_id=user_id)
 
+    def get_user_assigned_tasks(self, user_id) -> List[Task]:
+        self.get_user_by_id(user_id)
+        return self.session.query(
+            Task).filter_by(assigned_id=user_id).all()
+
     def get_observable_tasks(self, user_id) -> List[Task]:
         """Method allows to get all observable tasks.
 
@@ -242,16 +253,52 @@ class AppService:
             Folder object
 
         """
+        self.get_user_by_id(user_id)
+        folder = self.session.query(Folder).filter_by(user_id=user_id,
+                                                      name=name).one_or_none()
+        if folder:
+            raise FolderExist('Folder with given name already exist')
         folder = Folder(user_id=user_id, name=name)
         self.session.add(folder)
         self.session.commit()
         return folder
 
-    def create_notification(self, task_id, date) -> Notification:
-        """Allows to create notification.
+    def get_folder_by_id(self, user_id, folder_id) -> Folder:
+        self.get_user_by_id(user_id)
+        folder = self.session.query(Folder).filter_by(
+            id=folder_id, user_id=user_id).one_or_none()
+        if folder is None:
+            raise FolderNotFound('Folder with following id not found')
+        return folder
+
+    def get_folder_by_name(self, user_id, folder_name) -> Folder:
+        self.get_user_by_id(user_id)
+        folder = self.session.query(Folder).filter_by(
+            folder_name=folder_name, user_id=user_id)
+        if folder is None:
+            raise FolderNotFound('Folder with following name not found')
+        return folder
+
+    def get_all_folders(self, user_id):
+        self.get_user_by_id(user_id)
+        return self.session.query(Folder).filter_by(user_id=user_id).all()
+
+    def update_folder(self, user_id, folder_id, args: dict):
+        self.session.query(Task).filter_by(id=folder_id,
+                                           user_id=user_id).update(args)
+        self.session.commit()
+
+    def delete_folder(self, user_id, folder_id):
+        folder = self.get_folder_by_id(user_id, folder_id)
+        self.session.delete(folder)
+
+    def create_notification(self, user_id, task_id, date) -> Notification:
+        """Allows to create notification for task
 
         Parameters
         ----------
+        user_id : int
+            id of user who create notification
         task_id : int
             id of task to notify
         date : type
@@ -263,6 +310,7 @@ class AppService:
             Notification object
 
         """
+        self.user_can_write_task(user_id, task_id)
         notification = Notification(task_id=task_id, date=date)
         self.session.add(notification)
         self.session.commit()
@@ -294,10 +342,6 @@ class AppService:
     #     """
         # return self.session.query(
         #     Folder).filter(Folder.owner == self.current_user).all()
-
-    # def get_user_assigned_tasks(self) -> List[Task]:
-    #     return self.session.query(
-    #         Task).filter(Task.assigned == self.current_user).all()
 
     # def add_system_folder(self, name):
     #     if name not in self.sysfolders:
