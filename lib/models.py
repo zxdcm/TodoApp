@@ -110,6 +110,9 @@ class Folder(Base):
         self.name = name
         self.user_id = user_id
 
+    def __str__(self):
+        return self.name
+
 
 # due to add of user rights this model dont need anymore
 # class Group(Base):
