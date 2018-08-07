@@ -9,3 +9,11 @@ class UserNotFound(Exception):
 
 class TaskNotFound(Exception):
     pass
+
+
+class FolderNotFound(Exception):
+    pass
+
+
+class FolderExist(Exception):
+    pass
