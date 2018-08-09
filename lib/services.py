@@ -17,16 +17,8 @@ from sqlalchemy import orm, exc
 from datetime import datetime
 from typing import List
 from .exceptions import (AccessError,
-                         UserNotFound,
-                         TaskNotFound,
-                         FolderNotFound,
-                         FolderExist)
-
-
-def object_exist(obj, param, type):
-    if obj is None:
-        print(f'type with {param} not found')
-        raise ObjectNotFound(f'type with {param} not found')
+                         FolderExist,
+                         check_object_exist)
 
 
 class AppService:
@@ -53,19 +45,19 @@ class AppService:
 
         """
         user = self.session.query(User).get(user_id)
-        object_exist(user, user_id, 'User')
+        check_object_exist(user, user_id, 'User')
         return user
 
     def get_user_by_email(self, email) -> User:
         user = self.session.query(User).filter_by(email=email).one_or_none()
-        object_exist(user, email, 'User')
+        check_object_exist(user, email, 'User')
         return user
 
     def user_can_write_task(self, user_id, task_id):
         user = self.session.query(User).get(user_id)
-        object_exist(user, user_id, 'User')
+        check_object_exist(user, user_id, 'User')
         task = self.session.query(Task).get(task_id)
-        object_exist(user, user_id, 'Task')
+        check_object_exist(user, user_id, 'Task')
         if (task.user_id == user_id or
                 user in task.editors or task.assigned_id == user_id):
             return True
@@ -73,9 +65,9 @@ class AppService:
 
     def user_can_read_task(self, user_id, task_id):
         user = self.session.query(User).get(user_id)
-        object_exist(user, user_id, 'User')
+        check_object_exist(user, user_id, 'User')
         task = self.session.query(Task).get(task_id)
-        object_exist(user, user_id, 'Task')
+        check_object_exist(user, user_id, 'Task')
         if (task.user_id == user_id or user in task.observers or
                 task.assigned_id == user_id):
             return True
@@ -112,7 +104,7 @@ class AppService:
 
         """
         user = self.session.query(User).get(user_id)
-        object_exist(user, user_id, 'User')
+        check_object_exist(user, user_id, 'User')
 
         if priority:
             priority = TaskPriority[priority.upper()]
@@ -224,6 +216,13 @@ class AppService:
         self.user_can_write_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
         task.status = TaskStatus.ARCHIVED
+        self.session.commit()
+
+    def done_task_by_id(self, user_id, task_id):
+        self.user_can_write_task(user_id, task_id)
+        task = self.session.query(Task).get(task_id)
+        task.status = TaskStatus.DONE
+        self.session.commit()
 
     def create_folder(self, user_id, name) -> Folder:
         """Allow create folder with provided name for user
@@ -255,14 +254,14 @@ class AppService:
         self.get_user_by_id(user_id)
         folder = self.session.query(Folder).filter_by(
             id=folder_id, user_id=user_id).one_or_none()
-        object_exist(folder, (user_id, folder_id), 'Folder')
+        check_object_exist(folder, (user_id, folder_id), 'Folder')
         return folder
 
     def get_folder_by_name(self, user_id, folder_name) -> Folder:
         self.get_user_by_id(user_id)
         folder = self.session.query(Folder).filter_by(
             folder_name=folder_name, user_id=user_id)
-        object_exist(folder, (user_id, folder_name), 'Folder')
+        check_object_exist(folder, (user_id, folder_name), 'Folder')
         return folder
 
     def get_all_folders(self, user_id):
