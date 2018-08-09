@@ -9,7 +9,8 @@ from .models import (
     TaskStatus,
     Period,
     user_task_editors_association_table,
-    user_task_observer_association_table
+    user_task_observer_association_table,
+    task_folder_association_table
 )
 
 from sqlalchemy import orm, exc
@@ -22,20 +23,13 @@ from .exceptions import (AccessError,
                          FolderExist)
 
 
+def object_exist(obj, param, type):
+    if obj is None:
+        print(f'type with {param} not found')
+        raise ObjectNotFound(f'type with {param} not found')
+
+
 class AppService:
-    """AppService class contains methods which allow
-    to perform most frequent actions with library entities
-
-    Parameters
-    ----------
-    email:
-        Description of parameter `email`.
-
-    Attributes
-    ----------
-    session : type
-        Description of attribute `session`.
-    """
 
     def __init__(self, session=None):
         if session is None:
@@ -59,47 +53,33 @@ class AppService:
 
         """
         user = self.session.query(User).get(user_id)
-        if user is None:
-            raise UserNotFound('User with given id not found')
+        object_exist(user, user_id, 'User')
         return user
 
     def get_user_by_email(self, email) -> User:
         user = self.session.query(User).filter_by(email=email).one_or_none()
-        if user is None:
-            raise UserNotFound('User with given email not found')
+        object_exist(user, email, 'User')
         return user
 
     def user_can_write_task(self, user_id, task_id):
-        user = self.get_user_by_id(user_id)
+        user = self.session.query(User).get(user_id)
+        object_exist(user, user_id, 'User')
         task = self.session.query(Task).get(task_id)
-        if task:
-            if (task.user_id == user_id or user in task.editors or
-                    task.assigned_id == user_id):
-                return True
-            raise AccessError('User doesnt have permissions to write the task')
-        raise TaskNotFound('Task with given id doesnt exist')
+        object_exist(user, user_id, 'Task')
+        if (task.user_id == user_id or
+                user in task.editors or task.assigned_id == user_id):
+            return True
+        raise AccessError('User doesnt have permissions to write the task')
 
     def user_can_read_task(self, user_id, task_id):
-        """Check user permissions on task with given id.
-
-        Parameters
-        ----------
-        user_id : int
-        task_id : int
-
-        Returns
-        -------
-        Bool or AccessError exception
-
-        """
-        user = self.get_user_by_id(user_id)
+        user = self.session.query(User).get(user_id)
+        object_exist(user, user_id, 'User')
         task = self.session.query(Task).get(task_id)
-        if task:
-            if (task.user_id == user_id or user in task.observers or
-                    task.assigned_id == user_id):
-                return True
-            raise AccessError('User doesnt have permissions to read the task')
-        raise TaskNotFound('Task with given id doesnt exist')
+        object_exist(user, user_id, 'Task')
+        if (task.user_id == user_id or user in task.observers or
+                task.assigned_id == user_id):
+            return True
+        raise AccessError('User doesnt have permissions to read the task')
 
     def create_task(self, user_id, name, description=None,  start_date=None,
                     priority=None, status=None,
@@ -131,15 +111,16 @@ class AppService:
             Task object
 
         """
-        self.get_user_by_id(user_id)
+        user = self.session.query(User).get(user_id)
+        object_exist(user, user_id, 'User')
+
         if priority:
             priority = TaskPriority[priority.upper()]
-
         if status:
             status = TaskStatus[status.upper()]
-
         if parent_task_id:
-            self.get_task_by_id(user_id, parent_task_id)
+            self.user_can_write_task(user_id, parent_task_id)
+
         task = Task(user_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
@@ -151,10 +132,12 @@ class AppService:
     def update_task(self, user_id, task_id, args: dict):
         if 'priority' in args:
             args['priority'] = TaskPriority[args['priority'].upper()]
+
         self.user_can_write_task(user_id=user_id, task_id=task_id)
+
         self.session.query(Task).filter_by(id=task_id).update(args)
         self.session.commit()
-        # return self.session.query(Task).get(task_id)
+        return self.session.query(Task).get(task_id)
 
     def get_task_by_id(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
@@ -237,6 +220,11 @@ class AppService:
         task = self.session.query(Task).get(task_id)
         self.session.delete(task)
 
+    def archive_task_by_id(self, user_id, task_id):
+        self.user_can_write_task(user_id, task_id)
+        task = self.session.query(Task).get(task_id)
+        task.status = TaskStatus.ARCHIVED
+
     def create_folder(self, user_id, name) -> Folder:
         """Allow create folder with provided name for user
 
@@ -267,16 +255,14 @@ class AppService:
         self.get_user_by_id(user_id)
         folder = self.session.query(Folder).filter_by(
             id=folder_id, user_id=user_id).one_or_none()
-        if folder is None:
-            raise FolderNotFound('Folder with following id not found')
+        object_exist(folder, (user_id, folder_id), 'Folder')
         return folder
 
     def get_folder_by_name(self, user_id, folder_name) -> Folder:
         self.get_user_by_id(user_id)
         folder = self.session.query(Folder).filter_by(
             folder_name=folder_name, user_id=user_id)
-        if folder is None:
-            raise FolderNotFound('Folder with following name not found')
+        object_exist(folder, (user_id, folder_name), 'Folder')
         return folder
 
     def get_all_folders(self, user_id):
@@ -284,13 +270,32 @@ class AppService:
         return self.session.query(Folder).filter_by(user_id=user_id).all()
 
     def update_folder(self, user_id, folder_id, args: dict):
-        self.session.query(Task).filter_by(id=folder_id,
-                                           user_id=user_id).update(args)
+        folder = self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
+        folder.update(args)
         self.session.commit()
 
     def delete_folder(self, user_id, folder_id):
         folder = self.get_folder_by_id(user_id, folder_id)
         self.session.delete(folder)
+
+    def get_folder_tasks(self, user_id):
+        self.get_user_by_id(user_id)
+        return self.session.query(Folder).join(
+            task_folder_association_table).filter_by(user_id=user_id)
+
+    def populate_folder(self, user_id, folder_id, task_id):
+        folder = self.get_folder_by_id(folder_id)
+        task = self.get_task_by_id(user_id)
+        folder.tasks.append(task)
+        return folder
+
+        # maybe raise exception
+    def unpopulate_folder(self, user_id, folder_id, task_id):
+        folder = self.get_folder_by_id(folder_id)
+        task = self.get_task_by_id(user_id)
+        if task not in folder.tasks:
+            return
+        folder.tasks.remove(task)
 
     def create_notification(self, user_id, task_id, date) -> Notification:
         """Allows to create notification for task

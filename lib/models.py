@@ -100,11 +100,6 @@ class Folder(Base):
 
     name = Column(String)
     tasks = relationship('Task', secondary=task_folder_association_table)
-    # user = relationship('User', back_populates='folders')
-    # tasks = relationship(
-    #     'Task',
-    #     secondary=task_folder_association_table,
-    #     back_populates='folders')
 
     def __init__(self, name, user_id):
         self.name = name
