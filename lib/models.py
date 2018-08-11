@@ -5,12 +5,14 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     Table,
-    Enum
+    Enum,
+    Boolean
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 import enum
+import datetime
 
 
 Base = declarative_base()
@@ -122,7 +124,19 @@ class Folder(Base):
     #     self.user_id = user_id
 
 
-class Task(Base):
+class Freezable:
+    def __new__(cls, *args, frozen=False, **kwargs):
+        obj = super().__new__(cls, *args, **kwargs)
+        super().__setattr__(obj, '_frozen', frozen)
+        return obj
+
+    def __setattr__(self, name, value):
+        if self._frozen:
+            raise TypeError(f'Frozen {type(self).__name__} do not support assignment')
+        super().__setattr__(name, value)
+
+
+class Task(Base, Freezable):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
@@ -148,7 +162,6 @@ class Task(Base):
                              secondary=user_task_observer_association_table)
     editors = relationship('User',
                            secondary=user_task_editors_association_table)
-
     # folders = relationship(
     #     'Folder',
     #     secondary=task_folder_association_table,
@@ -197,19 +210,42 @@ class Period(enum.Enum):
     YEAR = "year"
 
 
+class EndType(enum.Enum):
+    NEVER = 'Never'
+    AMOUNT = 'Amount'
+    DATE = 'Date'
+
+
 class Repeat(Base):
     __tablename__ = 'repeats'
     id = Column(Integer, primary_key=True)
     task_id = Column(Integer, ForeignKey('tasks.id'))
+    user_id = Column(Integer, ForeignKey('users.id'))
 
-    period = Column(Enum(Period))
-    duration = Column(DateTime)
     task = relationship('Task', back_populates='repeat')
 
-    def __init__(self, task, period, duration):
-        self.period = period
-        self.duration = duration
-        self.task = task
+    period = Column(Enum(Period))
+    period_amount = Column(Integer)
+    end_type = Column(Enum(EndType))
+    repetitions_amount = Column(Integer)
+    repetitions_count = Column(Integer)
+    end_date = Column(DateTime)
+    bound = Column(Boolean)
+
+    apply_on_other = Column(Boolean, default=False, nullable=False)
+
+    def __init__(self, user_id, task_id,
+                 period, period_amount,
+                 end_type,
+                 repetitions_amount,
+                 end_date, bound=False):
+        self.user_id = user_id,
+        self.task_id = task_id,
+        self.period = period,
+        self.end_type = end_type,
+        self.repetitions_amount = repetitions_amount,
+        self.end_date = end_date
+        self.bound = bound
 
 
 class Notification(Base):
