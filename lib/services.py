@@ -16,12 +16,11 @@ from .models import (
 )
 
 from sqlalchemy import orm, exc
-from datetime import datetime, timedelta
-from dateutil import parser, relativedelta
 from typing import List
 from .exceptions import (AccessError,
                          FolderExist,
                          check_object_exist)
+from utils import get_end_type
 
 
 class AppService:
@@ -134,10 +133,6 @@ class AppService:
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
-    def delete_task(self, user_id, task_id):
-        self.user_can_write_task(user_id=user_id, task_id=task_id)
-        self.session.query(Task).get(task_id).delete()
-
     def get_frozen_task_by_id(self, user_id, task_id) -> Task:
         """Return frozen Task object. (readonly object)
            Every assigment will cause Attribute Error
@@ -161,8 +156,7 @@ class AppService:
 
     def get_task_by_id(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
-        return task
+        return self.session.query(Task).get(task_id)
 
     def share_task_on_read(self, user_owner_id, task_id, user_receiver_id):
         self.user_can_write_task(user_owner_id, task_id)
@@ -238,8 +232,8 @@ class AppService:
 
     def delete_task(self, user_id, task_id):
         self.user_can_write_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
-        self.session.delete(task)
+        self.session.query(Task).get(task_id).delete()
+        self.session.commit()
 
     def archive_task_by_id(self, user_id, task_id):
         self.user_can_write_task(user_id, task_id)
@@ -330,36 +324,6 @@ class AppService:
 
     # move to utils
 
-    def __get_interval__(self, period_type, period_quantity):
-        if period_type.value == 'hour':
-            return relativedelta(hours=period_quantity)
-        elif period_type.value == 'day':
-            return relativedelta(days=period_quantity)
-        elif period_type.value == 'week':
-            return relativedelta(weeks=period_quantity)
-        elif period_type.value == 'month':
-            return relativedelta(months=period_quantity)
-        elif period_type.value == 'years':
-            return relativedelta(years=period_quantity)
-
-    def __select__EndType__(self, task_start_date,
-                            end_date=None, repetitions_amount=None):
-        # if the both (end_date and repetitions_amount) set: need to calculate
-        # how much times we can repeat task until it end
-        # if it less then end => set EndType = Count
-        # otherwise set EndType = Date
-        if end_date and repetitions_amount:
-            interval = self.__get_interval__(end_date, repetitions_amount)
-            if interval * repetitions_amount + task_start_date < end_date:
-                return EndType.AMOUNT
-            return EndType.DATE
-
-        if end_date:
-            return EndType.DATE
-        if repetitions_amount:
-            return EndType.AMOUNT
-        return EndType.NEVER
-
     def create_repeat(self, user_id, task_id,
                       period_amount,
                       period_type,
@@ -375,8 +339,8 @@ class AppService:
 
         period = Period[period_type.upper()]
 
-        end_type = self.__select__EndType__(task.start_date, end_date,
-                                            period_amount)
+        end_type = get_end_type(task.start_date, end_date,
+                                period_amount)
 
         repeat = Repeat(user_id=user_id, task_id=task_id, period=period,
                         period_amount=period_amount,
@@ -389,6 +353,7 @@ class AppService:
         return repeat
 
     def get_repeat_by_id(self, user_id, repeat_id):
+        self.get_user_by_id(user_id)
         repeat = self.session.query(Repeat).get(repeat_id)
         check_object_exist(repeat, repeat_id, 'Repeat')
         self.user_can_write_task(user_id, repeat.task_id)
@@ -400,6 +365,10 @@ class AppService:
     def get_created_repeats(self, user_id):
         self.get_user_by_id(user_id)
         self.session.query(Repeat).filter_by(user_id == user_id).all()
+
+    def delete_repeat(self, user_id, repeat_id):
+        self.get_repeat_by_id(self, user_id, repeat_id).delete()
+        self.session.commit()
 
     @staticmethod
     def create_user(name, email):
