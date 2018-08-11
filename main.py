@@ -1,6 +1,6 @@
 import argparse
 import sys
-from lib.services import AppService, Task, TaskPriority
+from lib.services import AppService, Task, TaskPriority, Period
 from datetime import datetime
 
 
@@ -116,6 +116,9 @@ def commands_handler(service: AppService, namespace, *args, **kwargs):
 
     elif namespace.entity == 'folder':
         folder_handler(service, namespace, args, kwargs)
+
+    elif namespace.entity == 'repeat':
+        repeat_handler(service, namespace)
 
 
 def func_task_parser(sup_parser: argparse):
@@ -239,12 +242,28 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    # AppService.create_user(name='Test2', email='newuser')
+    # AppService.create_user(name='Test2', email='newuser2')
+    # sys.exit()
     main_parser = parse_args()
     service = AppService()
+    # task = service.get_frozen_task_by_id(user_id=1, task_id=1)
+    # try:
+    #     task.name = 'Test'
+    # except TypeError:
+    #     print('bingo')
+    # task = service.create_task(user_id=1, name='test', priority='Low')
+    # [print(x) for x in service.get_own_tasks(1)]
+    #repeat = service.create_repeat(user_id=2, task_id=1, period_amount=1)
+    # print(repeat)
+    repeat = service.get_repeat_by_id(user_id=1, repeat_id=1)
+    [print(x) for x in service.get_all_repeats(user_id=1)]
+    # service.share_task_on_write(user_owner_id=1, user_receiver_id=2, task_id=1)
+    #repeat = service.create_repeat(user_id=1, task_id=2, period_amount=1)
+
+    # service.save()
 #    service.get_observable_tasks(1)
 #    service.user_can_read_task(user_id=1, task_id=5)
-    args = main_parser.parse_args()
-    args.user_id = 1
-    commands_handler(service, args)
-    print(args)
+    # args = main_parser.parse_args()
+    # args.user_id = 1
+    # commands_handler(service, args)
+    # print(args)

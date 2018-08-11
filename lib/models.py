@@ -85,7 +85,7 @@ class User(Base):
 
     # folders = relationship('Folder', back_populates='user')
     # managed_groups = relationship('Group', back_populates='owner')
-    #tasks = relationship('Task', back_populates='owner')
+    # tasks = relationship('Task', back_populates='owner')
 
     def __init__(self, username, email):
         self.username = username
@@ -125,18 +125,19 @@ class Folder(Base):
 
 
 class Freezable:
-    def __new__(cls, *args, frozen=False, **kwargs):
-        obj = super().__new__(cls, *args, **kwargs)
-        super().__setattr__(obj, '_frozen', frozen)
-        return obj
+    ...
+#     def __new__(cls, *args, frozen=False, **kwargs):
+#         obj = super().__new__(cls, *args, **kwargs)
+#         super().__setattr__(obj, '_frozen', frozen)
+#         return obj
+#
+#     def __setattr__(self, name, value):
+#         if self._frozen:
+#             raise TypeError(f'Frozen {type(self).__name__} do not support assignment')
+#         super().__setattr__(name, value)
 
-    def __setattr__(self, name, value):
-        if self._frozen:
-            raise TypeError(f'Frozen {type(self).__name__} do not support assignment')
-        super().__setattr__(name, value)
 
-
-class Task(Base, Freezable):
+class Task(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
@@ -203,11 +204,11 @@ class Task(Base, Freezable):
 
 
 class Period(enum.Enum):
-    HOUR = "hour"
-    DAY = "day"
-    WEEK = "week"
-    MONTH = "month"
-    YEAR = "year"
+    HOUR = 'Hour'
+    DAY = 'Day'
+    WEEK = 'Week'
+    MONTH = 'Month'
+    YEAR = 'Year'
 
 
 class EndType(enum.Enum):
@@ -230,8 +231,6 @@ class Repeat(Base):
     repetitions_amount = Column(Integer)
     repetitions_count = Column(Integer)
     end_date = Column(DateTime)
-    bound = Column(Boolean)
-
     apply_on_other = Column(Boolean, default=False, nullable=False)
 
     def __init__(self, user_id, task_id,
@@ -239,13 +238,20 @@ class Repeat(Base):
                  end_type,
                  repetitions_amount,
                  end_date, bound=False):
-        self.user_id = user_id,
-        self.task_id = task_id,
-        self.period = period,
-        self.end_type = end_type,
-        self.repetitions_amount = repetitions_amount,
+        self.user_id = user_id
+        self.task_id = task_id
+        self.period = period
+        self.period_amount = period_amount
+        self.end_type = end_type
+        self.repetitions_amount = repetitions_amount
         self.end_date = end_date
-        self.bound = bound
+
+    def __str__(self):
+        return (f'''
+                        user_id : {self.user_id}
+                        task_ID: {self.task_id}
+                        period: {self.period.value}
+                ''')
 
 
 class Notification(Base):

@@ -20,7 +20,8 @@ from typing import List
 from .exceptions import (AccessError,
                          FolderExist,
                          check_object_exist)
-from utils import get_end_type
+from .utils import get_end_type
+import datetime
 
 
 class AppService:
@@ -110,8 +111,8 @@ class AppService:
 
         if priority:
             priority = TaskPriority[priority.upper()]
-        if status:
-            status = TaskStatus[status.upper()]
+        # if status:
+        #     status = TaskStatus[status.upper()]
         if parent_task_id:
             self.user_can_write_task(user_id, parent_task_id)
 
@@ -322,8 +323,6 @@ class AppService:
         folder.tasks.remove(task)
         self.session.commit()
 
-    # move to utils
-
     def create_repeat(self, user_id, task_id,
                       period_amount,
                       period_type,
@@ -335,10 +334,9 @@ class AppService:
         task = self.session.query(Task).get(task_id)
 
         if task.start_date is None:
-            return
+            task.start_date = datetime.datetime.now()
 
         period = Period[period_type.upper()]
-
         end_type = get_end_type(task.start_date, end_date,
                                 period_amount)
 
@@ -347,7 +345,6 @@ class AppService:
                         end_type=end_type,
                         repetitions_amount=repetitions_amount,
                         end_date=end_date, bound=bound)
-
         self.session.add(repeat)
         self.session.commit()
         return repeat
@@ -359,12 +356,15 @@ class AppService:
         self.user_can_write_task(user_id, repeat.task_id)
         return repeat
 
+        # rework
     def get_all_repeats(self, user_id):
-        ...
+        user = self.get_user_by_id(user_id)
+        # self.session.query(Repeat).join(
+        #     Repeat.task).join(Repeat.task.user_id).filter_by(user_id=user_id).all()
 
     def get_created_repeats(self, user_id):
         self.get_user_by_id(user_id)
-        self.session.query(Repeat).filter_by(user_id == user_id).all()
+        self.session.query(Repeat).filter_by(user_id=user_id).all()
 
     def delete_repeat(self, user_id, repeat_id):
         self.get_repeat_by_id(self, user_id, repeat_id).delete()

@@ -1,5 +1,5 @@
 from dateutil import relativedelta
-from models import EndType
+from .models import EndType
 
 
 def __get_interval__(self, period_type, period_quantity):
