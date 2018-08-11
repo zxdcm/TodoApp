@@ -8,13 +8,16 @@ from .models import (
     TaskPriority,
     TaskStatus,
     Period,
+    EndType,
     user_task_editors_association_table,
     user_task_observer_association_table,
-    task_folder_association_table
+    task_folder_association_table,
+    Freezable,
 )
 
 from sqlalchemy import orm, exc
-from datetime import datetime
+from datetime import datetime, timedelta
+from dateutil import parser, relativedelta
 from typing import List
 from .exceptions import (AccessError,
                          FolderExist,
@@ -131,9 +134,35 @@ class AppService:
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
+    def delete_task(self, user_id, task_id):
+        self.user_can_write_task(user_id=user_id, task_id=task_id)
+        self.session.query(Task).get(task_id).delete()
+
+    def get_frozen_task_by_id(self, user_id, task_id) -> Task:
+        """Return frozen Task object. (readonly object)
+           Every assigment will cause Attribute Error
+        Parameters
+        ----------
+        user_id : type
+            Description of parameter `user_id`.
+        task_id : type
+            Description of parameter `task_id`.
+
+        Returns
+        -------
+        Task
+            Description of returned object.
+
+        """
+        self.user_can_read_task(user_id=user_id, task_id=task_id)
+        task = self.session.query(Task).get(task_id)
+        task._frozen = True
+        return task
+
     def get_task_by_id(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
-        return self.session.query(Task).get(task_id)
+        task = self.session.query(Task).get(task_id)
+        return task
 
     def share_task_on_read(self, user_owner_id, task_id, user_receiver_id):
         self.user_can_write_task(user_owner_id, task_id)
@@ -283,104 +312,96 @@ class AppService:
             task_folder_association_table).filter_by(user_id=user_id)
 
     def populate_folder(self, user_id, folder_id, task_id):
-        folder = self.get_folder_by_id(folder_id)
-        task = self.get_task_by_id(user_id)
+        folder = self.get_folder_by_id(user_id, folder_id)
+        task = self.get_task_by_id(user_id, task_id)
+        if task in folder.tasks:
+            return
         folder.tasks.append(task)
-        return folder
+        self.session.commit()
 
         # maybe raise exception
     def unpopulate_folder(self, user_id, folder_id, task_id):
-        folder = self.get_folder_by_id(folder_id)
-        task = self.get_task_by_id(user_id)
+        folder = self.get_folder_by_id(user_id, folder_id)
+        task = self.get_task_by_id(user_id, task_id)
         if task not in folder.tasks:
             return
         folder.tasks.remove(task)
-
-    def create_notification(self, user_id, task_id, date) -> Notification:
-        """Allows to create notification for task
-
-        Parameters
-        ----------
-        user_id : int
-            id of user who create notification
-        task_id : int
-            id of task to notify
-        date : type
-            notification date
-
-        Returns
-        -------
-        Notification
-            Notification object
-
-        """
-        self.user_can_write_task(user_id, task_id)
-        notification = Notification(task_id=task_id, date=date)
-        self.session.add(notification)
         self.session.commit()
-        return notification
 
-    def create_repeat(self, task_id, period, duration) -> Repeat:
-        if period:
-            period = Period[period.upper()]
+    # move to utils
 
-        repeat = Repeat(task_id=task_id, period=period,
-                        duration=duration)
-        self.session.add(period)
+    def __get_interval__(self, period_type, period_quantity):
+        if period_type.value == 'hour':
+            return relativedelta(hours=period_quantity)
+        elif period_type.value == 'day':
+            return relativedelta(days=period_quantity)
+        elif period_type.value == 'week':
+            return relativedelta(weeks=period_quantity)
+        elif period_type.value == 'month':
+            return relativedelta(months=period_quantity)
+        elif period_type.value == 'years':
+            return relativedelta(years=period_quantity)
+
+    def __select__EndType__(self, task_start_date,
+                            end_date=None, repetitions_amount=None):
+        # if the both (end_date and repetitions_amount) set: need to calculate
+        # how much times we can repeat task until it end
+        # if it less then end => set EndType = Count
+        # otherwise set EndType = Date
+        if end_date and repetitions_amount:
+            interval = self.__get_interval__(end_date, repetitions_amount)
+            if interval * repetitions_amount + task_start_date < end_date:
+                return EndType.AMOUNT
+            return EndType.DATE
+
+        if end_date:
+            return EndType.DATE
+        if repetitions_amount:
+            return EndType.AMOUNT
+        return EndType.NEVER
+
+    def create_repeat(self, user_id, task_id,
+                      period_amount,
+                      period_type,
+                      bound=False,
+                      repetitions_amount=None,
+                      end_date=None) -> Repeat:
+
+        self.user_can_write_task(user_id, task_id)
+        task = self.session.query(Task).get(task_id)
+
+        if task.start_date is None:
+            return
+
+        period = Period[period_type.upper()]
+
+        end_type = self.__select__EndType__(task.start_date, end_date,
+                                            period_amount)
+
+        repeat = Repeat(user_id=user_id, task_id=task_id, period=period,
+                        period_amount=period_amount,
+                        end_type=end_type,
+                        repetitions_amount=repetitions_amount,
+                        end_date=end_date, bound=bound)
+
+        self.session.add(repeat)
         self.session.commit()
         return repeat
 
-    # def get_user_folders(self, user_id) -> List[Folder]:
-    #     """Methods allow get user folders.
-    #
-    #     Parameters
-    #     ----------
-    #     user_id : type
-    #         id of user who get folders
-    #
-    #     Returns
-    #     -------
-    #     List[Folder]
-    #         List of user folders.
-    #
-    #     """
-        # return self.session.query(
-        #     Folder).filter(Folder.owner == self.current_user).all()
+    def get_repeat_by_id(self, user_id, repeat_id):
+        repeat = self.session.query(Repeat).get(repeat_id)
+        check_object_exist(repeat, repeat_id, 'Repeat')
+        self.user_can_write_task(user_id, repeat.task_id)
+        return repeat
 
-    # def add_system_folder(self, name):
-    #     if name not in self.sysfolders:
-    #         self.sysfolders.append(name)
-    #         self.create_folder(name)
-    #     else:
-    #         print('System folder already exist')
+    def get_all_repeats(self, user_id):
+        ...
 
-    # def remove_system_folder(self, name):
-    #     if name not in self.sysfolders:
-    #         print('System folder doesnt exist')
-    #     else:
-    #         self.sysfolders.remove(name)
-    #         self.delete_folder_by_name(name)
-    #
-    # def delete_folder_by_name(self, name):
-    #     if name in self.sysfolders:
-    #         print('Error. System folder can''t be removed')
-    #     else:
-    #         self.session.query(
-    #             Folder).filter(Folder.name == self.name).delete()
-    #
-    # def archive_task_by_id(self, id):
-    #     task = self.session.query(
-    #         Task).get(id)
-    #     folder = self.session.query(
-    #         Folder).filter(
-    #             Folder.owner == self.current_user and
-    #             Folder.name == 'Archive').first()
-    #     if folder is None:
-    #         folder = self.create_folder('Archive')
-    #     folder.tasks.append(task)
-    #     self.session.commit()
+    def get_created_repeats(self, user_id):
+        self.get_user_by_id(user_id)
+        self.session.query(Repeat).filter_by(user_id == user_id).all()
 
-    @staticmethod   # temp func. need to rework with context manager
+    @staticmethod
     def create_user(name, email):
         session = Database.set_up_connection()
         try:
