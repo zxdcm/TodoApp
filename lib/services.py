@@ -9,13 +9,13 @@ from .models import (
     TaskStatus,
     Period,
     EndType,
-    user_task_editors_association_table,
-    user_task_observer_association_table,
+    TaskUserEditors,
+    TaskUserObservers,
     task_folder_association_table,
     Freezable,
 )
 
-from sqlalchemy import orm, exc
+from sqlalchemy import orm, exc, or_, and_, union
 from typing import List
 from .exceptions import (AccessError,
                          FolderExist,
@@ -30,6 +30,7 @@ class AppService:
         if session is None:
             session = Database.set_up_connection()
         self.session = session
+        self.expunge_list = []
         # self.current_user = self.session.query(
         #     User).filter(User.email == email).first()
 
@@ -57,14 +58,22 @@ class AppService:
         return user
 
     def user_can_write_task(self, user_id, task_id):
-        user = self.session.query(User).get(user_id)
-        check_object_exist(user, user_id, 'User')
-        task = self.session.query(Task).get(task_id)
-        check_object_exist(user, user_id, 'Task')
-        if (task.user_id == user_id or
-                user in task.editors or task.assigned_id == user_id):
+        q1 = self.session.query(Task).filter_by(id=task_id).filter(
+            or_(Task.user_id == user_id, Task.assigned_id == user_id)).one_or_none()
+        q2 = self.session.query(user_task_editors_association_table).filter_by(
+            task_id=task_id, user_id=user_id).one_or_none()
+        if q1 or q2:
             return True
-        raise AccessError('User doesnt have permissions to write the task')
+        raise AccessError('User doesnt have permissions to this task')
+
+        # user = self.session.query(User).get(user_id)
+        # check_object_exist(user, user_id, 'User')
+        # task = self.session.query(Task).get(task_id)
+        # check_object_exist(user, user_id, 'Task')
+        # if (task.user_id == user_id or
+        #         user in task.editors or task.assigned_id == user_id):
+        #     return True
+        # raise AccessError('User doesnt have perыmissions to write the task')
 
     def user_can_read_task(self, user_id, task_id):
         user = self.session.query(User).get(user_id)
@@ -120,6 +129,7 @@ class AppService:
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
                     assigned_id=assigned_id, group_id=group_id)
+
         self.session.add(task)
         self.session.commit()
         return task
@@ -152,7 +162,7 @@ class AppService:
         """
         self.user_can_read_task(user_id=user_id, task_id=task_id)
         task = self.session.query(Task).get(task_id)
-        task._frozen = True
+        self.expunge_list.append(task)
         return task
 
     def get_task_by_id(self, user_id, task_id) -> Task:
@@ -350,21 +360,18 @@ class AppService:
         return repeat
 
     def get_repeat_by_id(self, user_id, repeat_id):
-        self.get_user_by_id(user_id)
         repeat = self.session.query(Repeat).get(repeat_id)
         check_object_exist(repeat, repeat_id, 'Repeat')
         self.user_can_write_task(user_id, repeat.task_id)
         return repeat
 
-        # rework
-    def get_all_repeats(self, user_id):
-        user = self.get_user_by_id(user_id)
-        # self.session.query(Repeat).join(
-        #     Repeat.task).join(Repeat.task.user_id).filter_by(user_id=user_id).all()
+    def get_shared_repeats(self, user_id):
+        return self.session.query(Repeat).join(
+            Repeat.task, user_task_editors_association_table).filter_by(
+                user_id=user_id).all()
 
-    def get_created_repeats(self, user_id):
-        self.get_user_by_id(user_id)
-        self.session.query(Repeat).filter_by(user_id=user_id).all()
+    def get_own_repeats(self, user_id):
+        return self.session.query(Repeat).filter_by(user_id=user_id).all()
 
     def delete_repeat(self, user_id, repeat_id):
         self.get_repeat_by_id(self, user_id, repeat_id).delete()
@@ -383,4 +390,5 @@ class AppService:
 
     # Allows to commit updates made out of the lib
     def save_updates(self):
+        self.session.expunge_all(expunge_list)
         self.session.commit()

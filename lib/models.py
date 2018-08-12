@@ -39,6 +39,23 @@ class Database:
 #     Column('user_id', Integer, ForeignKey('users.id')),
 #     Column('group_id', Integer, ForeignKey('groups.id'))
 # )
+#
+
+#
+#
+# class TaskUserEditors(Base):
+#     __tablename__ = 'task_users_editors'
+#     id = Column(Integer, primary_key=True)
+#     user = Column(Integer, ForeignKey('users.id'))
+#     task = Column(Integer, ForeignKey('tasks.id'))
+
+#
+# class TaskUserObservers(Base):
+#     __tablename__ = 'task_users_observers'
+#     id = Column(Integer, primary_key=True)
+#     user = Column(Integer, ForeignKey('users.id'))
+#     task = Column(Integer, ForeignKey('tasks.id'))
+#
 
 user_task_observer_association_table = Table(
     'task_users_observers', Base.metadata,
@@ -160,9 +177,9 @@ class Task(Base):
     assigned = relationship('User', foreign_keys=assigned_id)
 
     observers = relationship('User',
-                             secondary=user_task_observer_association_table)
+                             secondary='task_users_observers')
     editors = relationship('User',
-                           secondary=user_task_editors_association_table)
+                           secondary='task_users_editors')
     # folders = relationship(
     #     'Folder',
     #     secondary=task_folder_association_table,
