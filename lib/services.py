@@ -35,6 +35,10 @@ class AppService:
         self.session = session
 
     def user_can_access_task(self, user_id: int, task_id: int):
+        if self.session.query(Task).join(TaskUserEditors).filter_by(
+                user_id=user_id, task_id=task_id).one_or_none():
+            return True
+        raise AccessError('User doesnt have permissions to this task')
         task = self.session.query(Task).join(TaskUserEditors).filter_by(
             user_id == user_id, task_id == task_id).one_or_none()
         if task:
@@ -277,7 +281,10 @@ class AppService:
         self.session.commit()
 
         # maybe raise exception
-    def unpopulate_folder(self, user_id: int, folder_id: int, task_id: int):
+    def unpopulate_folder(self,
+                          user_id: int,
+                          folder_id: int,
+                          task_id: int):
         folder = self.get_folder_by_id(user_id, folder_id)
         task = self.get_task_by_id(user_id, task_id)
         if task not in folder.tasks:
@@ -431,7 +438,10 @@ class AppService:
         self.get_repeat_by_id(user_id, repeat_id).delete()
         self.session.commit()
 
-    def update_repeat(self, user_id: int, repeat_id: int, args: dict) -> Repeat:
+    def update_repeat(self,
+                      user_id: int,
+                      repeat_id: int,
+                      args: dict) -> Repeat:
         repeat = self.session.query(Repeat).get(repeat_id)
         check_object_exist(repeat, repeat_id, 'Repeat')
         self.user_can_write_task(user_id, repeat.task_id)
