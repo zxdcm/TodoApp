@@ -95,19 +95,14 @@ class TaskPriority(enum.Enum):
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
-
     username = Column(String, unique=True)
-    password_hash = Column(String)
-    password_salt = Column(String)
-    email = Column(String, unique=True)
 
     # folders = relationship('Folder', back_populates='user')
     # managed_groups = relationship('Group', back_populates='owner')
     # tasks = relationship('Task', back_populates='owner')
 
-    def __init__(self, username, email):
+    def __init__(self, username):
         self.username = username
-        self.email = email
 
     def __str__(self):
         return self.username
@@ -222,6 +217,7 @@ class Task(Base):
 
 
 class Period(enum.Enum):
+    MIN = 'Min'
     HOUR = 'Hour'
     DAY = 'Day'
     WEEK = 'Week'
@@ -246,17 +242,18 @@ class Repeat(Base):
     period = Column(Enum(Period))
     period_amount = Column(Integer)
     end_type = Column(Enum(EndType))
-    repetitions_amount = Column(Integer)
-    repetitions_count = Column(Integer)
+    repetitions_amount = Column(Integer, nullable=False, default=0)
+    repetitions_count = Column(Integer, nullable=False, default=0)
     last_activated = Column(DateTime)
+    start_date = Column(DateTime)
     end_date = Column(DateTime)
-    apply_on_other = Column(Boolean, default=False, nullable=False)
+    # interval = Column(DateTime)
 
     def __init__(self, user_id, task_id,
                  period, period_amount,
                  end_type,
                  repetitions_amount,
-                 end_date, bound=False):
+                 end_date, start_date):
         self.user_id = user_id
         self.task_id = task_id
         self.period = period
@@ -264,12 +261,22 @@ class Repeat(Base):
         self.end_type = end_type
         self.repetitions_amount = repetitions_amount
         self.end_date = end_date
+        self.start_date = start_date
+        self.last_activated = self.start_date
+        # self.interval = interval
 
     def __str__(self):
         return (f'''
                         user_id : {self.user_id}
-                        task_ID: {self.task_id}
+                        task_id: {self.task_id}
                         period: {self.period.value}
+                        period_amount: {self.period_amount}
+                        end_type: {self.end_type.value}
+                        repetitions_amount: {self.repetitions_amount}
+                        repetitions count: {self.repetitions_amount}
+                        start date: {self.start_date}
+                        end date: {self.end_date}
+                        last activated: {self.last_activated}
                 ''')
 
 

@@ -49,9 +49,9 @@ class AppService:
         check_object_exist(user, user_id, 'User')
         return user
 
-    def get_user_by_email(self, email) -> User:
-        user = self.session.query(User).filter_by(email=email).one_or_none()
-        check_object_exist(user, email, 'User')
+    def get_user_by_username(self, username) -> User:
+        user = self.session.query(User).filter_by(username=username).one_or_none()
+        check_object_exist(user, username, 'User')
         return user
 
     def user_can_write_task(self, user_id, task_id):
@@ -128,10 +128,10 @@ class AppService:
     def update_task(self, user_id, task_id, args: dict):
         if 'priority' in args:
             args['priority'] = TaskPriority[args['priority'].upper()]
-
+        if 'status' in args:
+            args['status'] = TaskStatus[args['status'].upper()]
         self.user_can_write_task(user_id=user_id, task_id=task_id)
-
-        self.session.query(Task).get(task_id).update(args)
+        self.session.query(Task).filter_by(id=task_id).update(args)
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
@@ -140,7 +140,7 @@ class AppService:
         return self.session.query(Task).get(task_id)
 
     def share_task_on_read(self, user_creator_id, task_id, user_receiver_id):
-        self.user_can_read_task(user_creator_id, task_id)
+        self.user_can_write_task(user_creator_id, task_id)
         receiver = self.get_user_by_id(user_receiver_id)
         task = self.session.query(Task).get(task_id)
         task.observers.append(receiver)
@@ -317,17 +317,18 @@ class AppService:
         task = self.session.query(Task).get(task_id)
 
         if task.start_date is None:
-            task.start_date = datetime.datetime.now()
+            return
 
         period = Period[period_type.upper()]
-        end_type = get_end_type(task.start_date, end_date,
-                                period_amount)
-
+        start_date = task.start_date
+        print(period_amount, 'period amount', end=' ')
+        end_type = get_end_type(start_date, end_date, repetitions_amount)
         repeat = Repeat(user_id=user_id, task_id=task_id, period=period,
                         period_amount=period_amount,
                         end_type=end_type,
                         repetitions_amount=repetitions_amount,
-                        end_date=end_date, bound=bound)
+                        end_date=end_date,
+                        start_date=start_date)
         self.session.add(repeat)
         self.session.commit()
         return repeat
@@ -354,8 +355,11 @@ class AppService:
         return repeats
 
     def get_generated_tasks(self, user_id):
-        pass
-        # epeats = self.session.query(Task).filter()
+        tasks = self.session.query(Task).join(Repeat.task).filter(
+            Task.parent_task_id == Repeat.task.id)
+        print(tasks)
+        return None
+        # return tasks
 
     def get_active_repeats(self, user_id, repeats=None) -> List[Repeat]:
         if repeats is None:
@@ -363,6 +367,7 @@ class AppService:
         repeats = self.get_all_repeats(user_id)
         active_list = []
         for repeat in repeats:
+            #interval = self.interval
             interval = get_interval(repeat.period, repeat.period_amount)
             near_activation = repeat.last_activated + interval
             if repeat.end_type == EndType.AMOUNT:
@@ -378,18 +383,57 @@ class AppService:
 
         return active_list
 
-    def delete_unactive_repeats(self, user_id):
-        repeats = self.get_all_repeats(user_id)
-        if repeats:
-            active_list = self.get_active_repeats(repeats)
-            unactive = [x for x in repeats + active_list if x not in repeats
-                        or x not in active_list]
-            # need to test does it work: for x in unactive: self.session.delete(x)
-            self.session.delete(*unactive)
-            self.session.commit()
-
     def generate_tasks(self, user_id, active_repeats=None):
-        ...
+        """
+
+        Parameters
+        ----------
+        user_id : type
+            Description of parameter `user_id`.
+        active_repeats : type
+            Description of parameter `active_repeats`.
+
+        Returns
+        -------
+        None
+
+        """
+        '''
+    1. foreach repeat:
+          calculate interval according to period and period amount
+          sum last_activation and interval and get near activation
+          if near activation < current time
+              if EndType == AMOUNT or EndType == DATE and we reached the goal:
+                  we dont have to create any task. Repeat rule is completed now
+              otherwise
+                we keep creating tasks on every activation + interval
+                                            until we reach current time
+            '''
+        if active_repeats:
+            active_repeats = self.get_active_repeats(user_id)
+        for repeat in active_repeats:
+            # interval = repeat.interval
+            interval = get_interval(repeat.period, repeat.period_amount)
+            near_activation = repeat.last_activated + interval
+            while near_activation < datetime.datetime.now():
+                if (repeat.end_type == EndType.AMOUNT and
+                        repeat.repetitions_count == repeat.repetitions_amount):
+                    break
+                if (repeat.end_type == EndType.DATE and
+                        near_activation > repeat.end_date):
+                    break
+                task = self.create_task(user_id=user_id,
+                                        name=repeat.task.name,
+                                        description=repeat.task.description,
+                                        start_date=near_activation,
+                                        parent_task_id=repeat.task.id,
+                                        assigned_id=repeat.task.assigned_id)
+                task.editors = repeat.task.editors
+                task.observers = repeat.task.observers
+                repeat.last_activated = near_activation
+                near_activation = repeat.last_activated + interval
+                self.session.add(task)
+        self.session.commit()
 
     def delete_repeat(self, user_id, repeat_id):
         self.get_repeat_by_id(user_id, repeat_id).delete()
@@ -399,14 +443,24 @@ class AppService:
         repeat = self.session.query(Repeat).get(repeat_id)
         check_object_exist(repeat, repeat_id, 'Repeat')
         self.user_can_write_task(user_id, repeat.task_id)
+        start_date = repeat.start_date
+        end_date = repeat.end_date
+        repetitions_amount = repeat.repetitions_amount
+        if 'start_date' in args:
+            start_date = args['start_date']
+        if 'end_date' in args:
+            end_date = args['end_date']
+        if 'repetitions_amount' in args:
+            repetitions_amount = args['repetitions_amount']
+        args['end_type'] = get_end_type(start_date, end_date, repetitions_amount)
         repeat.update(args)
         return repeat
 
     @staticmethod
-    def create_user(name, email):
+    def create_user(name):
         session = Database.set_up_connection()
         try:
-            user = User(name, email)
+            user = User(name)
             session.add(user)
             session.commit()
             session.close()
