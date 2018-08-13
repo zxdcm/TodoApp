@@ -2,6 +2,11 @@ from dateutil.relativedelta import relativedelta
 from .models import EndType, Period
 
 
+def check_object_exist(obj, param, type):
+    if obj is None:
+        raise ObjectNotFound(f'type with {param} not found')
+
+
 def get_interval(period_type: Period, period_quantity):
     if period_type.value == 'Min':
         return relativedelta(minutes=period_quantity)
