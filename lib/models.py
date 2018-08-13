@@ -43,19 +43,20 @@ class Database:
 
 #
 #
+#
 # class TaskUserEditors(Base):
 #     __tablename__ = 'task_users_editors'
 #     id = Column(Integer, primary_key=True)
 #     user = Column(Integer, ForeignKey('users.id'))
 #     task = Column(Integer, ForeignKey('tasks.id'))
-
+#
 #
 # class TaskUserObservers(Base):
 #     __tablename__ = 'task_users_observers'
 #     id = Column(Integer, primary_key=True)
 #     user = Column(Integer, ForeignKey('users.id'))
 #     task = Column(Integer, ForeignKey('tasks.id'))
-#
+
 
 user_task_observer_association_table = Table(
     'task_users_observers', Base.metadata,
@@ -247,6 +248,7 @@ class Repeat(Base):
     end_type = Column(Enum(EndType))
     repetitions_amount = Column(Integer)
     repetitions_count = Column(Integer)
+    last_activated = Column(DateTime)
     end_date = Column(DateTime)
     apply_on_other = Column(Boolean, default=False, nullable=False)
 

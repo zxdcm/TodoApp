@@ -9,8 +9,8 @@ from .models import (
     TaskStatus,
     Period,
     EndType,
-    TaskUserEditors,
-    TaskUserObservers,
+    user_task_editors_association_table,
+    user_task_observer_association_table,
     task_folder_association_table,
     Freezable,
 )
@@ -20,7 +20,7 @@ from typing import List
 from .exceptions import (AccessError,
                          FolderExist,
                          check_object_exist)
-from .utils import get_end_type
+from .utils import get_end_type, get_interval
 import datetime
 
 
@@ -30,9 +30,6 @@ class AppService:
         if session is None:
             session = Database.set_up_connection()
         self.session = session
-        self.expunge_list = []
-        # self.current_user = self.session.query(
-        #     User).filter(User.email == email).first()
 
     def get_user_by_id(self, user_id) -> User:
         """Allows to get user object by id.
@@ -60,28 +57,23 @@ class AppService:
     def user_can_write_task(self, user_id, task_id):
         q1 = self.session.query(Task).filter_by(id=task_id).filter(
             or_(Task.user_id == user_id, Task.assigned_id == user_id)).one_or_none()
+        if q1:
+            return True
         q2 = self.session.query(user_task_editors_association_table).filter_by(
             task_id=task_id, user_id=user_id).one_or_none()
-        if q1 or q2:
+        if q2:
             return True
         raise AccessError('User doesnt have permissions to this task')
 
-        # user = self.session.query(User).get(user_id)
-        # check_object_exist(user, user_id, 'User')
-        # task = self.session.query(Task).get(task_id)
-        # check_object_exist(user, user_id, 'Task')
-        # if (task.user_id == user_id or
-        #         user in task.editors or task.assigned_id == user_id):
-        #     return True
-        # raise AccessError('User doesnt have perыmissions to write the task')
-
     def user_can_read_task(self, user_id, task_id):
-        user = self.session.query(User).get(user_id)
-        check_object_exist(user, user_id, 'User')
-        task = self.session.query(Task).get(task_id)
-        check_object_exist(user, user_id, 'Task')
-        if (task.user_id == user_id or user in task.observers or
-                task.assigned_id == user_id):
+        q1 = self.session.query(Task).filter_by(id=task_id).filter(
+            or_(Task.user_id == user_id, Task.assigned_id == user_id)).one_or_none()
+        if q1:
+            return True
+        q2 = self.session.query(user_task_editors_association_table,
+                                user_task_observer_association_table).filter_by(
+            task_id=task_id, user_id=user_id).one_or_none()
+        if q2:
             return True
         raise AccessError('User doesnt have permissions to read the task')
 
@@ -120,8 +112,7 @@ class AppService:
 
         if priority:
             priority = TaskPriority[priority.upper()]
-        # if status:
-        #     status = TaskStatus[status.upper()]
+
         if parent_task_id:
             self.user_can_write_task(user_id, parent_task_id)
 
@@ -140,51 +131,30 @@ class AppService:
 
         self.user_can_write_task(user_id=user_id, task_id=task_id)
 
-        self.session.query(Task).filter_by(id=task_id).update(args)
+        self.session.query(Task).get(task_id).update(args)
         self.session.commit()
         return self.session.query(Task).get(task_id)
-
-    def get_frozen_task_by_id(self, user_id, task_id) -> Task:
-        """Return frozen Task object. (readonly object)
-           Every assigment will cause Attribute Error
-        Parameters
-        ----------
-        user_id : type
-            Description of parameter `user_id`.
-        task_id : type
-            Description of parameter `task_id`.
-
-        Returns
-        -------
-        Task
-            Description of returned object.
-
-        """
-        self.user_can_read_task(user_id=user_id, task_id=task_id)
-        task = self.session.query(Task).get(task_id)
-        self.expunge_list.append(task)
-        return task
 
     def get_task_by_id(self, user_id, task_id) -> Task:
         self.user_can_read_task(user_id, task_id)
         return self.session.query(Task).get(task_id)
 
-    def share_task_on_read(self, user_owner_id, task_id, user_receiver_id):
-        self.user_can_write_task(user_owner_id, task_id)
+    def share_task_on_read(self, user_creator_id, task_id, user_receiver_id):
+        self.user_can_read_task(user_creator_id, task_id)
         receiver = self.get_user_by_id(user_receiver_id)
         task = self.session.query(Task).get(task_id)
         task.observers.append(receiver)
         self.session.commit()
 
-    def share_task_on_write(self, user_owner_id, task_id, user_receiver_id):
-        self.user_can_write_task(user_owner_id, task_id)
+    def share_task_on_write(self, user_creator_id, task_id, user_receiver_id):
+        self.user_can_write_task(user_creator_id, task_id)
         receiver = self.get_user_by_id(user_receiver_id)
         task = self.session.query(Task).get(task_id)
         task.editors.append(receiver)
         self.session.commit()
 
-    def unshare_task_on_read(self, user_owner_id, task_id, user_receiver_id):
-        self.user_can_write_task(user_owner_id, task_id)
+    def unshare_task_on_read(self, user_creator_id, task_id, user_receiver_id):
+        self.user_can_write_task(user_creator_id, task_id)
         receiver = self.get_user_by_id(user_receiver_id)
         task = self.session.query(Task).get(task_id)
         task.observers.remove(receiver)
@@ -211,7 +181,7 @@ class AppService:
 
         """
         self.get_user_by_id(user_id)
-        return self.session.query(Task).filter_by(user_id=user_id)
+        return self.session.query(Task).filter_by(user_id=user_id).all()
 
     def get_user_assigned_tasks(self, user_id) -> List[Task]:
         self.get_user_by_id(user_id)
@@ -227,7 +197,6 @@ class AppService:
             List of tasks
 
         """
-        self.get_user_by_id(user_id)
         return self.session.query(Task).join(
             user_task_observer_association_table).filter_by(
                 user_id=user_id
@@ -235,7 +204,6 @@ class AppService:
 
     # rename
     def get_writeble_tasks(self, user_id) -> List[Task]:
-        self.get_user_by_id(user_id)
         return self.session.query(Task).join(
             user_task_editors_association_table).filter_by(
                 user_id=user_id
@@ -246,7 +214,7 @@ class AppService:
         self.session.query(Task).get(task_id).delete()
         self.session.commit()
 
-    def archive_task_by_id(self, user_id, task_id):
+    def archive_task_by_id(self, user_id, task_id, archive_substasks=None):
         self.user_can_write_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
         task.status = TaskStatus.ARCHIVED
@@ -310,11 +278,16 @@ class AppService:
     def delete_folder(self, user_id, folder_id):
         folder = self.get_folder_by_id(user_id, folder_id)
         self.session.delete(folder)
+        self.session.commit()
 
     def get_folder_tasks(self, user_id):
         self.get_user_by_id(user_id)
         return self.session.query(Folder).join(
-            task_folder_association_table).filter_by(user_id=user_id)
+            task_folder_association_table).filter_by(user_id=user_id).all()
+
+    def get_task_folders(self, user_id, task_id):
+        return self.session.query(Folder).filter_by(user_id=user_id,
+                                                    task_id=task_id).all()
 
     def populate_folder(self, user_id, folder_id, task_id):
         folder = self.get_folder_by_id(user_id, folder_id)
@@ -362,7 +335,7 @@ class AppService:
     def get_repeat_by_id(self, user_id, repeat_id):
         repeat = self.session.query(Repeat).get(repeat_id)
         check_object_exist(repeat, repeat_id, 'Repeat')
-        self.user_can_write_task(user_id, repeat.task_id)
+        self.user_can_read_task(user_id, repeat.task_id)
         return repeat
 
     def get_shared_repeats(self, user_id):
@@ -373,9 +346,61 @@ class AppService:
     def get_own_repeats(self, user_id):
         return self.session.query(Repeat).filter_by(user_id=user_id).all()
 
+    def get_all_repeats(self, user_id):
+        repeats = self.session.query(Repeat).join(
+            Repeat.task, user_task_editors_association_table).filter_by(
+                user_id=user_id).all()
+        repeats += self.session.query(Repeat).filter_by(user_id=user_id).all()
+        return repeats
+
+    def get_generated_tasks(self, user_id):
+        pass
+        # epeats = self.session.query(Task).filter()
+
+    def get_active_repeats(self, user_id, repeats=None) -> List[Repeat]:
+        if repeats is None:
+            repeats = self.get_all_repeats(user_id)
+        repeats = self.get_all_repeats(user_id)
+        active_list = []
+        for repeat in repeats:
+            interval = get_interval(repeat.period, repeat.period_amount)
+            near_activation = repeat.last_activated + interval
+            if repeat.end_type == EndType.AMOUNT:
+                if (near_activation < datetime.datetime.now() and
+                        repeat.repetitions_count < repeat.repetitions_amount):
+                    active_list.append(repeat)
+            elif repeat.end_type == EndType.DATE:
+                if (near_activation < datetime.datetime.now() and
+                        near_activation < repeat.end_date):
+                    active_list.append(repeat)
+            elif near_activation < datetime.datetime.now():
+                active_list.append(repeat)
+
+        return active_list
+
+    def delete_unactive_repeats(self, user_id):
+        repeats = self.get_all_repeats(user_id)
+        if repeats:
+            active_list = self.get_active_repeats(repeats)
+            unactive = [x for x in repeats + active_list if x not in repeats
+                        or x not in active_list]
+            # need to test does it work: for x in unactive: self.session.delete(x)
+            self.session.delete(*unactive)
+            self.session.commit()
+
+    def generate_tasks(self, user_id, active_repeats=None):
+        ...
+
     def delete_repeat(self, user_id, repeat_id):
-        self.get_repeat_by_id(self, user_id, repeat_id).delete()
+        self.get_repeat_by_id(user_id, repeat_id).delete()
         self.session.commit()
+
+    def update_repeat(self, user_id, repeat_id, args: dict) -> Repeat:
+        repeat = self.session.query(Repeat).get(repeat_id)
+        check_object_exist(repeat, repeat_id, 'Repeat')
+        self.user_can_write_task(user_id, repeat.task_id)
+        repeat.update(args)
+        return repeat
 
     @staticmethod
     def create_user(name, email):
@@ -388,7 +413,29 @@ class AppService:
         except exc.IntegrityError:
             print('Database error')
 
-    # Allows to commit updates made out of the lib
+    def get_obj_by_id(self, cls, id):
+        """This method allows to get any object from the db without validation
+           Use this only if you are confident what are you doing
+           After work with object - commit changes via save_updates method
+
+        Parameters
+        ----------
+        cls : Library type
+            Library type. (Any type from models.py)
+        id : int
+            Object id
+
+        Returns
+        -------
+        Model
+            Model or None
+
+        """
+        return self.session.query(cls).get(id)
+
+    def delete_obj(self, obj):
+        self.session.delete(obj)
+
+        # Allows to commit updates made out of the lib
     def save_updates(self):
-        self.session.expunge_all(expunge_list)
         self.session.commit()

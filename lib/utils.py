@@ -2,7 +2,7 @@ from dateutil import relativedelta
 from .models import EndType
 
 
-def __get_interval__(self, period_type, period_quantity):
+def get_interval(self, period_type, period_quantity):
     if period_type.value == 'hour':
         return relativedelta(hours=period_quantity)
     elif period_type.value == 'day':
@@ -19,7 +19,7 @@ def get_end_type(self, task_start_date,
                  end_date=None, repetitions_amount=None) -> EndType:
 
     if end_date and repetitions_amount:
-        interval = self.__get_interval__(end_date, repetitions_amount)
+        interval = self.get_interval(end_date, repetitions_amount)
         if interval * repetitions_amount + task_start_date < end_date:
             return EndType.AMOUNT
         return EndType.DATE
