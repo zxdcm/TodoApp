@@ -1,8 +1,8 @@
 from dateutil.relativedelta import relativedelta
-from .models import EndType
+from .models import EndType, Period
 
 
-def get_interval(period_type, period_quantity):
+def get_interval(period_type: Period, period_quantity):
     if period_type.value == 'Min':
         return relativedelta(minutes=period_quantity)
     if period_type.value == 'Hour':
@@ -17,11 +17,11 @@ def get_interval(period_type, period_quantity):
         return relativedelta(years=period_quantity)
 
 
-def get_end_type(task_start_date,
+def get_end_type(task_start_date, period_type, period_amount,
                  end_date=None, repetitions_amount=None) -> EndType:
 
     if end_date and repetitions_amount:
-        interval = get_interval(end_date, repetitions_amount)
+        interval = get_interval(period_type, period_amount)
         print(end_date, repetitions_amount, end=' ')
         if interval * repetitions_amount + task_start_date < end_date:
             return EndType.AMOUNT

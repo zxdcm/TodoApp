@@ -214,13 +214,35 @@ class AppService:
         self.session.query(Task).get(task_id).delete()
         self.session.commit()
 
+    def add_subtask(self, user_id, task_id, subtask_id):
+        self.user_can_write_task(user_id, task_id)
+        self.user_can_write_task(user_id, subtask_id)
+        task = self.session.query(Task).get(subtask_id)
+        if task.parent_task_id:
+            return None
+        task.parent_task_id = task_id
+        self.session.commit()
+
+    def get_subtasks(self, user_id, task_id):
+        self.user_can_read_task(user_id, task_id)
+        own_assigned_tasks = self.session.query(Task).filter_by(
+            parent_task_id=task_id).filter(
+            or_(Task.user_id == user_id, Task.assigned_id == user_id)).all()
+        obs_tasks = self.session.query(Task).join(
+            user_task_observer_association_table).filter_by(
+                user_id=user_id).filter(Task.parent_task_id == task_id).all()
+        # editable_tasks = self.session.query(Task).filter_by(parent_task_id=task_id).join(
+        #     user_task_editors_association_table).filter_by(
+        #         user_id=user_id).all()
+        return own_assigned_tasks + obs_tasks
+
     def archive_task_by_id(self, user_id, task_id, archive_substasks=None):
         self.user_can_write_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
         task.status = TaskStatus.ARCHIVED
         self.session.commit()
 
-    def done_task_by_id(self, user_id, task_id):
+    def done_task_by_id(self, user_id, task_id, done_substasks=None):
         self.user_can_write_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
         task.status = TaskStatus.DONE
@@ -322,7 +344,9 @@ class AppService:
         period = Period[period_type.upper()]
         start_date = task.start_date
         print(period_amount, 'period amount', end=' ')
-        end_type = get_end_type(start_date, end_date, repetitions_amount)
+
+        end_type = get_end_type(start_date, period, period_amount,
+                                end_date, repetitions_amount)
         repeat = Repeat(user_id=user_id, task_id=task_id, period=period,
                         period_amount=period_amount,
                         end_type=end_type,
@@ -351,12 +375,12 @@ class AppService:
         repeats = self.session.query(Repeat).join(
             Repeat.task, user_task_editors_association_table).filter_by(
                 user_id=user_id).all()
-        repeats += self.session.query(Repeat).filter_by(user_id=user_id).all()
+        repeats += self.session.query(Repeat).filter_by(
+            user_id=user_id).all()
         return repeats
 
     def get_generated_tasks(self, user_id):
-        tasks = self.session.query(Task).join(Repeat.task).filter(
-            Task.parent_task_id == Repeat.task.id)
+        tasks = self.session.query(Task).join(Repeat).all()
         print(tasks)
         return None
         # return tasks
@@ -366,13 +390,16 @@ class AppService:
             repeats = self.get_all_repeats(user_id)
         repeats = self.get_all_repeats(user_id)
         active_list = []
+        print()
         for repeat in repeats:
-            #interval = self.interval
+            # interval = self.interval
+
             interval = get_interval(repeat.period, repeat.period_amount)
             near_activation = repeat.last_activated + interval
+
             if repeat.end_type == EndType.AMOUNT:
                 if (near_activation < datetime.datetime.now() and
-                        repeat.repetitions_count < repeat.repetitions_amount):
+                        repeat.repetitions_counter < repeat.repetitions_amount):
                     active_list.append(repeat)
             elif repeat.end_type == EndType.DATE:
                 if (near_activation < datetime.datetime.now() and
@@ -399,7 +426,7 @@ class AppService:
 
         """
         '''
-    1. foreach repeat:
+       foreach repeat:
           calculate interval according to period and period amount
           sum last_activation and interval and get near activation
           if near activation < current time
@@ -409,7 +436,7 @@ class AppService:
                 we keep creating tasks on every activation + interval
                                             until we reach current time
             '''
-        if active_repeats:
+        if active_repeats is None:
             active_repeats = self.get_active_repeats(user_id)
         for repeat in active_repeats:
             # interval = repeat.interval
@@ -417,7 +444,7 @@ class AppService:
             near_activation = repeat.last_activated + interval
             while near_activation < datetime.datetime.now():
                 if (repeat.end_type == EndType.AMOUNT and
-                        repeat.repetitions_count == repeat.repetitions_amount):
+                        repeat.repetitions_counter == repeat.repetitions_amount):
                     break
                 if (repeat.end_type == EndType.DATE and
                         near_activation > repeat.end_date):
@@ -432,6 +459,7 @@ class AppService:
                 task.observers = repeat.task.observers
                 repeat.last_activated = near_activation
                 near_activation = repeat.last_activated + interval
+                repeat.repetitions_counter += 1
                 self.session.add(task)
         self.session.commit()
 

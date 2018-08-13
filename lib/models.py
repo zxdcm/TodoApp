@@ -243,7 +243,7 @@ class Repeat(Base):
     period_amount = Column(Integer)
     end_type = Column(Enum(EndType))
     repetitions_amount = Column(Integer, nullable=False, default=0)
-    repetitions_count = Column(Integer, nullable=False, default=0)
+    repetitions_counter = Column(Integer, nullable=False, default=0)
     last_activated = Column(DateTime)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
