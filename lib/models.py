@@ -12,63 +12,25 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
 import enum
-import datetime
 
 
 Base = declarative_base()
 DATABASE = 'todoapp.db'
 
 
-class Database:
-
-    def __init__(self, connectionstring):
-        pass
-
-    @staticmethod
-    def set_up_connection():
-        engine = create_engine('sqlite:///todoapp.db')
-        session = sessionmaker(bind=engine)
-        Base.metadata.create_all(engine)
-        return session()
-        # db_connection.connect(reuse_if_open=True)
+def set_up_connection():
+    engine = create_engine('sqlite:///todoapp.db')
+    session = sessionmaker(bind=engine)
+    Base.metadata.create_all(engine)
+    return session()
 
 
-# link other tables later
-# user_group_association_table = Table(
-#     'user_groups', Base.metadata,
-#     Column('user_id', Integer, ForeignKey('users.id')),
-#     Column('group_id', Integer, ForeignKey('groups.id'))
-# )
-#
+class TaskUserEditors(Base):
+    __tablename__ = 'task_users_editors'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    task = Column(Integer, ForeignKey('tasks.id'))
 
-#
-#
-#
-# class TaskUserEditors(Base):
-#     __tablename__ = 'task_users_editors'
-#     id = Column(Integer, primary_key=True)
-#     user = Column(Integer, ForeignKey('users.id'))
-#     task = Column(Integer, ForeignKey('tasks.id'))
-#
-#
-# class TaskUserObservers(Base):
-#     __tablename__ = 'task_users_observers'
-#     id = Column(Integer, primary_key=True)
-#     user = Column(Integer, ForeignKey('users.id'))
-#     task = Column(Integer, ForeignKey('tasks.id'))
-
-
-user_task_observer_association_table = Table(
-    'task_users_observers', Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id')),
-    Column('task_id', Integer, ForeignKey('tasks.id'))
-)
-
-user_task_editors_association_table = Table(
-    'task_users_editors', Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id')),
-    Column('task_id', Integer, ForeignKey('tasks.id'))
-)
 
 task_folder_association_table = Table(
     'task_folders', Base.metadata,
@@ -82,7 +44,6 @@ class TaskStatus(enum.Enum):
     WORK = 'Work'
     DONE = 'Done'
     ARCHIVED = 'Archived'
-    OVERDUE = 'Overdue'
 
 
 class TaskPriority(enum.Enum):
@@ -92,26 +53,10 @@ class TaskPriority(enum.Enum):
     HIGH = 'High'
 
 
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True)
-
-    # folders = relationship('Folder', back_populates='user')
-    # managed_groups = relationship('Group', back_populates='owner')
-    # tasks = relationship('Task', back_populates='owner')
-
-    def __init__(self, username):
-        self.username = username
-
-    def __str__(self):
-        return self.username
-
-
 class Folder(Base):
     __tablename__ = 'folders'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer)
 
     name = Column(String)
     tasks = relationship('Task', secondary=task_folder_association_table)
@@ -124,42 +69,15 @@ class Folder(Base):
         return self.name
 
 
-# due to add of user rights this model dont need anymore
-# class Group(Base):
-#     pass
-    # __tablename__ = 'groups'
-    # id = Column(Integer, primary_key=True)
-    # user_id = Column(Integer, ForeignKey('users.id'))
-    # name = Column(String)
-    #
-    # def __init__(self, name, user_id):
-    #     self.name = name
-    #     self.user_id = user_id
-
-
-class Freezable:
-    ...
-#     def __new__(cls, *args, frozen=False, **kwargs):
-#         obj = super().__new__(cls, *args, **kwargs)
-#         super().__setattr__(obj, '_frozen', frozen)
-#         return obj
-#
-#     def __setattr__(self, name, value):
-#         if self._frozen:
-#             raise TypeError(f'Frozen {type(self).__name__} do not support assignment')
-#         super().__setattr__(name, value)
-
-
 class Task(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer)
     parent_task_id = Column(Integer, ForeignKey('tasks.id'), nullable=True)
-    assigned_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    assigned_id = Column(Integer, nullable=True)
 
     name = Column(String)
     description = Column(String)
-    # group = Column(Integer, ForeignKey('groups.id'), nullable=True)
 
     priority = Column(Enum(TaskPriority), default=TaskPriority.NONE,
                       nullable=False)
@@ -169,18 +87,7 @@ class Task(Base):
     start_date = Column(DateTime)
     end_date = Column(DateTime, nullable=True)
 
-    owner = relationship('User', foreign_keys=user_id)
-    assigned = relationship('User', foreign_keys=assigned_id)
-
-    observers = relationship('User',
-                             secondary='task_users_observers')
-    editors = relationship('User',
-                           secondary='task_users_editors')
-    # folders = relationship(
-    #     'Folder',
-    #     secondary=task_folder_association_table,
-    #     back_populates='tasks'
-    # )
+    editors = relationship('TaskUserEditors')
 
     notifications = relationship('Notification', back_populates='task')
 
@@ -235,7 +142,7 @@ class Repeat(Base):
     __tablename__ = 'repeats'
     id = Column(Integer, primary_key=True)
     task_id = Column(Integer, ForeignKey('tasks.id'))
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer)
 
     task = relationship('Task', back_populates='repeat')
 
@@ -247,7 +154,6 @@ class Repeat(Base):
     last_activated = Column(DateTime)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
-    # interval = Column(DateTime)
 
     def __init__(self, user_id, task_id,
                  period, period_amount,
@@ -263,7 +169,6 @@ class Repeat(Base):
         self.end_date = end_date
         self.start_date = start_date
         self.last_activated = self.start_date
-        # self.interval = interval
 
     def __str__(self):
         return (f'''
