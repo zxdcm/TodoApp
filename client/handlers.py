@@ -2,6 +2,37 @@ from lib.services import AppService
 from client.parsers import exclude_keys
 
 
+def task_show_handler(service: AppService, namespace):
+    if namespace.show_type == 'id':
+        task = service.get_task_by_id(user_id=namespace.user_id,
+                                      task_id=namespace.task_id)
+        print(task)
+
+    elif namespace.show_type == 'own':
+        [print(x) for x in service.get_own_tasks(
+            user_id=namespace.user_id)]
+
+    elif namespace.show_type == 'inner':
+        [print(x) for x in service.get_inner_tasks(
+            user_id=namespace.user_id, task_id=namespace.parent_task_id)]
+
+    elif namespace.show_type == 'access':
+        [print(x) for x in service.get_available_tasks(
+            user_id=namespace.user_id)]
+
+    elif namespace.show_type == 'assigned':
+        [print(x) for x in service.get_user_assigned_tasks(
+            user_id=namespace.user_id)]
+
+    elif namespace.show_type == 'repeat':
+        [print(x) for x in service.get_generated_tasks(
+            user_id=namespace.user_id)]
+
+    elif namespace.show_type == 'repeatless':
+        [print(x) for x in service.get_available_tasks(
+            user_id=namespace.user_id) if x.repeat]
+
+
 def task_handler(service: AppService, namespace):
     if namespace.action == 'create':
         task = service.create_task(user_id=namespace.user_id,
@@ -13,11 +44,7 @@ def task_handler(service: AppService, namespace):
                                    priority=namespace.priority)
         print(task)
     elif namespace.action == 'show':
-        if namespace.task_id == -1:
-            [print(x) for x in service.get_available_tasks(namespace.user_id)]
-        else:
-            print(service.get_task_by_id(namespace.user_id,
-                                         namespace.task_id))
+        task_show_handler(service, namespace)
     elif namespace.action == 'share':
         service.share_task(user_id=namespace.user_id,
                            user_receiver_id=namespace.user_receiver_id,
