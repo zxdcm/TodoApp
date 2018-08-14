@@ -10,9 +10,39 @@ def exclude_keys(namespace):
             namespace[x]}
 
 
+def task_show_parser(show_subparser):
+    task_show = show_subparser.add_subparsers(dest='show_type',
+                                              title='Show tasks info',
+                                              metavar='')
+
+    task_id = task_show.add_parser('id',
+                                   help='Show task by id')
+    task_id.add_argument('task_id',
+                         help='Task id')
+
+    task_show.add_parser('all',
+                         help='Show tasks created by user')
+
+    inner = task_show.add_parser('inner',
+                                 help='Show inner tasks by its parent id')
+    inner.add_argument('parent_task_id')
+
+    task_show.add_parser('access',
+                         help='Show tasks that user can access')
+
+    task_show.add_parser('assigned',
+                         help='Show tasks assigned on user')
+
+    task_show.add_parser('archived',
+                         help='Show archived tasks')
+
+    task_show.add_parser('repeat',
+                         help='Show tasks created by repeat')
+    task_show.add_parser('repeatless', help='Show tasks without repeat')
+
+
 def task_parser(sup_parser: argparse):
     task_parser = sup_parser.add_parser('task', help='Manage tasks')
-
     task_subparser = task_parser.add_subparsers(dest='action', metavar='')
 
     create = task_subparser.add_parser('create',
@@ -31,10 +61,6 @@ def task_parser(sup_parser: argparse):
     create.add_argument('-priority', type=str,
                         choices=[x.name.lower() for x in TaskPriority])
 
-    show = task_subparser.add_parser('show', help='Show task(s) info')
-    show.add_argument('-tid', '--task_id', type=int,
-                      help='Task id', default=-1)
-
     share = task_subparser.add_parser('share', help='Share task with user')
     share.add_argument('-tid', '--task_id', type=int,
                        help='Id of task to be shared', required=True)
@@ -46,6 +72,13 @@ def task_parser(sup_parser: argparse):
     unshare.add_argument('-tid', '--task_id', help='task id', required=True)
     unshare.add_argument('-uid', '--user_receiver_id',
                          help='user id', required=True)
+
+    assign = task_subparser.add_parser(
+        'assign', help='Assign task executor')
+
+    assign.add_argument('-tid', '--task_id', help='task id', required=True)
+    assign.add_argument('-uid', '--assigner_user_id',
+                        help='user id', required=True)
 
     edit = task_subparser.add_parser('edit', help='Edit task with provided id')
     edit.add_argument('-tid', '--task_id', required=True)
@@ -65,6 +98,9 @@ def task_parser(sup_parser: argparse):
     delete = task_subparser.add_parser('delete',
                                        help='Delete task with provided id')
     delete.add_argument('-tid', '--task_id', required=True, type=int)
+
+    show = task_subparser.add_parser('show', help='Show tasks')
+    task_show_parser(show)
 
 
 def folder_parser(sup_parser: argparse):
