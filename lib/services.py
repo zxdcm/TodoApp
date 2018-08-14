@@ -25,7 +25,8 @@ from lib.exceptions import (AccessError,
 from lib.utils import (get_end_type,
                        get_interval,
                        check_object_exist)
-import datetime
+
+from datetime import datetime
 
 
 class AppService:
@@ -47,10 +48,10 @@ class AppService:
     def create_task(self,
                     user_id,
                     name,
+                    status=TaskStatus.TODO,
+                    priority=TaskPriority.MEDIUM,
+                    start_date=datetime.now(),
                     description=None,
-                    start_date=None,
-                    priority=None,
-                    status=None,
                     end_date=None,
                     parent_task_id=None,
                     assigned_id=None
@@ -101,6 +102,7 @@ class AppService:
                     user_id: int,
                     task_id: int,
                     args: dict) -> Task:
+
         if 'priority' in args:
             args['priority'] = TaskPriority[args['priority'].upper()]
         if 'status' in args:
@@ -125,6 +127,17 @@ class AppService:
                            'Task')
         self.user_can_access_task(user_id, task_id)
         return task
+
+    def assign_user(self, user_id: int,
+                    task_id: int,
+                    user_receiver_id: int):
+
+        self.user_can_access_task(user_id, task_id)
+        new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
+        task = self.session.query(Task).get(task_id)
+        task.editors(new_editor)
+        task.assigned_id = user_id
+        self.session.commit()
 
     def share_task(self,
                    user_id: int,
@@ -151,6 +164,7 @@ class AppService:
             task=task.id)
 
         task.editors.remove(editor)
+
         self.session.commit()
 
     def get_own_tasks(self, user_id: int) -> List[Task]:
@@ -189,6 +203,7 @@ class AppService:
     def delete_task(self, user_id: int, task_id: int):
         self.user_can_access_task(user_id, task_id)
         self.session.query(Task).filter_by(id=task_id).delete()
+        self.session.query(Repeat).filter_by(Repeat.task.id == task_id).delete()  # TODO: test
         self.session.commit()
 
     def add_subtask(self, user_id: int, task_id: int, subtask_id: int):
@@ -196,31 +211,32 @@ class AppService:
         self.user_can_access_task(user_id, subtask_id)
         subtask = self.session.query(Task).get(subtask_id)
         if subtask.parent_task_id:
-            raise UpdateError('')
+            raise UpdateError('Subtask already has parent task.')
         subtask.parent_task_id = task_id
         self.session.commit()
 
     def get_subtasks(self, user_id: int, task_id: int):
         self.user_can_access_task(user_id, task_id)
-        ...
+        self.session.query(Task).filter_by(  # TODO:  fix
+            parent_task_id=task_id).all()
 
-    def archive_task_by_id(self,
+    def change_task_status(self,
                            user_id: int,
                            task_id: int,
-                           archive_substasks=None):
+                           status: str,
+                           apply_subtasks=None):
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
-        task.status = TaskStatus.ARCHIVED
-        if archive_substasks:
-            ...
-        self.session.commit()
 
-    def done_task_by_id(self, user_id: int, task_id: int, done_substasks=None):
-        self.user_can_access_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
-        task.status = TaskStatus.DONE
-        if done_substasks:
-            ...
+        try:
+            status = TaskStatus[status.upper()]
+        except:  # TODO:  specity type
+            raise UpdateError('Status not found')
+
+        task.status = status
+        if apply_subtasks:
+            self.session.query(Task).filter_by(  # TODO:  fix
+                parent_task_id=task_id).update({'status': status})
         self.session.commit()
 
     def create_folder(self, user_id: int, name: str) -> Folder:
@@ -479,7 +495,9 @@ class AppService:
             end_date = args['end_date']
         if 'repetitions_amount' in args:
             repetitions_amount = args['repetitions_amount']
-        args['end_type'] = get_end_type(start_date, end_date, repetitions_amount)
+        args['end_type'] = get_end_type(start_date,
+                                        end_date,
+                                        repetitions_amount)
 
         try:
             repeat.update(args)

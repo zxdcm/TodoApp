@@ -6,11 +6,13 @@ from sqlalchemy import (
     DateTime,
     Table,
     Enum)
+
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
-import enum
 
+from datetime import datetime
+import enum
 
 Base = declarative_base()
 DATABASE = 'todoapp.db'
@@ -39,7 +41,8 @@ task_folder_association_table = Table(
 
 class TaskStatus(enum.Enum):
     CREATED = 'Created'
-    WORK = 'Work'
+    TODO = 'Todo'
+    INWORK = 'In work'
     DONE = 'Done'
     ARCHIVED = 'Archived'
 
@@ -83,7 +86,7 @@ class Task(Base):
                     nullable=False)
 
     start_date = Column(DateTime)
-    end_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime)
 
     editors = relationship('TaskUserEditors')
 

@@ -55,7 +55,7 @@ def task_parser(sup_parser: argparse):
     create.add_argument('-sd', '--start_date', type=datetime,
                         help='Start date. Current time by default')
     create.add_argument('-ed', '--end_date', type=datetime,
-                        help='Eend date')
+                        help='End date')
     create.add_argument('-p', '--parent_task_id', type=int,
                         help='Parent task id')
     create.add_argument('-priority', type=str,
@@ -89,19 +89,25 @@ def task_parser(sup_parser: argparse):
 
     unshare = task_subparser.add_parser(
         'unshare', help='Unshare shared task with user')
-    unshare.add_argument('-tid', '--task_id', help='task id', required=True)
+    unshare.add_argument('-tid', '--task_id', help='Task id', required=True)
     unshare.add_argument('-uid', '--user_receiver_id',
                          help='user id', required=True)
 
     assign = task_subparser.add_parser(
         'assign', help='Assign task executor')
-    assign.add_argument('-tid', '--task_id', help='task id', required=True)
+    assign.add_argument('-tid', '--task_id', help='Task id', required=True)
     assign.add_argument('-uid', '--assigner_user_id',
                         help='user id', required=True)
 
+    subtask = task_subparser.add_parser('set_subtask',
+                                        help='Set task with task_id as the subtask of task with parent_id')
+    subtask.add_argument('-tid', '--task_id', required=True, help='Task id')
+    subtask.add_argument('-pid', '--parent_task_id', help='Parent task id',
+                         required=True)
+
     archive = task_subparser.add_parser('archive', help='Archive task')
     archive.add_argument('task_id', help='task id')
-    archive.add_argument('--done_subs', action='store_true',
+    archive.add_argument('--archive_subs', action='store_true',
                          help='Archive subtasks')
 
     done = task_subparser.add_parser('done', help='Done task')

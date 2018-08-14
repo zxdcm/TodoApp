@@ -75,15 +75,22 @@ def task_handler(service: AppService, namespace):
                             task_id=namespace.task_id,
                             user_receiver_id=namespace.user_receiver_id)
 
+    elif namespace.action == 'set_subtask':
+        service.add_subtask(user_id=namespace.user_id,
+                            task_id=namespace.parent_task_id,
+                            subtask_id=namespace.task_id)
+
     elif namespace.action == 'done':
-        service.done_task_by_id(user_id=namespace.user_id,
-                                task_id=namespace.task_id,
-                                done_substasks=namespace.done_subs)
+        service.change_task_status(user_id=namespace.user_id,
+                                   task_id=namespace.task_id,
+                                   status='done',
+                                   apply_on_subtasks=namespace.archive_subs)
 
     elif namespace.action == 'archive':
-        service.archive_substasks(user_id=namespace.user_id,
-                                  task_id=namespace.task_id,
-                                  archive_substasks=namespace.archive_subs)
+        service.change_task_status(user_id=namespace.user_id,
+                                   task_id=namespace.task_id,
+                                   status='archived',
+                                   apply_on_subtasks=namespace.archive_subs)
 
     elif namespace.action == 'delete':
         service.delete_task(user_id=namespace.user_id,
