@@ -7,7 +7,8 @@ class FolderExist(Exception):
     pass
 
 
-class UpdateError(Exception)
+class UpdateError(Exception):
+    pass
 
 
 class ObjectNotFound(Exception):

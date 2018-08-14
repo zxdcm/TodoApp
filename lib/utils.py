@@ -1,10 +1,11 @@
 from dateutil.relativedelta import relativedelta
-from .models import EndType, Period
+from lib.models import EndType, Period
+from lib.exceptions import ObjectNotFound
 
 
-def check_object_exist(obj, param, type):
+def check_object_exist(obj, params, type):
     if obj is None:
-        raise ObjectNotFound(f'type with {param} not found')
+        raise ObjectNotFound(f'type with params: {params} not found')
 
 
 def get_interval(period_type: Period, period_quantity):

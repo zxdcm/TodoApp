@@ -5,9 +5,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     Table,
-    Enum,
-    Boolean
-)
+    Enum)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import create_engine
@@ -18,8 +16,8 @@ Base = declarative_base()
 DATABASE = 'todoapp.db'
 
 
-def set_up_connection():
-    engine = create_engine('sqlite:///todoapp.db')
+def set_up_connection(connection_string=None):
+    engine = create_engine(f'sqlite:///todoapp.db')
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     return session()
@@ -29,7 +27,7 @@ class TaskUserEditors(Base):
     __tablename__ = 'task_users_editors'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
-    task = Column(Integer, ForeignKey('tasks.id'))
+    task_id = Column(Integer, ForeignKey('tasks.id'))
 
 
 task_folder_association_table = Table(
@@ -72,7 +70,7 @@ class Folder(Base):
 class Task(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    owner_id = Column(Integer)
     parent_task_id = Column(Integer, ForeignKey('tasks.id'), nullable=True)
     assigned_id = Column(Integer, nullable=True)
 
@@ -94,31 +92,31 @@ class Task(Base):
     #  uselist prop allows to set one to one relation
     repeat = relationship("Repeat", uselist=False, back_populates='task')
 
-    def __init__(self, name, user_id, description,
-                 start_date, end_date,
-                 priority, parent_task_id,
-                 group_id, assigned_id):
+    def __init__(self, name, owner_id, description=None,
+                 start_date=None, end_date=None,
+                 priority=None, parent_task_id=None, assigned_id=None):
         self.name = name
-        self.user_id = user_id
+        self.owner_id = owner_id
         self.description = description
         self.start_date = start_date
         self.end_date = end_date
         self.parent_task_id = parent_task_id
         self.assigned_id = assigned_id
-        self.group_id = group_id
         self.priority = priority
 
     def __str__(self):
         return (
             f'''
+
                 ID : {self.id}
                 Name: {self.name}
-                Owner: {self.owner.username}
+                Owner_id: {self.owner_id}
                 Description: {self.description}
                 Status: {self.status.value}
                 Priority: {self.priority.value}
                 Start Date: {self.start_date}
                 End Date: {self.end_date}
+                Repeat: {self.repeat}
             '''
         )
 
@@ -204,7 +202,3 @@ class Notification(Base):
                 Task: {self.task_id}
             '''
         )
-
-#
-# class Comment(Base):
-#     pass
