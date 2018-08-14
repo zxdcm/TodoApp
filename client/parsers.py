@@ -1,6 +1,6 @@
 from datetime import datetime
 import argparse
-from lib.models import TaskPriority
+from lib.models import TaskPriority, TaskStatus
 
 
 def exclude_keys(namespace):
@@ -10,7 +10,7 @@ def exclude_keys(namespace):
             namespace[x]}
 
 
-def task_show_parser(show_subparser):
+def task_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
                                               title='Show tasks info',
                                               metavar='')
@@ -20,7 +20,7 @@ def task_show_parser(show_subparser):
     task_id.add_argument('task_id',
                          help='Task id')
 
-    task_show.add_parser('all',
+    task_show.add_parser('own',
                          help='Show tasks created by user')
 
     inner = task_show.add_parser('inner',
@@ -61,24 +61,8 @@ def task_parser(sup_parser: argparse):
     create.add_argument('-priority', type=str,
                         choices=[x.name.lower() for x in TaskPriority])
 
-    share = task_subparser.add_parser('share', help='Share task with user')
-    share.add_argument('-tid', '--task_id', type=int,
-                       help='Id of task to be shared', required=True)
-    share.add_argument('-uid', '--user_receiver_id', type=int,
-                       help='User id to share task with', required=True)
-
-    unshare = task_subparser.add_parser(
-        'unshare', help='Unshare shared task with user')
-    unshare.add_argument('-tid', '--task_id', help='task id', required=True)
-    unshare.add_argument('-uid', '--user_receiver_id',
-                         help='user id', required=True)
-
-    assign = task_subparser.add_parser(
-        'assign', help='Assign task executor')
-
-    assign.add_argument('-tid', '--task_id', help='task id', required=True)
-    assign.add_argument('-uid', '--assigner_user_id',
-                        help='user id', required=True)
+    show = task_subparser.add_parser('show', help='Show tasks')
+    task_show_parser(show)
 
     edit = task_subparser.add_parser('edit', help='Edit task with provided id')
     edit.add_argument('-tid', '--task_id', required=True)
@@ -94,13 +78,40 @@ def task_parser(sup_parser: argparse):
                       help='Parent task id')
     edit.add_argument('-priority', type=str,
                       choices=[x.name.lower() for x in TaskPriority])
+    edit.add_argument('-status', type=str,
+                      choices=[x.name.lower() for x in TaskStatus])
+
+    share = task_subparser.add_parser('share', help='Share task with user')
+    share.add_argument('-tid', '--task_id', type=int,
+                       help='Id of task to be shared', required=True)
+    share.add_argument('-uid', '--user_receiver_id', type=int,
+                       help='User id to share task with', required=True)
+
+    unshare = task_subparser.add_parser(
+        'unshare', help='Unshare shared task with user')
+    unshare.add_argument('-tid', '--task_id', help='task id', required=True)
+    unshare.add_argument('-uid', '--user_receiver_id',
+                         help='user id', required=True)
+
+    assign = task_subparser.add_parser(
+        'assign', help='Assign task executor')
+    assign.add_argument('-tid', '--task_id', help='task id', required=True)
+    assign.add_argument('-uid', '--assigner_user_id',
+                        help='user id', required=True)
+
+    archive = task_subparser.add_parser('archive', help='Archive task')
+    archive.add_argument('task_id', help='task id')
+    archive.add_argument('--done_subs', action='store_true',
+                         help='Archive subtasks')
+
+    done = task_subparser.add_parser('done', help='Done task')
+    done.add_argument('task_id', help='task id')
+    done.add_argument('--done_subs', action='store_true',
+                      help='Done subtasks')
 
     delete = task_subparser.add_parser('delete',
                                        help='Delete task with provided id')
-    delete.add_argument('-tid', '--task_id', required=True, type=int)
-
-    show = task_subparser.add_parser('show', help='Show tasks')
-    task_show_parser(show)
+    delete.add_argument('task_id', type=int)
 
 
 def folder_parser(sup_parser: argparse):
@@ -127,13 +138,17 @@ def folder_parser(sup_parser: argparse):
 
     edit = folder_subparser.add_parser(
         'edit', help='Edit folder with provided id')
-    edit.add_argument('-fid', '--folder_id', required=True)
-    edit.add_argument('-n', '--name',
+    edit.add_argument('folder_id')
+    edit.add_argument('name',
                       help='Folder name')
 
     delete = folder_subparser.add_parser('delete',
                                          help='Delete folder with provided id')
-    delete.add_argument('-fid', '--folder_id', required=True)
+    delete.add_argument('folder_id')
+
+
+def repeat_parser(sup_parser: argparse):
+    ...  # TODO:
 
 
 def get_args():
@@ -146,4 +161,5 @@ def get_args():
         description='Select entity', metavar='')
     task_parser(entity_parser)
     folder_parser(entity_parser)
+    repeat_parser(entity_parser)
     return main_parser.parse_args()

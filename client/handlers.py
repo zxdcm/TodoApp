@@ -30,7 +30,7 @@ def task_show_handler(service: AppService, namespace):
 
     elif namespace.show_type == 'repeatless':
         [print(x) for x in service.get_available_tasks(
-            user_id=namespace.user_id) if x.repeat]
+            user_id=namespace.user_id) if x.repeat is None]
 
 
 def task_handler(service: AppService, namespace):
@@ -43,8 +43,20 @@ def task_handler(service: AppService, namespace):
                                    parent_task_id=namespace.parent_task_id,
                                    priority=namespace.priority)
         print(task)
+
     elif namespace.action == 'show':
         task_show_handler(service, namespace)
+
+    elif namespace.action == 'edit':
+        args = exclude_keys(namespace)
+        if len(args) == 0:
+            print('Nothing to update.')
+        else:
+            task = service.update_task(user_id=namespace.user_id,
+                                       task_id=namespace.task_id,
+                                       args=args)
+            print('Updated task:', task)
+
     elif namespace.action == 'share':
         service.share_task(user_id=namespace.user_id,
                            user_receiver_id=namespace.user_receiver_id,
@@ -57,15 +69,21 @@ def task_handler(service: AppService, namespace):
                          task_id=namespace.task_id)
 
         print(f'Task {namespace.task_id} unshared on {namespace.user_receiver_id}')
-    elif namespace.action == 'edit':
-        args = exclude_keys(namespace)
-        if len(args) == 0:
-            print('Nothing to update.')
-        else:
-            service.update_task(user_id=namespace.user_id,
+
+    elif namespace.action == 'assign':
+        service.assign_user(user_id=namespace.user_id,
+                            task_id=namespace.task_id,
+                            user_receiver_id=namespace.user_receiver_id)
+
+    elif namespace.action == 'done':
+        service.done_task_by_id(user_id=namespace.user_id,
                                 task_id=namespace.task_id,
-                                args=args)
-            print('Task updated')
+                                done_substasks=namespace.done_subs)
+
+    elif namespace.action == 'archive':
+        service.archive_substasks(user_id=namespace.user_id,
+                                  task_id=namespace.task_id,
+                                  archive_substasks=namespace.archive_subs)
 
     elif namespace.action == 'delete':
         service.delete_task(user_id=namespace.user_id,
