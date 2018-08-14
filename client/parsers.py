@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import argparse
 from lib.models import TaskPriority
 
@@ -23,9 +23,9 @@ def task_parser(sup_parser: argparse):
                         '--description',
                         help='Task description')
     create.add_argument('-sd', '--start_date', type=datetime,
-                        help='Set start date. Current time by default')
+                        help='Start date. Current time by default')
     create.add_argument('-ed', '--end_date', type=datetime,
-                        help='Set end date')
+                        help='Eend date')
     create.add_argument('-p', '--parent_task_id', type=int,
                         help='Parent task id')
     create.add_argument('-priority', type=str,
@@ -35,33 +35,28 @@ def task_parser(sup_parser: argparse):
     show.add_argument('-tid', '--task_id', type=int,
                       help='Task id', default=-1)
 
-    share_parent = task_subparser.add_parser('share',
-                                             help='Share task with user')
-    share_parent.add_argument('--tid', '--task_id', help='task id',
-                              required=True)
-    share = share_parent.add_mutually_exclusive_group(required=True)
+    share = task_subparser.add_parser('share', help='Share task with user')
+    share.add_argument('-tid', '--task_id', type=int,
+                       help='Id of task to be shared', required=True)
     share.add_argument('-uid', '--user_receiver_id', type=int,
-                       help='User id to share task with')
-    # share.add_argument('--uemail', '--user_receiver_email',
-    #                    help='User email to share task with')
-    # share.add_argument('--st', '--share_type', help='Share type',
-    #                    default='read', choices=['read', 'write'])
+                       help='User id to share task with', required=True)
 
     unshare = task_subparser.add_parser(
         'unshare', help='Unshare shared task with user')
     unshare.add_argument('-tid', '--task_id', help='task id', required=True)
-    unshare.add_argument('-uid', '--user_id', help='user id', required=True)
+    unshare.add_argument('-uid', '--user_receiver_id',
+                         help='user id', required=True)
 
     edit = task_subparser.add_parser('edit', help='Edit task with provided id')
     edit.add_argument('-tid', '--task_id', required=True)
-    edit.add_argument('--name',
+    edit.add_argument('-n', '--name',
                       help='Task name')
     edit.add_argument('-d', '--description',
                       help='Task description')
     edit.add_argument('-sd', '--start_date', type=datetime,
-                      help='Set start date')
+                      help='Start date')
     edit.add_argument('-ed', '--end_date', type=datetime,
-                      help='Set end date')
+                      help='End date')
     edit.add_argument('-p', '--parent_task_id', type=int,
                       help='Parent task id')
     edit.add_argument('-priority', type=str,
@@ -73,6 +68,7 @@ def task_parser(sup_parser: argparse):
 
 
 def folder_parser(sup_parser: argparse):
+
     folder_parser = sup_parser.add_parser('folder', help='Manage folders')
     folder_subparser = folder_parser.add_subparsers(dest='action', metavar='')
 
@@ -90,7 +86,6 @@ def folder_parser(sup_parser: argparse):
 
     unpopulate = folder_subparser.add_parser(
         'unpopulate', help='delete task from folder')
-
     unpopulate.add_argument('-fid', '--folder_id', required=True)
     unpopulate.add_argument('-tid', '--task_id', required=True)
 
@@ -98,7 +93,7 @@ def folder_parser(sup_parser: argparse):
         'edit', help='Edit folder with provided id')
     edit.add_argument('-fid', '--folder_id', required=True)
     edit.add_argument('-n', '--name',
-                      help='Task name')
+                      help='Folder name')
 
     delete = folder_subparser.add_parser('delete',
                                          help='Delete folder with provided id')
