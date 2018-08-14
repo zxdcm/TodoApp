@@ -1,5 +1,5 @@
 from lib.services import AppService
-from parsers import exclude_keys
+from client.parsers import exclude_keys
 
 
 def task_handler(service: AppService, namespace):
@@ -14,7 +14,7 @@ def task_handler(service: AppService, namespace):
         print(task)
     elif namespace.action == 'show':
         if namespace.task_id == -1:
-            [print(x) for x in service.get_own_tasks(namespace.user_id)]
+            [print(x) for x in service.get_available_tasks(namespace.user_id)]
         else:
             print(service.get_task_by_id(namespace.user_id,
                                          namespace.task_id))
@@ -22,16 +22,28 @@ def task_handler(service: AppService, namespace):
         service.share_task(user_id=namespace.user_id,
                            user_receiver_id=namespace.user_receiver_id,
                            task_id=namespace.task_id)
-        print(f'Task {namespace.task_id} shared with {namespace.user_receiver_id}')
+        print(f'Task with ID={namespace.task_id} shared with user ID={namespace.user_receiver_id}')
+
     elif namespace.action == 'unshare':
-        service.share_task(user_id=namespace.user_id,
-                           user_receiver_id=namespace.user_receiver_id,
-                           task_id=namespace.task_id)
+        service.unshared(user_id=namespace.user_id,
+                         user_receiver_id=namespace.user_receiver_id,
+                         task_id=namespace.task_id)
+
         print(f'Task {namespace.task_id} unshared on {namespace.user_receiver_id}')
     elif namespace.action == 'edit':
-        service.update_task(user_id=namespace.user_id,
-                            task_id=namespace.task_id,
-                            args=exclude_keys(namespace))
+        args = exclude_keys(namespace)
+        if len(args) == 0:
+            print('Nothing to update.')
+        else:
+            service.update_task(user_id=namespace.user_id,
+                                task_id=namespace.task_id,
+                                args=args)
+            print('Task updated')
+
+    elif namespace.action == 'delete':
+        service.delete_task(user_id=namespace.user_id,
+                            task_id=namespace.task_id)
+        print(f'Task with {namespace.task_id} ID deleted')
 
 
 def folder_handler(service: AppService, namespace):
@@ -49,16 +61,19 @@ def folder_handler(service: AppService, namespace):
             for x in folder.tasks:
                 print(x)
     elif namespace.action == 'edit':
+
         service.update_folder(folder_id=namespace.folder_id,
                               user_id=namespace.user_id,
                               args=exclude_keys(namespace))
 
     elif namespace.action == 'populate':
+
         service.populate_folder(user_id=namespace.user_id,
                                 folder_id=namespace.folder_id,
                                 task_id=namespace.task_id)
 
     elif namespace.action == 'unpopulate':
+
         service.unpopulate_folder(user_id=namespace.user_id,
                                   folder_id=namespace.folder_id,
                                   task_id=namespace.task_id)

@@ -1,5 +1,4 @@
 from lib.models import (
-    User,
     Task,
     Folder,
     Notification,
@@ -18,9 +17,11 @@ from sqlalchemy import (orm,
                         or_)
 from typing import List
 
-from lib.exceptions.py import (AccessError,
-                               FolderExist,
-                               UpdateError)
+from lib.exceptions import (AccessError,
+                            FolderExist,
+                            UpdateError,
+                            ObjectNotFound)
+
 from lib.utils import (get_end_type,
                        get_interval,
                        check_object_exist)
@@ -35,13 +36,11 @@ class AppService:
         self.session = session
 
     def user_can_access_task(self, user_id: int, task_id: int):
-        if self.session.query(Task).join(TaskUserEditors).filter_by(
-                user_id=user_id, task_id=task_id).one_or_none():
+        if self.session.query(Task).filter_by(
+                id=task_id, owner_id=user_id).one_or_none():
             return True
-        raise AccessError('User doesnt have permissions to this task')
-        task = self.session.query(Task).join(TaskUserEditors).filter_by(
-            user_id == user_id, task_id == task_id).one_or_none()
-        if task:
+        if self.session.query(Task).join(TaskUserEditors).filter_by(
+                user_id=user_id, task_id=task_id).all():
             return True
         raise AccessError('User doesnt have permissions to this task')
 
@@ -88,10 +87,11 @@ class AppService:
         if parent_task_id:
             self.user_can_access_task(user_id=user_id, task_id=parent_task_id)
 
-        task = Task(user_id=user_id, name=name, description=description,
+        task = Task(owner_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
-                    assigned_id=assigned_id, group_id=group_id)
+                    assigned_id=assigned_id)
+        task.editors.append(TaskUserEditors(user_id=user_id, task_id=task.id))
 
         self.session.add(task)
         self.session.commit()
@@ -107,19 +107,24 @@ class AppService:
             args['status'] = TaskStatus[args['status'].upper()]
 
         self.user_can_access_task(user_id=user_id, task_id=task_id)
+
         try:
-            self.session.query(Task).get(task_id).update(args)
+            self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
-            raise UpdateError('Dictionary error') from e
+            raise UpdateError('Args error. Args dict can not be empty') from e
+
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
     def get_task_by_id(self,
                        user_id: int,
                        task_id: int) -> Task:
-        task = self.session.query(Task).join(TaskUserEditors).filter(
-            TaskUserEditors.user_id == user_id, Task.id == task_id)
-        check_object_exist(task, (user_id, task_id), 'Task')
+        task = self.session.query(Task).get(task_id)
+        check_object_exist(task,
+                           f'user_id : {user_id} task_id : {task_id}',
+                           'Task')
+        self.user_can_access_task(user_id, task_id)
+        return task
 
     def share_task(self,
                    user_id: int,
@@ -127,8 +132,9 @@ class AppService:
                    user_receiver_id: int):
 
         self.user_can_access_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
-        task.editors.append(TaskUserEditors(user_id=user_id, task=task))
+        new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
+
+        self.session.add(new_editor)
         self.session.commit()
 
     def unshare_task(self,
@@ -137,9 +143,13 @@ class AppService:
                      user_receiver_id: int):
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
+
+        if user_receiver_id == task.owner_id:
+            raise AccessError('You can not unshare task with its owner')
         editor = self.session.query(TaskUserEditors).filter_by(
             user_id=user_id,
-            task_id=task_id)
+            task=task.id)
+
         task.editors.remove(editor)
         self.session.commit()
 
@@ -157,7 +167,7 @@ class AppService:
 
         """
         return self.session.query(
-            Task).filter_by(user_id=user_id).all()
+            Task).filter_by(owner_id=user_id).all()
 
     def get_user_assigned_tasks(self, user_id: int) -> List[Task]:
         return self.session.query(
@@ -178,23 +188,26 @@ class AppService:
 
     def delete_task(self, user_id: int, task_id: int):
         self.user_can_access_task(user_id, task_id)
-        self.session.query(Task).get(task_id).delete()
+        self.session.query(Task).filter_by(id=task_id).delete()
         self.session.commit()
 
     def add_subtask(self, user_id: int, task_id: int, subtask_id: int):
         self.user_can_access_task(user_id, task_id)
         self.user_can_access_task(user_id, subtask_id)
-        task = self.session.query(Task).get(subtask_id)
-        if task.parent_task_id:
-            return None
-        task.parent_task_id = task_id
+        subtask = self.session.query(Task).get(subtask_id)
+        if subtask.parent_task_id:
+            raise UpdateError('')
+        subtask.parent_task_id = task_id
         self.session.commit()
 
     def get_subtasks(self, user_id: int, task_id: int):
         self.user_can_access_task(user_id, task_id)
         ...
 
-    def archive_task_by_id(self, user_id: int, task_id: int, archive_substasks=None):
+    def archive_task_by_id(self,
+                           user_id: int,
+                           task_id: int,
+                           archive_substasks=None):
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
         task.status = TaskStatus.ARCHIVED
@@ -238,7 +251,9 @@ class AppService:
     def get_folder_by_id(self, user_id: int, folder_id: int) -> Folder:
         folder = self.session.query(Folder).filter_by(
             id=folder_id, user_id=user_id).one_or_none()
-        check_object_exist(folder, (user_id, folder_id), 'Folder')
+        check_object_exist(folder,
+                           f'user_id : {user_id} folder_id : {folder_id}',
+                           'Folder')
         return folder
 
     def get_folder_by_name(self, user_id: int, folder_name: int) -> Folder:
@@ -247,15 +262,25 @@ class AppService:
         check_object_exist(folder, (user_id, folder_name), 'Folder')
         return folder
 
+    def get_or_create_folder(self, user_id: int, name: str) -> Folder:
+        try:
+            folder = self.get_folder_by_name(user_id, name)
+        except ObjectNotFound as e:
+            folder = Folder(user_id=user_id, name=name)
+            self.session.add(folder)
+            self.session.commit()
+        finally:
+            return folder
+
     def get_all_folders(self, user_id: int) -> List[Folder]:
         return self.session.query(Folder).filter_by(user_id=user_id).all()
 
     def update_folder(self, user_id: int, folder_id: int, args: dict):
-        folder = self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
+        self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
         try:
-            folder.update(args)
+            self.session.query(Folder).update(args)
         except exc.SQLAlchemyError as e:
-            raise UpdateError('Dictionary error')
+            raise UpdateError('Args error. Args dict can not be empty')
         self.session.commit()
 
     def delete_folder(self, user_id: int, folder_id: int):
@@ -324,7 +349,7 @@ class AppService:
         repeat = self.session.query(Repeat).get(repeat_id)
         check_object_exist(repeat, repeat_id, 'Repeat')
         try:
-            self.user_can_read_task(user_id, repeat.task_id)
+            self.user_can_access_task(user_id, repeat.task_id)
         except AccessError as e:
             raise AccessError('User doesnt have permission to access this Repeat') from e
         return repeat
@@ -442,12 +467,12 @@ class AppService:
                       user_id: int,
                       repeat_id: int,
                       args: dict) -> Repeat:
-        repeat = self.session.query(Repeat).get(repeat_id)
-        check_object_exist(repeat, repeat_id, 'Repeat')
-        self.user_can_write_task(user_id, repeat.task_id)
+        repeat = self.get_repeat_by_id(user_id=user_id, repeat_id=repeat_id)
+
         start_date = repeat.start_date
         end_date = repeat.end_date
         repetitions_amount = repeat.repetitions_amount
+
         if 'start_date' in args:
             start_date = args['start_date']
         if 'end_date' in args:
@@ -455,10 +480,11 @@ class AppService:
         if 'repetitions_amount' in args:
             repetitions_amount = args['repetitions_amount']
         args['end_type'] = get_end_type(start_date, end_date, repetitions_amount)
+
         try:
             repeat.update(args)
         except exc.SQLAlchemyError as e:
-            raise UpdateError('Dictionary error')from e
+            raise UpdateError('Args error. Args dict can not be empty') from e
         return repeat
 
         # TODO:  migrate out of this class
@@ -466,7 +492,7 @@ class AppService:
     def create_user(name):
         session = set_up_connection()
         try:
-            user = User(name)
+            user = name
             session.add(user)
             session.commit()
             session.close()
