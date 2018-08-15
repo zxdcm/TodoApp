@@ -304,11 +304,6 @@ class AppService:
         self.session.delete(folder)
         self.session.commit()
 
-    def get_folder_tasks(self, user_id: int):
-        self.get_user_by_id(user_id)
-        return self.session.query(Folder).join(
-            task_folder_association_table).filter_by(user_id=user_id).all()
-
     def get_task_folders(self, user_id: int, task_id: int):
         return self.session.query(Folder).filter_by(user_id=user_id,
                                                     task_id=task_id).all()

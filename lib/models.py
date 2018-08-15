@@ -110,7 +110,6 @@ class Task(Base):
     def __str__(self):
         return (
             f'''
-
                 ID : {self.id}
                 Name: {self.name}
                 Owner_id: {self.owner_id}

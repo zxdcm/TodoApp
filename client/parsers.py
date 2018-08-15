@@ -120,6 +120,25 @@ def task_parser(sup_parser: argparse):
     delete.add_argument('task_id', type=int)
 
 
+def folder_show_parser(show_subparser: argparse):
+    task_show = show_subparser.add_subparsers(dest='show_type',
+                                              title='Show folder and its info',
+                                              metavar='')
+    folder_id = task_show.add_parser('id',
+                                     help='Show folder by it')
+    folder_id.add_argument('folder_id',
+                           help='Folder id')
+    folder_id.add_argument('--tasks',
+                           action='store_true',
+                           help='Show folder tasks')
+
+    folder_all = task_show.add_parser('all',
+                                      help='Show all folders')
+    folder_all.add_argument('--tasks',
+                            action='store_true',
+                            help='Show folder_tasks')
+
+
 def folder_parser(sup_parser: argparse):
 
     folder_parser = sup_parser.add_parser('folder', help='Manage folders')
@@ -128,9 +147,8 @@ def folder_parser(sup_parser: argparse):
     create = folder_subparser.add_parser('create', help='Create new folder')
     create.add_argument('name', help='Folder name')
 
-    show = folder_subparser.add_parser('show', help='Show folder(s) info')
-    show.add_argument('-fid', '--folder_id', type=int,
-                      help='Folder id', default=-1)
+    show = folder_subparser.add_parser('show', help='Show folders  info')
+    folder_show_parser(show)
 
     populate = folder_subparser.add_parser(
         'populate', help='Populate folder with provided task')

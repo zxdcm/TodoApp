@@ -49,7 +49,7 @@ def task_handler(service: AppService, namespace):
 
     elif namespace.action == 'edit':
         args = exclude_keys(namespace)
-        if len(args) == 0:
+        if not args:
             print('Nothing to update.')
         else:
             task = service.update_task(user_id=namespace.user_id,
@@ -98,22 +98,52 @@ def task_handler(service: AppService, namespace):
         print(f'Task with {namespace.task_id} ID deleted')
 
 
+def folder_show_handler(service: AppService, namespace):
+
+    if namespace.show_type == 'id':
+        folder = service.get_folder_by_id(user_id=namespace.user_id,
+                                          folder_id=namespace.folder_id)
+        print('Folder name:', folder)
+        if namespace.tasks:
+            if folder.tasks:
+                print('Folder tasks:')
+                [print(x) for x in folder.tasks]
+            else:
+                print('Folder dont have any tasks')
+
+    elif namespace.show_type == 'all':
+        folders = service.get_all_folders(user_id=namespace.user_id)
+
+        if not folders:
+            print('You dont have folders')
+            return
+
+        if namespace.tasks:
+            for folder in folders:
+                print(folder)
+                if folder.tasks:
+                    for task in folder.tasks:
+                        print(task)
+        else:
+            for folder in folders:
+                print(folder)
+
+
 def folder_handler(service: AppService, namespace):
     if namespace.action == 'create':
         folder = service.create_folder(user_id=namespace.user_id,
                                        name=namespace.name)
-    elif namespace.action == 'show':
-        if namespace.folder_id == -1:
-            [print(x) for x in service.get_all_folders(user_id=namespace.user_id)]
-        else:
-            folder = service.get_folder_by_id(user_id=namespace.user_id,
-                                              folder_id=namespace.folder_id)
-            print(f'Folder name: {folder.name}')
-            print(f'Folder tasks:')
-            for x in folder.tasks:
-                print(x)
-    elif namespace.action == 'edit':
+        print(folder)
 
+    elif namespace.action == 'show':
+        folder_show_handler(service, namespace)
+
+    elif namespace.action == 'edit':
+        try:
+            folder = service.get_folder_by_name(namespace.user_id)
+        except:
+            print('Folder with such name already exist')
+            return
         service.update_folder(folder_id=namespace.folder_id,
                               user_id=namespace.user_id,
                               args=exclude_keys(namespace))
