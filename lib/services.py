@@ -48,8 +48,8 @@ class AppService:
     def create_task(self,
                     user_id,
                     name,
-                    status=TaskStatus.TODO,
-                    priority=TaskPriority.MEDIUM,
+                    status='todo',
+                    priority='medium',
                     start_date=datetime.now(),
                     description=None,
                     end_date=None,
@@ -322,9 +322,9 @@ class AppService:
         self.session.delete(folder)
         self.session.commit()
 
-    def get_folder_tasks(self, user_id: int):
-        return self.session.query(Folder).join(
-            task_folder_association_table).filter_by(user_id=user_id).all()
+    # def get_folder_tasks(self, user_id: int): # probably that is pointless
+    #     return self.session.query(Folder).join(
+    #         task_folder_association_table).filter_by(user_id=user_id).all()
 
     def get_task_folders(self, user_id: int, task_id: int):
         return self.session.query(Folder).filter_by(user_id=user_id,
@@ -358,9 +358,8 @@ class AppService:
 
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
-
         if task.start_date is None:
-            task.start_date == datetime.now()  # TODO: raise exception
+            task.start_date = datetime.now()  # TODO: raise exceptio
 
         period = Period[period_type.upper()]
         start_date = task.start_date
@@ -386,27 +385,19 @@ class AppService:
             raise AccessError('User doesnt have permission to access this Repeat') from e
         return repeat
 
-    def get_shared_repeats(self, user_id: int) -> List[Repeat]:
-        ...
-        # return self.session.query(Repeat).join(
-        #     Repeat.task, user_task_editors_association_table).filter_by(
-        #         user_id=user_id).all()
+    def get_all_repeats(self, user_id: int) -> List[Repeat]:
+        return self.session.query(Repeat).join(Task).join(
+            TaskUserEditors).filter(
+                TaskUserEditors.user_id == user_id).all()
 
     def get_own_repeats(self, user_id: int) ->Repeat:
         return self.session.query(Repeat).filter_by(user_id=user_id).all()
 
-    def get_all_repeats(self, user_id: int) -> List[Repeat]:
-        ...
-        # repeats = self.session.query(Repeat).join(
-        #     Repeat.task, user_task_editors_association_table).filter_by(
-        #         user_id=user_id).all()
-        # repeats += self.session.query(Repeat).filter_by(
-        #     user_id=user_id).all()
-        # return repeats
-
     def get_generated_tasks(self, user_id: int):
-        ...
-        # return tasks
+        return self.session.query(Task).join(  # TODO: fix
+            Repeat).filter(
+                Task.parent_task_id == Repeat.task_id).join(
+                TaskUserEditors).all()
 
     def get_active_repeats(self, user_id: int, repeats=None) -> List[Repeat]:
         if repeats is None:
@@ -422,17 +413,17 @@ class AppService:
 
             if repeat.end_type == EndType.AMOUNT:
 
-                if (near_activation < datetime.datetime.now() and
+                if (near_activation < datetime.now() and
                         repeat.repetitions_counter < repeat.repetitions_amount):
                     active_list.append(repeat)
 
             elif repeat.end_type == EndType.DATE:
 
-                if (near_activation < datetime.datetime.now() and
+                if (near_activation < datetime.now() and
                         near_activation < repeat.end_date):
                     active_list.append(repeat)
 
-            elif near_activation < datetime.datetime.now():
+            elif near_activation < datetime.now():
                 active_list.append(repeat)
 
         return active_list
@@ -469,7 +460,7 @@ class AppService:
             interval = get_interval(repeat.period, repeat.period_amount)
             near_activation = repeat.last_activated + interval
 
-            while near_activation < datetime.datetime.now():
+            while near_activation < datetime.now():
 
                 if (repeat.end_type == EndType.AMOUNT and
                         repeat.repetitions_counter == repeat.repetitions_amount):
@@ -484,11 +475,18 @@ class AppService:
                                         start_date=near_activation,
                                         parent_task_id=repeat.task.id,
                                         assigned_id=repeat.task.assigned_id)
-                task.editors = repeat.task.editors
                 repeat.last_activated = near_activation
                 near_activation = repeat.last_activated + interval
                 repeat.repetitions_counter += 1
+                for x in repeat.task.editors:
+                    if x.user_id is user_id:
+                        continue
+                    task.editors.append(
+                        TaskUserEditors(user_id=x.user_id,
+                                        task_id=task.id))
+                    # # TODO:  fix
                 self.session.add(task)
+
         self.session.commit()
 
     def delete_repeat(self, user_id: int, repeat_id: int):
@@ -520,18 +518,6 @@ class AppService:
         except exc.SQLAlchemyError as e:
             raise UpdateError('Args error. Args dict can not be empty') from e
         return repeat
-
-        # TODO:  migrate out of this class
-    @staticmethod
-    def create_user(name):
-        session = set_up_connection()
-        try:
-            user = name
-            session.add(user)
-            session.commit()
-            session.close()
-        except exc.IntegrityError:
-            print('Database error')
 
     def get_obj_by_id(self, cls, id: int):
         """This method allows to get any object from the db without validation
