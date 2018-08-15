@@ -49,6 +49,7 @@ def task_handler(service: AppService, namespace):
 
     elif namespace.action == 'edit':
         args = exclude_keys(namespace)
+        print(args)
         if not args:
             print('Nothing to update.')
         else:
@@ -171,11 +172,56 @@ def folder_handler(service: AppService, namespace):
         # service.save_updates()
 
 
-def repeat_handler(service: AppService, namespace):
+def print_repeats(repeat):
     ...
 
 
+def repeat_show_handlers(service: AppService, namespace):
+    if namespace.show_type == 'id':
+        repeat = service.get_repeat_by_id(user_id=namespace.user_id,
+                                          repeat_id=namespace.repeat_id)
+        if namespace.tasks:
+            ...  # TODO:
+
+    elif namespace.show_type == 'all':
+        repeats = service.get_all_repeats(user_id=namespace.user_id)
+
+        #  TODO:
+
+
+def repeat_handler(service: AppService, namespace):
+    if namespace.action == 'create':
+
+        repeat = service.create_repeat(user_id=namespace.user_id,
+                                       period_amount=namespace.period_amount,
+                                       period_Type=namespace.period_type,
+                                       repetitions_amount=namespace.repeat_amount,
+                                       end_date=namespace.end_date)
+        print(repeat)
+
+    elif namespace.action == 'show':
+
+        repeat_show_handlers(service, namespace)
+
+    elif namespace.action == 'edit':
+
+        args = exclude_keys(namespace)
+        if not args:
+            print('Nothing to update')
+            return
+
+        service.update_repeat(repeat_id=namespace.repeat_id,
+                              user_id=namespace.user_id,
+                              args=args)
+
+    elif namespace.action == 'delete':
+
+        service.delete_repeat(user_id=namespace.user_id,
+                              repeat_id=namespace.repeat_id)
+
+
 def commands_handler(service: AppService, namespace):
+
     if namespace.entity == 'task':
         task_handler(service, namespace)
 
