@@ -206,7 +206,7 @@ def repeat_parser(sup_parser: argparse):
                         help='Period amount')
     create.add_argument('period_type',
                         help='Period type',
-                        choise=[x.name.lower() for x in Period])
+                        choices=[x.name.lower() for x in Period])
 
     create.add_argument('-ra', '--repeat_amount',
                         type=int,
@@ -224,9 +224,9 @@ def repeat_parser(sup_parser: argparse):
                       help='repeat_id')
     edit.add_argument('-pa', '--period_amount',
                       help='Period amount')
-    edit.add_argument('-pt', 'period_type',
+    edit.add_argument('-pt', '--period_type',
                       help='Period type',
-                      choise=[x.name.lower() for x in Period])
+                      choices=[x.name.lower() for x in Period])
     edit.add_argument('-ra', '--repeat_amount',
                       type=int,
                       help='How much repeat should be executed')
