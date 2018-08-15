@@ -1,6 +1,6 @@
 from datetime import datetime
 import argparse
-from lib.models import TaskPriority, TaskStatus
+from lib.models import TaskPriority, TaskStatus, Period
 
 
 def exclude_keys(namespace):
@@ -122,10 +122,10 @@ def task_parser(sup_parser: argparse):
 
 def folder_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
-                                              title='Show folder and its info',
+                                              title='Show repeat and its info',
                                               metavar='')
     folder_id = task_show.add_parser('id',
-                                     help='Show folder by it')
+                                     help='Show repeat by id')
     folder_id.add_argument('folder_id',
                            help='Folder id')
     folder_id.add_argument('--tasks',
@@ -167,12 +167,76 @@ def folder_parser(sup_parser: argparse):
                       help='Folder name')
 
     delete = folder_subparser.add_parser('delete',
-                                         help='Delete folder with provided id')
+                                         help='Delete folder by id')
     delete.add_argument('folder_id')
 
 
+def repeat_show_parser(sup_parser: argparse):
+    repeat_show = sup_parser.add_subparsers(dest='show_type',
+                                            title='Show folder and its info',
+                                            metavar='')
+    repeat_id = repeat_show.add_parser('id',
+                                       help='Show folder by id')
+
+    repeat_id.add_argument('repeat_id',
+                           help='Repeat id')
+    repeat_id.add_argument('--tasks',
+                           action='store_true',
+                           help='Show repeat. Task and generated tasks')
+
+    repeat_all = repeat_show.add_parser('all',
+                                        help='Show all folders')
+    repeat_all.add_argument('--tasks',
+                            action='store_true',
+                            help='Show repeat. Task and generated tasks')
+
+
 def repeat_parser(sup_parser: argparse):
-    ...  # TODO:
+
+    repeat_parser = sup_parser.add_parser('repeat',
+                                          help='Manage repeat')
+    repeat_subparser = repeat_parser.add_subparsers(dest='action',
+                                                    metavar='')
+
+    create = repeat_subparser.add_parser('create',
+                                         help='Create repeat for existing task')
+    create.add_argument('task_id',
+                        help='task id')
+    create.add_argument('period_amount',
+                        help='Period amount')
+    create.add_argument('period_type',
+                        help='Period type',
+                        choise=[x.name.lower() for x in Period])
+
+    create.add_argument('-ra', '--repeat_amount',
+                        type=int,
+                        help='How much repeat should be executed')
+    create.add_argument('-ed', '--end_date',
+                        type=datetime,
+                        help='Repeat end date.')
+
+    show = repeat_subparser.add_parser('show', help='Show folders  info')
+    repeat_show_parser(show)
+
+    edit = repeat_subparser.add_parser('edit',
+                                       help='Edit repeat')
+    edit.add_argument('repeat_id',
+                      help='repeat_id')
+    edit.add_argument('-pa', '--period_amount',
+                      help='Period amount')
+    edit.add_argument('-pt', 'period_type',
+                      help='Period type',
+                      choise=[x.name.lower() for x in Period])
+    edit.add_argument('-ra', '--repeat_amount',
+                      type=int,
+                      help='How much repeat should be executed')
+    edit.add_argument('-ed', '--end_date',
+                      type=datetime,
+                      help='Repeat end date.')
+
+    delete = repeat_subparser.add_parser('delete',
+                                         help='Delete repeat by id')
+    delete.add_argument('repeat_id')
 
 
 def get_args():
