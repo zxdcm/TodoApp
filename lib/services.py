@@ -83,7 +83,10 @@ class AppService:
         """
 
         if priority:
-            priority = TaskPriority[priority.upper()]
+            try:
+                priority = TaskPriority[priority.upper()]
+            except KeyError:
+                raise UpdateError('Priority not found')
 
         if parent_task_id:
             self.user_can_access_task(user_id=user_id, task_id=parent_task_id)
@@ -104,9 +107,15 @@ class AppService:
                     args: dict) -> Task:
 
         if 'priority' in args:
-            args['priority'] = TaskPriority[args['priority'].upper()]
+            try:
+                args['priority'] = TaskPriority[args['priority'].upper()]
+            except KeyError:
+                raise UpdateError('Priority not found')
         if 'status' in args:
-            args['status'] = TaskStatus[args['status'].upper()]
+            try:
+                args['status'] = TaskStatus[args['status'].upper()]
+            except KeyError:
+                raise UpdateError('Priority not found')
 
         self.user_can_access_task(user_id=user_id, task_id=task_id)
 
@@ -200,10 +209,11 @@ class AppService:
             TaskUserEditors).filter_by(
                 user_id=user_id).all()
 
-    def delete_task(self, user_id: int, task_id: int):
+    def delete_task(self, user_id: int, task_id: int, delete_repeat=True):
         self.user_can_access_task(user_id, task_id)
         self.session.query(Task).filter_by(id=task_id).delete()
-        self.session.query(Repeat).filter_by(Repeat.task.id == task_id).delete()  # TODO: test
+        if delete_repeat:
+            self.session.query(Repeat).filter_by(task_id=task_id).delete()
         self.session.commit()
 
     def add_subtask(self, user_id: int, task_id: int, subtask_id: int):
@@ -217,8 +227,14 @@ class AppService:
 
     def get_subtasks(self, user_id: int, task_id: int):
         self.user_can_access_task(user_id, task_id)
-        self.session.query(Task).filter_by(  # TODO:  fix
-            parent_task_id=task_id).all()
+        return self.session.query(Task).filter_by(
+            parent_task_id=task_id).join(
+                TaskUserEditors).filter_by(user_id=user_id)
+        # return self.session.query(Task).filter_by(  # TODO: fix join
+        #     parent_task_id=task_id).join(TaskUserEditors).filter(or_(
+        #         Task.owner_id == user_id,
+        #         Task.assigned_id == user_id,
+        #         TaskUserEditors.user_id == user_id)).all()
 
     def change_task_status(self,
                            user_id: int,
@@ -230,13 +246,15 @@ class AppService:
 
         try:
             status = TaskStatus[status.upper()]
-        except:  # TODO:  specity type
+        except KeyError:
             raise UpdateError('Status not found')
 
         task.status = status
         if apply_subtasks:
-            self.session.query(Task).filter_by(  # TODO:  fix
-                parent_task_id=task_id).update({'status': status})
+            self.session.query(Task).filter_by(
+                parent_task_id=task_id).join(
+                    TaskUserEditors).filter_by(
+                        user_id=user_id).update({'status': status})
         self.session.commit()
 
     def create_folder(self, user_id: int, name: str) -> Folder:
@@ -304,6 +322,10 @@ class AppService:
         self.session.delete(folder)
         self.session.commit()
 
+    def get_folder_tasks(self, user_id: int):
+        return self.session.query(Folder).join(
+            task_folder_association_table).filter_by(user_id=user_id).all()
+
     def get_task_folders(self, user_id: int, task_id: int):
         return self.session.query(Folder).filter_by(user_id=user_id,
                                                     task_id=task_id).all()
@@ -331,7 +353,6 @@ class AppService:
     def create_repeat(self, user_id, task_id,
                       period_amount,
                       period_type,
-                      bound=False,
                       repetitions_amount=None,
                       end_date=None) -> Repeat:
 
@@ -339,7 +360,7 @@ class AppService:
         task = self.session.query(Task).get(task_id)
 
         if task.start_date is None:
-            return
+            task.start_date == datetime.now()  # TODO: raise exception
 
         period = Period[period_type.upper()]
         start_date = task.start_date

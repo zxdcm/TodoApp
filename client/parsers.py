@@ -23,9 +23,9 @@ def task_show_parser(show_subparser: argparse):
     task_show.add_parser('own',
                          help='Show tasks created by user')
 
-    inner = task_show.add_parser('inner',
-                                 help='Show inner tasks by its parent id')
-    inner.add_argument('parent_task_id')
+    subtasks = task_show.add_parser('subtasks',
+                                    help='Show subtasks for task by id')
+    subtasks.add_argument('task_id')
 
     task_show.add_parser('access',
                          help='Show tasks that user can access')
@@ -210,12 +210,12 @@ def repeat_parser(sup_parser: argparse):
 
     create.add_argument('-ra', '--repeat_amount',
                         type=int,
-                        help='How much repeat should be executed')
+                        help='How much times repeat should be executed')
     create.add_argument('-ed', '--end_date',
                         type=datetime,
                         help='Repeat end date.')
 
-    show = repeat_subparser.add_parser('show', help='Show folders  info')
+    show = repeat_subparser.add_parser('show', help='Show repeats info')
     repeat_show_parser(show)
 
     edit = repeat_subparser.add_parser('edit',

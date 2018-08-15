@@ -1,5 +1,6 @@
 from lib.services import AppService
 from client.parsers import exclude_keys
+from lib.exceptions import ObjectNotFound
 
 
 def task_show_handler(service: AppService, namespace):
@@ -12,11 +13,11 @@ def task_show_handler(service: AppService, namespace):
         [print(x) for x in service.get_own_tasks(
             user_id=namespace.user_id)]
 
-    elif namespace.show_type == 'inner':
-        [print(x) for x in service.get_inner_tasks(
-            user_id=namespace.user_id, task_id=namespace.parent_task_id)]
+    elif namespace.show_type == 'subtasks':
+        [print(x) for x in service.get_subtasks(
+            user_id=namespace.user_id, task_id=namespace.task_id)]
 
-    elif namespace.show_type == 'access':
+    elif namespace.show_type == 'all':
         [print(x) for x in service.get_available_tasks(
             user_id=namespace.user_id)]
 
@@ -49,7 +50,6 @@ def task_handler(service: AppService, namespace):
 
     elif namespace.action == 'edit':
         args = exclude_keys(namespace)
-        print(args)
         if not args:
             print('Nothing to update.')
         else:
@@ -141,13 +141,13 @@ def folder_handler(service: AppService, namespace):
 
     elif namespace.action == 'edit':
         try:
-            folder = service.get_folder_by_name(namespace.user_id)
-        except:
+            folder = service.get_folder_by_name(namespace.name)
             print('Folder with such name already exist')
             return
-        service.update_folder(folder_id=namespace.folder_id,
-                              user_id=namespace.user_id,
-                              args=exclude_keys(namespace))
+        except ObjectNotFound:
+            service.update_folder(folder_id=namespace.folder_id,
+                                  user_id=namespace.user_id,
+                                  args=exclude_keys(namespace))
 
     elif namespace.action == 'populate':
 
@@ -160,16 +160,6 @@ def folder_handler(service: AppService, namespace):
         service.unpopulate_folder(user_id=namespace.user_id,
                                   folder_id=namespace.folder_id,
                                   task_id=namespace.task_id)
-        # folder = service.get_folder_by_id(user_id=namespace.user_id,
-        #                                   folder_id=namespace.id)
-        # task = folder.get_task_by_id(user_id=namespace.user_id,
-        #                              task_id=namespace.task_id)
-        # if task in folder.tasks:
-        #     folder.tasks.remove(task)
-        #     print(f'Task {task.id} no longer in {folder.name}')
-        # else:
-        #     print('Folder doesnt contain task with following id')
-        # service.save_updates()
 
 
 def print_repeats(repeat):
@@ -180,12 +170,13 @@ def repeat_show_handlers(service: AppService, namespace):
     if namespace.show_type == 'id':
         repeat = service.get_repeat_by_id(user_id=namespace.user_id,
                                           repeat_id=namespace.repeat_id)
+        print(repeat)
         if namespace.tasks:
             ...  # TODO:
 
     elif namespace.show_type == 'all':
         repeats = service.get_all_repeats(user_id=namespace.user_id)
-
+        [print(x) for x in repeats]
         #  TODO:
 
 
@@ -193,8 +184,9 @@ def repeat_handler(service: AppService, namespace):
     if namespace.action == 'create':
 
         repeat = service.create_repeat(user_id=namespace.user_id,
+                                       task_id=namespace.task_id,
                                        period_amount=namespace.period_amount,
-                                       period_Type=namespace.period_type,
+                                       period_type=namespace.period_type,
                                        repetitions_amount=namespace.repeat_amount,
                                        end_date=namespace.end_date)
         print(repeat)

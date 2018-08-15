@@ -111,8 +111,9 @@ class Task(Base):
         return (
             f'''
                 ID : {self.id}
-                Name: {self.name}
                 Owner_id: {self.owner_id}
+                Parent_id: {self.parent_task_id}
+                Name: {self.name}
                 Description: {self.description}
                 Status: {self.status.value}
                 Priority: {self.priority.value}
