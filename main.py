@@ -1,27 +1,7 @@
-import argparse
-import sys
-from lib.services import AppService, Task, TaskPriority, Period
-from datetime import datetime, timedelta
-
-
-class UserSession:
-
-    def __init__(self):
-        pass
-
-    def login(self, email, password):
-        pass
-
-
-def exclude_keys(namespace):
-    namespace = vars(namespace)
-    keys = ['entity', 'action', 'user_id', 'task_id', 'folder_id']
-    return {x: namespace[x] for x in namespace if x not in keys and
-            namespace[x]}
-
+from client import __main__
 
 if __name__ == '__main__':
-    ...
+    __main__.main()
     # AppService().create_user('user')
     # service = AppService()
     # task = service.create_task(2, name='test', start_date=datetime.now())

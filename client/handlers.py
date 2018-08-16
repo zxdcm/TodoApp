@@ -222,7 +222,7 @@ def users_handler(service: AppService, namespace):
     if namespace.action == 'show':
         if namespace.show_type == 'id':
             if service.user_with_id_exist(user_id=namespace.user_id):
-                print('User with followign id exist')
+                print('User with following id exist')
             else:
                 print('User not found')
         elif namespace.show_type == 'all':

@@ -51,7 +51,7 @@ class AppService:
             return True
 
     def get_all_users_ids(self):
-        user_ids = [x.user_id for x in self.session.query(TaskUserEditors).all()]
+        user_ids = set(x.user_id for x in self.session.query(TaskUserEditors).all())
         return user_ids
 
     def create_task(self,

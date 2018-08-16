@@ -2,7 +2,8 @@
 /venv
 /.idea
 __*
-
+/env
+*.md
 
 *.db
 
