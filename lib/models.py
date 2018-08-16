@@ -112,20 +112,25 @@ class Task(Base):
         self.status = status
 
     def __str__(self):
+        self.created = self.created.strftime('%Y-%m-%d %H:%M')
+        self.updated = self.updated.strftime('%Y-%m-%d %H:%M')
+        if self.start_date:
+            self.start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
+        if self.end_date:
+            self.end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
         return (
-            f'''
-                ID : {self.id}
-                Owner_id: {self.owner_id}
-                Parent_id: {self.parent_task_id}
-                Name: {self.name}
-                Description: {self.description}
-                Status: {self.status.value}
-                Priority: {self.priority.value}
-                Created: {self.created}
-                Updated: {self.updated}
-                Start Date: {self.start_date}
-                End Date: {self.end_date}
-            '''
+            f'\n'
+            f'ID : {self.id}\n'
+            f'Owner_id: {self.owner_id}\n'
+            f'Parent_task_id: {self.parent_task_id}\n'
+            f'Name: {self.name}\n'
+            f'Description: {self.description}\n'
+            f'Status: {self.status.value}\n'
+            f'Priority: {self.priority.value}\n'
+            f'Created: {self.created}\n'
+            f'Updated: {self.updated}\n'
+            f'Start Date: {self.start_date}\n'
+            f'End Date: {self.end_date}\n'
         )
 
 
@@ -177,18 +182,23 @@ class Repeat(Base):
         self.last_activated = self.start_date
 
     def __str__(self):
-        return (f'''
-                    Owner ID : {self.user_id}
-                    Task ID: {self.task_id}
-                    Period: {self.period.value}
-                    Period amount: {self.period_amount}
-                    End type: {self.end_type.value}
-                    Repetitions_amount: {self.repetitions_amount}
-                    Repetitions count: {self.repetitions_amount}
-                    Start date: {self.start_date}
-                    End date: {self.end_date}
-                    Last activated: {self.last_activated}
-                ''')
+        if self.end_date:
+            self.end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
+        if self.start_date:
+            self.start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
+        self.last_activated = self.last_activated.strftime('%Y-%m-%d %H:%M')
+        return (f'\n'
+                f'Owner ID : {self.user_id}\n'
+                f'Task ID: {self.task_id}\n'
+                f'Period: {self.period.value}\n'
+                f'Period amount: {self.period_amount}\n'
+                f'End type: {self.end_type.value}\n'
+                f'Repetitions_amount: {self.repetitions_amount}\n'
+                f'Repetitions count: {self.repetitions_amount}\n'
+                f'Start date: {self.start_date}\n'
+                f'End date: {self.end_date}\n'
+                f'Last activated: {self.last_activated}\n'
+                f'')
 
 
 class Notification(Base):
@@ -204,9 +214,9 @@ class Notification(Base):
 
     def __str__(self):
         return (
-            f'''
-                ID : {self.id}
-                Date: {self.date}
-                Task: {self.task_id}
-            '''
+            f'\n'
+            f'                ID : {self.id}\n'
+            f'                Date: {self.date}\n'
+            f'                Task: {self.task_id}\n'
+            f'            '
         )

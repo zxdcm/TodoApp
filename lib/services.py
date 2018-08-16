@@ -47,7 +47,8 @@ class AppService:
         raise AccessError('User doesnt have permissions to this task')
 
     def user_with_id_exist(self, user_id: int):
-        user_tasks = self.session.query(TaskUserEditors).filter_by(user_id=user_id).all()
+        user_tasks = self.session.query(
+            TaskUserEditors).filter_by(user_id=user_id).all()
         if user_tasks:
             return True
 
@@ -144,7 +145,7 @@ class AppService:
         self.user_can_access_task(user_id=user_id, task_id=task_id)
 
         try:
-            args['updated'] = datetime.now().replace(microsecond=0)
+            args['updated'] = datetime.now()
             self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
             raise UpdateError('Args error. Args dict can not be empty') from e
@@ -157,7 +158,7 @@ class AppService:
                        task_id: int) -> Task:
         task = self.session.query(Task).get(task_id)
         check_object_exist(task,
-                           f'user_id : {user_id} task_id : {task_id}',
+                           f'user_id : {user_id} & task_id : {task_id}',
                            'Task')
         self.user_can_access_task(user_id, task_id)
         return task
@@ -302,6 +303,7 @@ class AppService:
         if folder:
             raise FolderExist('User already has folder with following name')
         folder = Folder(user_id=user_id, name=name)
+
         self.session.add(folder)
         self.session.commit()
         return folder
@@ -310,14 +312,14 @@ class AppService:
         folder = self.session.query(Folder).filter_by(
             id=folder_id, user_id=user_id).one_or_none()
         check_object_exist(folder,
-                           f'folder_id : {folder_id}',
+                           f'id : {folder_id}',
                            'Folder')
         return folder
 
     def get_folder_by_name(self, user_id: int, folder_name: int) -> Folder:
         folder = self.session.query(Folder).filter_by(
             folder_name=folder_name, user_id=user_id)
-        check_object_exist(folder, f'name: {folder_name}, 'Folder')
+        check_object_exist(folder, f'name: {folder_name}', 'Folder')
         return folder
 
     def get_or_create_folder(self, user_id: int, name: str) -> Folder:
@@ -509,7 +511,6 @@ class AppService:
                     task.editors.append(
                         TaskUserEditors(user_id=x.user_id,
                                         task_id=task.id))
-                    # # TODO:  fix
                 self.session.add(task)
 
         self.session.commit()
