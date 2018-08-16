@@ -178,16 +178,16 @@ class Repeat(Base):
 
     def __str__(self):
         return (f'''
-                        Owner ID : {self.user_id}
-                        Task ID: {self.task_id}
-                        Period: {self.period.value}
-                        Period amount: {self.period_amount}
-                        End type: {self.end_type.value}
-                        Repetitions_amount: {self.repetitions_amount}
-                        Repetitions count: {self.repetitions_amount}
-                        Start date: {self.start_date}
-                        End date: {self.end_date}
-                        Last activated: {self.last_activated}
+                    Owner ID : {self.user_id}
+                    Task ID: {self.task_id}
+                    Period: {self.period.value}
+                    Period amount: {self.period_amount}
+                    End type: {self.end_type.value}
+                    Repetitions_amount: {self.repetitions_amount}
+                    Repetitions count: {self.repetitions_amount}
+                    Start date: {self.start_date}
+                    End date: {self.end_date}
+                    Last activated: {self.last_activated}
                 ''')
 
 

@@ -412,11 +412,21 @@ class AppService:
     def get_own_repeats(self, user_id: int) ->Repeat:
         return self.session.query(Repeat).filter_by(user_id=user_id).all()
 
-    def get_generated_tasks(self, user_id: int):
-        return self.session.query(Task).join(  # TODO: fix
-            Repeat).filter(
-                Task.parent_task_id == Repeat.task_id).join(
-                TaskUserEditors).all()
+    # def get_generated_tasks(self, user_id: int) -> List[Task]:
+    #     result = self.session.query(Task, Repeat).filter(
+    #         Task.parent_task_id == Repeat.task_id).join(
+    #         TaskUserEditors).all()
+    #     tasks = []
+    #     for task, junk in result:
+    #         tasks.append(task)
+    #     return tasks
+
+    def get_generated_tasks_by_repeat(self, user_id: int,
+                                      repeat_id: int) -> List[Task]:
+        repeat = self.session.query(Repeat).get(repeat_id)
+        return self.session.query(Task).filter_by(
+            parent_task_id=repeat.task_id).join(
+            TaskUserEditors).all()
 
     def get_active_repeats(self, user_id: int, repeats=None) -> List[Repeat]:
         if repeats is None:
