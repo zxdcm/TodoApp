@@ -1,15 +1,19 @@
 
-class AccessError(Exception):
+class BaseLibError(Exception):
     pass
 
 
-class FolderExist(Exception):
+class AccessError(BaseLibError):
     pass
 
 
-class UpdateError(Exception):
+class FolderExist(BaseLibError):
     pass
 
 
-class ObjectNotFound(Exception):
+class UpdateError(BaseLibError):
+    pass
+
+
+class ObjectNotFound(BaseLibError):
     pass

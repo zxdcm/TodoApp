@@ -27,10 +27,11 @@ def task_show_parser(show_subparser: argparse):
 
     subtasks = task_show.add_parser('subtasks',
                                     help='Show subtasks for task by id')
-    subtasks.add_argument('task_id', type=int)
+    subtasks.add_argument('task_id',
+                          type=int)
 
-    task_show.add_parser('access',
-                         help='Show tasks that user can access')
+    task_show.add_parser('all',
+                         help='Show all tasks user can access')
 
     task_show.add_parser('assigned',
                          help='Show tasks assigned on user')
@@ -184,7 +185,7 @@ def folder_show_parser(show_subparser: argparse):
     folder_id = task_show.add_parser('id',
                                      help='Show repeat by id')
     folder_id.add_argument('folder_id',
-                           help='Folder id')
+                           help='Folder id', type=int)
     folder_id.add_argument('--tasks',
                            action='store_true',
                            help='Show folder tasks')
@@ -216,31 +217,37 @@ def folder_parser(sup_parser: argparse):
         'populate', help='Populate folder with provided task')
     populate.add_argument('-fid',
                           '--folder_id',
-                          required=True)
+                          required=True,
+                          type=int)
     populate.add_argument('-tid',
                           '--task_id',
-                          required=True)
+                          required=True,
+                          type=int)
 
     unpopulate = folder_subparser.add_parser(
         'unpopulate',
         help='delete task from folder')
     unpopulate.add_argument('-fid',
                             '--folder_id',
-                            required=True)
+                            required=True,
+                            type=int)
     unpopulate.add_argument('-tid',
                             '--task_id',
-                            required=True)
+                            required=True,
+                            type=int)
 
     edit = folder_subparser.add_parser(
         'edit',
         help='Edit folder with provided id')
-    edit.add_argument('folder_id')
+    edit.add_argument('folder_id',
+                      type=int)
     edit.add_argument('name',
                       help='Folder name')
 
     delete = folder_subparser.add_parser('delete',
                                          help='Delete folder by id')
-    delete.add_argument('folder_id')
+    delete.add_argument('folder_id',
+                        type=int)
 
 
 def repeat_show_parser(sup_parser: argparse):
@@ -251,7 +258,8 @@ def repeat_show_parser(sup_parser: argparse):
                                        help='Show folder by id')
 
     repeat_id.add_argument('repeat_id',
-                           help='Repeat id')
+                           help='Repeat id',
+                           type=int)
     repeat_id.add_argument('--tasks',
                            action='store_true',
                            help='Show repeat. Task and generated tasks')
@@ -273,9 +281,11 @@ def repeat_parser(sup_parser: argparse):
     create = repeat_subparser.add_parser('create',
                                          help='Create repeat for existing task')
     create.add_argument('task_id',
-                        help='task id')
+                        help='task id',
+                        type=int)
     create.add_argument('period_amount',
-                        help='Period amount')
+                        help='Period amount',
+                        type=int)
     create.add_argument('period_type',
                         help='Period type',
                         choices=[x.name.lower() for x in Period])
@@ -293,9 +303,11 @@ def repeat_parser(sup_parser: argparse):
     edit = repeat_subparser.add_parser('edit',
                                        help='Edit repeat')
     edit.add_argument('repeat_id',
-                      help='repeat_id')
+                      help='repeat_id',
+                      type=int)
     edit.add_argument('-pa', '--period_amount',
-                      help='Period amount')
+                      help='Period amount',
+                      type=int)
     edit.add_argument('-pt', '--period_type',
                       help='Period type',
                       choices=[x.name.lower() for x in Period])
@@ -308,7 +320,8 @@ def repeat_parser(sup_parser: argparse):
 
     delete = repeat_subparser.add_parser('delete',
                                          help='Delete repeat by id')
-    delete.add_argument('repeat_id')
+    delete.add_argument('repeat_id',
+                        type=int)
 
 
 def user_parser(sup_parser: argparse):

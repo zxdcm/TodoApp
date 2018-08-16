@@ -5,7 +5,7 @@ from lib.exceptions import ObjectNotFound
 
 def check_object_exist(obj, params, type):
     if obj is None:
-        raise ObjectNotFound(f'type with params: {params} not found')
+        raise ObjectNotFound(f'{type} with params: {params} not found')
 
 
 def get_interval(period_type: Period, period_quantity):

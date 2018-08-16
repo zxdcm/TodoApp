@@ -1,6 +1,17 @@
 from lib.services import AppService
 from client.parsers import exclude_keys
-from lib.exceptions import ObjectNotFound
+from lib.exceptions import ObjectNotFound, BaseLibError
+
+
+def error_catcher(func):
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except BaseLibError as e:
+            print(str(e))
+        except Exception:
+            print("Unhandled exception")
+    return wrapper
 
 
 def task_show_handler(service: AppService, namespace):
@@ -145,11 +156,9 @@ def folder_handler(service: AppService, namespace):
         folder_show_handler(service, namespace)
 
     elif namespace.action == 'edit':
-        try:
-            folder = service.get_folder_by_name(namespace.name)
-            print('Folder with such name already exist')
-            return
-        except ObjectNotFound:
+
+
+:
             service.update_folder(folder_id=namespace.folder_id,
                                   user_id=namespace.user_id,
                                   args=exclude_keys(namespace))
@@ -235,6 +244,7 @@ def users_handler(service: AppService, namespace):
                 print('There are no users')
 
 
+@error_catcher
 def commands_handler(service: AppService, namespace):
 
     if namespace.entity == 'task':

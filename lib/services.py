@@ -143,7 +143,7 @@ class AppService:
         self.user_can_access_task(user_id=user_id, task_id=task_id)
 
         try:
-            args['updated'] = datetime.now()
+            args['updated'] = datetime.now().replace(microsecond=0)
             self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
             raise UpdateError('Args error. Args dict can not be empty') from e
@@ -305,7 +305,7 @@ class AppService:
         folder = self.session.query(Folder).filter_by(
             id=folder_id, user_id=user_id).one_or_none()
         check_object_exist(folder,
-                           f'user_id : {user_id} folder_id : {folder_id}',
+                           f'folder_id : {folder_id}',
                            'Folder')
         return folder
 
