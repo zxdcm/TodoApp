@@ -40,7 +40,6 @@ task_folder_association_table = Table(
 
 
 class TaskStatus(enum.Enum):
-    CREATED = 'Created'
     TODO = 'Todo'
     INWORK = 'In work'
     DONE = 'Done'
@@ -48,7 +47,6 @@ class TaskStatus(enum.Enum):
 
 
 class TaskPriority(enum.Enum):
-    NONE = 'None'
     LOW = 'Low'
     MEDIUM = 'Medium'
     HIGH = 'High'
@@ -82,7 +80,7 @@ class Task(Base):
 
     priority = Column(Enum(TaskPriority), default=TaskPriority.LOW,
                       nullable=False)
-    status = Column(Enum(TaskStatus), default=TaskStatus.CREATED,
+    status = Column(Enum(TaskStatus), default=TaskStatus.TODO,
                     nullable=False)
 
     start_date = Column(DateTime)
@@ -92,8 +90,6 @@ class Task(Base):
     updated = Column(DateTime, nullable=False, default=datetime.now())
 
     editors = relationship('TaskUserEditors')
-
-    notifications = relationship('Notification', back_populates='task')
 
     #  uselist prop allows to set one to one relation
     repeat = relationship("Repeat", uselist=False, back_populates='task')
@@ -112,25 +108,26 @@ class Task(Base):
         self.status = status
 
     def __str__(self):
-        self.created = self.created.strftime('%Y-%m-%d %H:%M')
-        self.updated = self.updated.strftime('%Y-%m-%d %H:%M')
+        created = self.created.strftime('%Y-%m-%d %H:%M')
+        updated = self.updated.strftime('%Y-%m-%d %H:%M')
         if self.start_date:
-            self.start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
+            start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
         if self.end_date:
-            self.end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
+            end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
         return (
             f'\n'
             f'ID : {self.id}\n'
-            f'Owner_id: {self.owner_id}\n'
-            f'Parent_task_id: {self.parent_task_id}\n'
+            f'Owner id: {self.owner_id}\n'
+            f'Parent taskid: {self.parent_task_id}\n'
             f'Name: {self.name}\n'
             f'Description: {self.description}\n'
             f'Status: {self.status.value}\n'
             f'Priority: {self.priority.value}\n'
-            f'Created: {self.created}\n'
-            f'Updated: {self.updated}\n'
-            f'Start Date: {self.start_date}\n'
-            f'End Date: {self.end_date}\n'
+            f'Created: {created}\n'
+            f'Updated: {updated}\n'
+            f'Start Date: {start_date if self.start_date else None}\n'
+            f'End Date: {end_date if self.end_date else None}\n'
+            f'Assigned user id: {self.assigned_id}'
         )
 
 
@@ -183,40 +180,19 @@ class Repeat(Base):
 
     def __str__(self):
         if self.end_date:
-            self.end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
-        if self.start_date:
-            self.start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
-        self.last_activated = self.last_activated.strftime('%Y-%m-%d %H:%M')
+            end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
+        start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
+        last_activated = self.last_activated.strftime('%Y-%m-%d %H:%M')
         return (f'\n'
-                f'Owner ID : {self.user_id}\n'
+                f'ID: {self.id}\n'
+                f'Owner ID: {self.user_id}\n'
                 f'Task ID: {self.task_id}\n'
                 f'Period: {self.period.value}\n'
                 f'Period amount: {self.period_amount}\n'
                 f'End type: {self.end_type.value}\n'
                 f'Repetitions_amount: {self.repetitions_amount}\n'
                 f'Repetitions count: {self.repetitions_amount}\n'
-                f'Start date: {self.start_date}\n'
-                f'End date: {self.end_date}\n'
-                f'Last activated: {self.last_activated}\n'
+                f'Start date: {start_date if self.start_date else None}\n'
+                f'End date: {end_date if self.end_date else None}\n'
+                f'Last activated: {last_activated if self.last_activated else None}\n'
                 f'')
-
-
-class Notification(Base):
-    __tablename__ = 'notifications'
-    id = Column(Integer, primary_key=True)
-    date = Column(DateTime)
-    task_id = Column(Integer, ForeignKey('tasks.id'))
-    task = relationship('Task', back_populates='notifications')
-
-    def __init__(self, task, date):
-        self.task = task
-        self.date = date
-
-    def __str__(self):
-        return (
-            f'\n'
-            f'                ID : {self.id}\n'
-            f'                Date: {self.date}\n'
-            f'                Task: {self.task_id}\n'
-            f'            '
-        )

@@ -6,7 +6,7 @@ from lib.models import TaskPriority, TaskStatus, Period
 
 def exclude_keys(namespace):
     namespace = vars(namespace)
-    keys = ['entity', 'action', 'user_id', 'task_id', 'folder_id']
+    keys = ['entity', 'action', 'user_id', 'task_id', 'folder_id', 'repeat_id']
     return {x: namespace[x] for x in namespace if x not in keys and
             namespace[x]}
 
@@ -26,7 +26,7 @@ def task_show_parser(show_subparser: argparse):
                          help='Show tasks created by user')
 
     subtasks = task_show.add_parser('subtasks',
-                                    help='Show subtasks for task by id')
+                                    help='Show subtasks by task id')
     subtasks.add_argument('task_id',
                           type=int)
 
@@ -58,20 +58,24 @@ def task_parser(sup_parser: argparse):
     create.add_argument('-d',
                         '--description',
                         help='Task description')
-    create.add_argument('-sd', '--start_date',
+    create.add_argument('-s', '--start_date',
                         type=parse,
                         help='Start date',
-                        default=datetime.now().replace(microsecond=0))
-    create.add_argument('-ed', '--end_date',
+                        default=datetime.now())
+    create.add_argument('-e',
+                        '--end_date',
                         type=parse,
                         help='End date')
     create.add_argument('-p',
                         '--parent_task_id',
                         type=int,
                         help='Parent task id')
-    create.add_argument('-priority',
+    create.add_argument('--priority',
                         type=str,
                         choices=[x.name.lower() for x in TaskPriority])
+    create.add_argument('--status',
+                        type=str,
+                        choices=[x.name.lower() for x in TaskStatus])
 
     show = task_subparser.add_parser('show',
                                      help='Show tasks')
@@ -88,20 +92,20 @@ def task_parser(sup_parser: argparse):
     edit.add_argument('-d',
                       '--description',
                       help='Task description')
-    edit.add_argument('-sd', '--start_date',
+    edit.add_argument('-s', '--start_date',
                       type=parse,
                       help='Start date')
-    edit.add_argument('-ed', '--end_date',
+    edit.add_argument('-e', '--end_date',
                       type=parse,
                       help='End date')
     edit.add_argument('-p',
                       '--parent_task_id',
                       type=int,
                       help='Parent task id')
-    edit.add_argument('-priority',
+    edit.add_argument('--priority',
                       type=str,
                       choices=[x.name.lower() for x in TaskPriority])
-    edit.add_argument('-status',
+    edit.add_argument('--status',
                       type=str,
                       choices=[x.name.lower() for x in TaskStatus])
 
@@ -139,7 +143,7 @@ def task_parser(sup_parser: argparse):
                         required=True,
                         type=int)
     assign.add_argument('-uid',
-                        '--assigner_user_id',
+                        '--user_receiver_id',
                         help='user id',
                         required=True,
                         type=int)
@@ -160,7 +164,8 @@ def task_parser(sup_parser: argparse):
     archive = task_subparser.add_parser('archive',
                                         help='Archive task')
     archive.add_argument('task_id',
-                         help='task id')
+                         help='task id',
+                         type=int)
     archive.add_argument('--archive_subs',
                          action='store_true',
                          help='Archive subtasks')
@@ -168,7 +173,8 @@ def task_parser(sup_parser: argparse):
     done = task_subparser.add_parser('done',
                                      help='Done task')
     done.add_argument('task_id',
-                      help='task id')
+                      help='task id',
+                      type=int)
     done.add_argument('--done_subs',
                       action='store_true',
                       help='Done subtasks')
@@ -239,7 +245,7 @@ def folder_parser(sup_parser: argparse):
 
     edit = folder_subparser.add_parser(
         'edit',
-        help='Edit folder with provided id')
+        help='Edit folder by id')
     edit.add_argument('folder_id',
                       type=int)
     edit.add_argument('name',
@@ -253,10 +259,10 @@ def folder_parser(sup_parser: argparse):
 
 def repeat_show_parser(sup_parser: argparse):
     repeat_show = sup_parser.add_subparsers(dest='show_type',
-                                            title='Show folder and its info',
+                                            title='Show repeat and its info',
                                             metavar='')
     repeat_id = repeat_show.add_parser('id',
-                                       help='Show folder by id')
+                                       help='Show repeat by id')
 
     repeat_id.add_argument('repeat_id',
                            help='Repeat id',
@@ -291,10 +297,10 @@ def repeat_parser(sup_parser: argparse):
                         help='Period type',
                         choices=[x.name.lower() for x in Period])
 
-    create.add_argument('-ra', '--repeat_amount',
+    create.add_argument('-r', '--repeat_amount',
                         type=int,
                         help='How much times repeat should be executed')
-    create.add_argument('-ed', '--end_date',
+    create.add_argument('-e', '--end_date',
                         type=parse,
                         help='Repeat end date.')
 
@@ -306,16 +312,16 @@ def repeat_parser(sup_parser: argparse):
     edit.add_argument('repeat_id',
                       help='repeat_id',
                       type=int)
-    edit.add_argument('-pa', '--period_amount',
+    edit.add_argument('-p', '--period_amount',
                       help='Period amount',
                       type=int)
-    edit.add_argument('-pt', '--period_type',
+    edit.add_argument('-t', '--period_type',
                       help='Period type',
                       choices=[x.name.lower() for x in Period])
-    edit.add_argument('-ra', '--repeat_amount',
+    edit.add_argument('-r', '--repeat_amount',
                       type=int,
                       help='How much repeat should be executed')
-    edit.add_argument('-ed', '--end_date',
+    edit.add_argument('-e', '--end_date',
                       type=parse,
                       help='Repeat end date.')
 

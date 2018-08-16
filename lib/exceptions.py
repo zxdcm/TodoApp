@@ -7,10 +7,6 @@ class AccessError(BaseLibError):
     pass
 
 
-class FolderExist(BaseLibError):
-    pass
-
-
 class UpdateError(BaseLibError):
     pass
 
@@ -20,4 +16,8 @@ class CreateError(BaseLibError):
 
 
 class ObjectNotFound(BaseLibError):
+    pass
+
+
+class DuplicateRelation(UpdateError):
     pass

@@ -1,7 +1,6 @@
 from lib.models import (
     Task,
     Folder,
-    Notification,
     Repeat,
     TaskPriority,
     TaskStatus,
@@ -12,20 +11,23 @@ from lib.models import (
     set_up_connection,
 )
 
+
 from sqlalchemy import (orm,
                         exc,
                         or_)
 from typing import List
 
 from lib.exceptions import (AccessError,
-                            FolderExist,
                             UpdateError,
                             ObjectNotFound,
-                            CreateError)
+                            CreateError,
+                            DuplicateRelation)
 
 from lib.utils import (get_end_type,
                        get_interval,
                        check_object_exist)
+
+from lib.validators import validate_dates
 
 from datetime import datetime
 
@@ -44,7 +46,8 @@ class AppService:
         if self.session.query(Task).join(TaskUserEditors).filter_by(
                 user_id=user_id, task_id=task_id).all():
             return True
-        raise AccessError('User doesnt have permissions to this task')
+        raise AccessError(
+            f'User(ID={user_id}) doesnt have permissions to task(ID={task_id})')
 
     def user_with_id_exist(self, user_id: int):
         user_tasks = self.session.query(
@@ -61,8 +64,8 @@ class AppService:
                     name,
                     status='todo',
                     priority='medium',
-                    description=None,
                     start_date=datetime.now(),
+                    description=None,
                     end_date=None,
                     parent_task_id=None,
                     assigned_id=None
@@ -74,13 +77,13 @@ class AppService:
         user_id : int
             id of user who create task
         name : str
-        description : str
         start_date : datetime
 
         Optional
         ----------
+        status   : str
         priority : str
-        status : str
+        description : str
         end_date  : datetime
         parent_task_id : int
         assigned_id : int
@@ -125,31 +128,49 @@ class AppService:
     def update_task(self,
                     user_id: int,
                     task_id: int,
-                    args: dict) -> Task:
-
-        if 'priority' in args:
-            try:
-                args['priority'] = TaskPriority[args['priority'].upper()]
-            except KeyError:
-                raise UpdateError('Priority not found')
-        if 'status' in args:
-            try:
-                args['status'] = TaskStatus[args['status'].upper()]
-            except KeyError:
-                raise UpdateError('Priority not found')
-
-        if 'start_date' and 'end_date' in args:
-            if args['start_date'] > args['end_date']:
-                raise UpdateError('End date has to be after start date')
+                    name=None,
+                    description=None,
+                    status=None,
+                    priority=None,
+                    end_date=None,
+                    start_date=None,
+                    parent_task_id=None) -> Task:
 
         self.user_can_access_task(user_id=user_id, task_id=task_id)
 
+        args = {}
+        if name:
+            args[Task.name] = name
+        if description:
+            args[Task.description] = description
+
+        if status:
+            try:
+                args[Task.status] = TaskStatus[status.upper()]
+            except KeyError:
+                raise UpdateError('Status not found')
+        if priority:
+            try:
+                args[Task.priority] = TaskPriority[priority.upper()]
+            except KeyError:
+                raise UpdateError('Priority not found')
+
+        task = self.session.query(Task).get(task_id)
+
+        if start_date or end_date:
+            if start_date is None:
+                start_date = task.start_date
+            elif end_date is None:
+                end_date = task.end_date
+            validate_dates(start_date, end_date)
+            args[Task.start_date] = start_date
+            args[Task.end_date] = end_date
+
         try:
-            args['updated'] = datetime.now()
+            args[Task.updated] = datetime.now()
             self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
-            raise UpdateError('Args error. Args dict can not be empty') from e
-
+            raise UpdateError('Arguments Error. Check your dictionary') from e
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
@@ -168,10 +189,15 @@ class AppService:
                     user_receiver_id: int):
 
         self.user_can_access_task(user_id, task_id)
-        new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
         task = self.session.query(Task).get(task_id)
-        task.editors(new_editor)
-        task.assigned_id = user_id
+        if task.assigned_id == user_receiver_id:
+            raise UpdateError(
+                f'User(ID={user_id}) already assigned as Task(ID={task_id}) executor')
+
+        new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
+        task.editors.append(new_editor)
+
+        task.assigned_id = user_receiver_id
         self.session.commit()
 
     def share_task(self,
@@ -180,10 +206,11 @@ class AppService:
                    user_receiver_id: int):
 
         self.user_can_access_task(user_id, task_id)
-        editor = self.sesion.query(TaskUserEditors).filter_by(
-            user_id=user_receiver_id, task_id=task_id)
+        editor = self.session.query(TaskUserEditors).filter_by(
+            user_id=user_receiver_id, task_id=task_id).one_or_none()
         if editor:
-            raise UpdateError('Task already shared with this user')
+            raise DuplicateRelation(
+                f'Task(ID={task_id}) already shared with user(ID={user_receiver_id})')
         new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
         self.session.add(new_editor)
         self.session.commit()
@@ -196,12 +223,14 @@ class AppService:
         task = self.session.query(Task).get(task_id)
 
         if user_receiver_id == task.owner_id:
-            raise AccessError('You can not unshare task with its owner')
+            raise AccessError(
+                'User(ID={user_id}) cant unshare task with its owner')
         editor = self.session.query(TaskUserEditors).filter_by(
-            user_id=user_id,
-            task=task.id)
+            user_id=user_receiver_id,
+            task_id=task.id).one_or_none()
         if editor is None:
-            raise UpdateError('Task wasnt shared with this user')
+            raise UpdateError(
+                f'Task(ID{task_id}) wasnt shared with the user(ID={user_receiver_id})')
         task.editors.remove(editor)
 
         self.session.commit()
@@ -251,7 +280,8 @@ class AppService:
         self.user_can_access_task(user_id, subtask_id)
         subtask = self.session.query(Task).get(subtask_id)
         if subtask.parent_task_id:
-            raise UpdateError('Subtask already has parent task.')
+            raise UpdateError(
+                f'Subtask(ID={subtask_id}) already has parent task')
         subtask.parent_task_id = task_id
         self.session.commit()
 
@@ -259,13 +289,13 @@ class AppService:
         self.user_can_access_task(user_id, task_id)
         return self.session.query(Task).filter_by(
             parent_task_id=task_id).join(
-                TaskUserEditors).filter_by(user_id=user_id)
+                TaskUserEditors).filter_by(user_id=user_id).all()
 
     def change_task_status(self,
                            user_id: int,
                            task_id: int,
                            status: str,
-                           apply_subtasks=None):
+                           apply_on_subtasks=None):
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
 
@@ -275,12 +305,15 @@ class AppService:
             raise UpdateError('Status not found')
 
         task.status = status
-        if apply_subtasks:
+        task.updated = datetime.now()
+        if apply_on_subtasks:
             self.session.query(Task).filter_by(
                 parent_task_id=task_id).join(
                     TaskUserEditors).filter_by(
-                        user_id=user_id).update({'status': status, 'updated': datetime.now()})
+                        user_id=user_id).update({Task.status: status,
+                                                 Task.updated: datetime.now()})
         self.session.commit()
+        return self.session.query(Task).get(task_id)
 
     def create_folder(self, user_id: int, name: str) -> Folder:
         """Allow create folder with provided name for user
@@ -301,7 +334,7 @@ class AppService:
         folder = self.session.query(Folder).filter_by(user_id=user_id,
                                                       name=name).one_or_none()
         if folder:
-            raise FolderExist('User already has folder with following name')
+            raise CreateError(f'User(ID={user_id}) already has folder {folder.name}')
         folder = Folder(user_id=user_id, name=name)
 
         self.session.add(folder)
@@ -316,10 +349,10 @@ class AppService:
                            'Folder')
         return folder
 
-    def get_folder_by_name(self, user_id: int, folder_name: int) -> Folder:
+    def get_folder_by_name(self, user_id: int, name: int) -> Folder:
         folder = self.session.query(Folder).filter_by(
-            folder_name=folder_name, user_id=user_id)
-        check_object_exist(folder, f'name: {folder_name}', 'Folder')
+            name=name, user_id=user_id).one_or_none()
+        check_object_exist(folder, f'name: {name}', 'Folder')
         return folder
 
     def get_or_create_folder(self, user_id: int, name: str) -> Folder:
@@ -335,22 +368,20 @@ class AppService:
     def get_all_folders(self, user_id: int) -> List[Folder]:
         return self.session.query(Folder).filter_by(user_id=user_id).all()
 
-    def update_folder(self, user_id: int, folder_id: int, args: dict):
-        self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
-        try:
-            self.session.query(Folder).update(args)
-        except exc.SQLAlchemyError as e:
-            raise UpdateError('Args error. Args dict can not be empty')
+    def update_folder(self, user_id: int, folder_id: int, name):
+        folder = self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
+        list = self.session.query(Folder).filter_by(user_id=user_id, name=name).all()
+        if len(list) > 1:
+            raise UpdateError(
+                f'User(ID={user_id}) already has folder {name}')
+        folder.name = name
         self.session.commit()
+        return folder
 
     def delete_folder(self, user_id: int, folder_id: int):
         folder = self.get_folder_by_id(user_id, folder_id)
         self.session.delete(folder)
         self.session.commit()
-
-    # def get_folder_tasks(self, user_id: int): # probably that is pointless
-    #     return self.session.query(Folder).join(
-    #         task_folder_association_table).filter_by(user_id=user_id).all()
 
     def get_task_folders(self, user_id: int, task_id: int):
         return self.session.query(Folder).filter_by(user_id=user_id,
@@ -360,11 +391,11 @@ class AppService:
         folder = self.get_folder_by_id(user_id, folder_id)
         task = self.get_task_by_id(user_id, task_id)
         if task in folder.tasks:
-            return
+            raise DuplicateRelation(
+                f'Folder with ID={folder_id} already have task with ID={task_id}')
         folder.tasks.append(task)
         self.session.commit()
 
-        # maybe raise exception
     def unpopulate_folder(self,
                           user_id: int,
                           folder_id: int,
@@ -372,7 +403,8 @@ class AppService:
         folder = self.get_folder_by_id(user_id, folder_id)
         task = self.get_task_by_id(user_id, task_id)
         if task not in folder.tasks:
-            return
+            raise UpdateError(
+                f'Folder with ID={folder_id} dont have task with ID={task_id}')
         folder.tasks.remove(task)
         self.session.commit()
 
@@ -387,9 +419,12 @@ class AppService:
         if task.start_date is None:
             raise CreateError('Task should have start date')
 
-        period = Period[period_type.upper()]
-        start_date = task.start_date
+        try:
+            period = Period[period_type.upper()]
+        except KeyError as e:
+            raise CreateError('Period not found') from e
 
+        start_date = task.start_date
         end_type = get_end_type(start_date, period, period_amount,
                                 end_date, repetitions_amount)
         repeat = Repeat(user_id=user_id, task_id=task_id, period=period,
@@ -408,7 +443,8 @@ class AppService:
         try:
             self.user_can_access_task(user_id, repeat.task_id)
         except AccessError as e:
-            raise AccessError('User doesnt have permission to access this Repeat') from e
+            raise AccessError(
+                f'User(ID={user_id}) doesnt have permissions to Repeat(ID={repeat_id})') from e
         return repeat
 
     def get_all_repeats(self, user_id: int) -> List[Repeat]:
@@ -422,9 +458,8 @@ class AppService:
     def get_generated_tasks_by_repeat(self, user_id: int,
                                       repeat_id: int) -> List[Task]:
         repeat = self.session.query(Repeat).get(repeat_id)
-        return self.session.query(Task).filter_by(
-            parent_task_id=repeat.task_id).join(
-            TaskUserEditors).all()
+        return self.session.query(Task).filter(
+            Task.parent_task_id == repeat.task_id).all()
 
     def get_active_repeats(self, user_id: int, repeats=None) -> List[Repeat]:
         if repeats is None:
@@ -522,27 +557,29 @@ class AppService:
     def update_repeat(self,
                       user_id: int,
                       repeat_id: int,
-                      args: dict) -> Repeat:
+                      period_type=None,
+                      period_amount=None,
+                      repetitions_amount=None,
+                      end_date=None) -> Repeat:
         repeat = self.get_repeat_by_id(user_id=user_id, repeat_id=repeat_id)
 
         start_date = repeat.start_date
         end_date = repeat.end_date
         repetitions_amount = repeat.repetitions_amount
 
-        if 'start_date' in args:
-            start_date = args['start_date']
-        if 'end_date' in args:
-            end_date = args['end_date']
-        if 'repetitions_amount' in args:
-            repetitions_amount = args['repetitions_amount']
-        args['end_type'] = get_end_type(start_date,
-                                        end_date,
-                                        repetitions_amount)
+        args = {}
+        if period_type:
+            args[Repeat.period_type] = period_type
+        if period_amount:
+            args[Repeat.period_amount] = period_amount
+        if repetitions_amount:
+            args[Repeat.repetitions_amount] = repetitions_amount
+        if end_date:
+            args[Repeat.end_date] = end_date
 
-        try:
-            repeat.update(args)
-        except exc.SQLAlchemyError as e:
-            raise UpdateError('Args error. Args dict can not be empty') from e
+        args[Repeat.end_type] = get_end_type(start_date,
+                                             end_date,
+                                             repetitions_amount)
         return repeat
 
     def get_obj_by_id(self, cls, id: int):
