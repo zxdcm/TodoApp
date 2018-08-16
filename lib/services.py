@@ -106,6 +106,10 @@ class AppService:
         if parent_task_id:
             self.user_can_access_task(user_id=user_id, task_id=parent_task_id)
 
+        if start_date and end_date:
+            if start_date > end_date:
+                raise UpdateError('End date has to be after start date')
+
         task = Task(owner_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
@@ -131,6 +135,10 @@ class AppService:
                 args['status'] = TaskStatus[args['status'].upper()]
             except KeyError:
                 raise UpdateError('Priority not found')
+
+        if 'start_date' and 'end_date' in args:
+            if args['start_date'] > args['end_date']:
+                raise UpdateError('End date has to be after start date')
 
         self.user_can_access_task(user_id=user_id, task_id=task_id)
 

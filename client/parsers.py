@@ -1,4 +1,5 @@
 from datetime import datetime
+from dateutil.parser import parse
 import argparse
 from lib.models import TaskPriority, TaskStatus, Period
 
@@ -57,10 +58,10 @@ def task_parser(sup_parser: argparse):
                         '--description',
                         help='Task description')
     create.add_argument('-sd', '--start_date',
-                        type=datetime,
+                        type=parse,
                         help='Start date. Current time by default')
     create.add_argument('-ed', '--end_date',
-                        type=datetime,
+                        type=parse,
                         help='End date')
     create.add_argument('-p',
                         '--parent_task_id',
@@ -86,10 +87,10 @@ def task_parser(sup_parser: argparse):
                       '--description',
                       help='Task description')
     edit.add_argument('-sd', '--start_date',
-                      type=datetime,
+                      type=parse,
                       help='Start date')
     edit.add_argument('-ed', '--end_date',
-                      type=datetime,
+                      type=parse,
                       help='End date')
     edit.add_argument('-p',
                       '--parent_task_id',
@@ -283,7 +284,7 @@ def repeat_parser(sup_parser: argparse):
                         type=int,
                         help='How much times repeat should be executed')
     create.add_argument('-ed', '--end_date',
-                        type=datetime,
+                        type=parse,
                         help='Repeat end date.')
 
     show = repeat_subparser.add_parser('show', help='Show repeats info')
@@ -302,7 +303,7 @@ def repeat_parser(sup_parser: argparse):
                       type=int,
                       help='How much repeat should be executed')
     edit.add_argument('-ed', '--end_date',
-                      type=datetime,
+                      type=parse,
                       help='Repeat end date.')
 
     delete = repeat_subparser.add_parser('delete',
