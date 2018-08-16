@@ -1,7 +1,7 @@
 from lib.models import (
     Task,
     Folder,
-    Repeat,
+    Plan,
     TaskPriority,
     TaskStatus,
     Period,
@@ -170,7 +170,7 @@ class AppService:
             args[Task.updated] = datetime.now()
             self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
-            raise UpdateError('Arguments Error. Check your dictionary') from e
+            raise UpdateError('Arguments Error. Check your arguments') from e
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
@@ -268,11 +268,11 @@ class AppService:
             TaskUserEditors).filter_by(
                 user_id=user_id).all()
 
-    def delete_task(self, user_id: int, task_id: int, delete_repeat=True):
+    def delete_task(self, user_id: int, task_id: int, delete_plan=True):
         self.user_can_access_task(user_id, task_id)
         self.session.query(Task).filter_by(id=task_id).delete()
-        if delete_repeat:
-            self.session.query(Repeat).filter_by(task_id=task_id).delete()
+        if delete_plan:
+            self.session.query(Plan).filter_by(task_id=task_id).delete()
         self.session.commit()
 
     def add_subtask(self, user_id: int, task_id: int, subtask_id: int):
@@ -306,6 +306,7 @@ class AppService:
 
         task.status = status
         task.updated = datetime.now()
+
         if apply_on_subtasks:
             self.session.query(Task).filter_by(
                 parent_task_id=task_id).join(
@@ -370,11 +371,13 @@ class AppService:
 
     def update_folder(self, user_id: int, folder_id: int, name):
         folder = self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
-        list = self.session.query(Folder).filter_by(user_id=user_id, name=name).all()
-        if len(list) > 1:
+        dupl = self.session.query(Folder).filter_by(
+            user_id=user_id, name=name).all()
+        if len(dupl) > 1:
             raise UpdateError(
                 f'User(ID={user_id}) already has folder {name}')
         folder.name = name
+
         self.session.commit()
         return folder
 
@@ -408,11 +411,11 @@ class AppService:
         folder.tasks.remove(task)
         self.session.commit()
 
-    def create_repeat(self, user_id, task_id,
-                      period_amount,
-                      period_type,
-                      repetitions_amount=None,
-                      end_date=None) -> Repeat:
+    def create_plan(self, user_id, task_id,
+                    period_amount,
+                    period_type,
+                    repetitions_amount=None,
+                    end_date=None) -> Plan:
 
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
@@ -427,78 +430,78 @@ class AppService:
         start_date = task.start_date
         end_type = get_end_type(start_date, period, period_amount,
                                 end_date, repetitions_amount)
-        repeat = Repeat(user_id=user_id, task_id=task_id, period=period,
-                        period_amount=period_amount,
-                        end_type=end_type,
-                        repetitions_amount=repetitions_amount,
-                        end_date=end_date,
-                        start_date=start_date)
-        self.session.add(repeat)
+        plan = Plan(user_id=user_id, task_id=task_id, period=period,
+                    period_amount=period_amount,
+                    end_type=end_type,
+                    repetitions_amount=repetitions_amount,
+                    end_date=end_date,
+                    start_date=start_date)
+        self.session.add(plan)
         self.session.commit()
-        return repeat
+        return plan
 
-    def get_repeat_by_id(self, user_id: int, repeat_id: int) -> Repeat:
-        repeat = self.session.query(Repeat).get(repeat_id)
-        check_object_exist(repeat, repeat_id, 'Repeat')
+    def get_plan_by_id(self, user_id: int, plan_id: int) -> Plan:
+        plan = self.session.query(Plan).get(plan_id)
+        check_object_exist(plan, plan_id, 'Plan')
         try:
-            self.user_can_access_task(user_id, repeat.task_id)
+            self.user_can_access_task(user_id, plan.task_id)
         except AccessError as e:
             raise AccessError(
-                f'User(ID={user_id}) doesnt have permissions to Repeat(ID={repeat_id})') from e
-        return repeat
+                f'User(ID={user_id}) doesnt have permissions to Plan(ID={plan_id})') from e
+        return plan
 
-    def get_all_repeats(self, user_id: int) -> List[Repeat]:
-        return self.session.query(Repeat).join(Task).join(
+    def get_all_plans(self, user_id: int) -> List[Plan]:
+        return self.session.query(Plan).join(Task).join(
             TaskUserEditors).filter(
                 TaskUserEditors.user_id == user_id).all()
 
-    def get_own_repeats(self, user_id: int) ->Repeat:
-        return self.session.query(Repeat).filter_by(user_id=user_id).all()
+    def get_own_plans(self, user_id: int) ->Plan:
+        return self.session.query(Plan).filter_by(user_id=user_id).all()
 
-    def get_generated_tasks_by_repeat(self, user_id: int,
-                                      repeat_id: int) -> List[Task]:
-        repeat = self.session.query(Repeat).get(repeat_id)
+    def get_generated_tasks_by_plan(self, user_id: int,
+                                    plan_id: int) -> List[Task]:
+        plan = self.session.query(Plan).get(plan_id)
         return self.session.query(Task).filter(
-            Task.parent_task_id == repeat.task_id).all()
+            Task.parent_task_id == plan.task_id).all()
 
-    def get_active_repeats(self, user_id: int, repeats=None) -> List[Repeat]:
-        if repeats is None:
-            repeats = self.get_all_repeats(user_id)
+    def get_active_plans(self, user_id: int, plans=None) -> List[Plan]:
+        if plans is None:
+            plans = self.get_all_plans(user_id)
 
-        repeats = self.get_all_repeats(user_id)
+        plans = self.get_all_plans(user_id)
         active_list = []
 
-        for repeat in repeats:
+        for plan in plans:
 
-            interval = get_interval(repeat.period, repeat.period_amount)
-            near_activation = repeat.last_activated + interval
+            interval = get_interval(plan.period, plan.period_amount)
+            near_activation = plan.last_activated + interval
 
-            if repeat.end_type == EndType.AMOUNT:
-
-                if (near_activation < datetime.now() and
-                        repeat.repetitions_counter < repeat.repetitions_amount):
-                    active_list.append(repeat)
-
-            elif repeat.end_type == EndType.DATE:
+            if plan.end_type == EndType.AMOUNT:
 
                 if (near_activation < datetime.now() and
-                        near_activation < repeat.end_date):
-                    active_list.append(repeat)
+                        plan.repetitions_counter < plan.repetitions_amount):
+                    active_list.append(plan)
+
+            elif plan.end_type == EndType.DATE:
+
+                if (near_activation < datetime.now() and
+                        near_activation < plan.end_date):
+                    active_list.append(plan)
 
             elif near_activation < datetime.now():
-                active_list.append(repeat)
+                active_list.append(plan)
 
         return active_list
 
-    def generate_tasks(self, user_id: int, active_repeats=None) -> List[Task]:
+    def execute_plan(self, user_id: int, active_plans=None) -> List[Task]:
         """
 
         Parameters
         ----------
         user_id : type
             Description of parameter `user_id`.
-        active_repeats : type
-            Description of parameter `active_repeats`.
+        active_plans : type
+            Description of parameter `active_plans`.
 
         Returns
         -------
@@ -506,41 +509,41 @@ class AppService:
 
         """
         '''
-       foreach repeat:
+       foreach plan:
           calculate interval according to period and period amount
           sum last_activation and interval and get near activation
           if near activation < current time
               if EndType == AMOUNT or EndType == DATE and we reached the goal:
-                  we dont have to create any task. Repeat rule is completed now
+                  we dont have to create any task. Plan rule is completed now
               otherwise
                 we keep creating tasks on every activation + interval
                                             until we reach current time
             '''
-        if active_repeats is None:
-            active_repeats = self.get_active_repeats(user_id)
-        for repeat in active_repeats:
-            interval = get_interval(repeat.period, repeat.period_amount)
-            near_activation = repeat.last_activated + interval
+        if active_plans is None:
+            active_plans = self.get_active_plans(user_id)
+        for plan in active_plans:
+            interval = get_interval(plan.period, plan.period_amount)
+            near_activation = plan.last_activated + interval
 
             while near_activation < datetime.now():
 
-                if (repeat.end_type == EndType.AMOUNT and
-                        repeat.repetitions_counter == repeat.repetitions_amount):
+                if (plan.end_type == EndType.AMOUNT and
+                        plan.repetitions_counter == plan.repetitions_amount):
                     break
-                if (repeat.end_type == EndType.DATE and
-                        near_activation > repeat.end_date):
+                if (plan.end_type == EndType.DATE and
+                        near_activation > plan.end_date):
                     break
 
                 task = self.create_task(user_id=user_id,
-                                        name=repeat.task.name,
-                                        description=repeat.task.description,
+                                        name=plan.task.name,
+                                        description=plan.task.description,
                                         start_date=near_activation,
-                                        parent_task_id=repeat.task.id,
-                                        assigned_id=repeat.task.assigned_id)
-                repeat.last_activated = near_activation
-                near_activation = repeat.last_activated + interval
-                repeat.repetitions_counter += 1
-                for x in repeat.task.editors:
+                                        parent_task_id=plan.task.id,
+                                        assigned_id=plan.task.assigned_id)
+                plan.last_activated = near_activation
+                near_activation = plan.last_activated + interval
+                plan.repetitions_counter += 1
+                for x in plan.task.editors:
                     if x.user_id is user_id:
                         continue
                     task.editors.append(
@@ -550,37 +553,51 @@ class AppService:
 
         self.session.commit()
 
-    def delete_repeat(self, user_id: int, repeat_id: int):
-        self.get_repeat_by_id(user_id, repeat_id).delete()
+    def delete_plan(self, user_id: int, plan_id: int):
+        self.get_plan_by_id(user_id, plan_id).delete()
         self.session.commit()
 
-    def update_repeat(self,
-                      user_id: int,
-                      repeat_id: int,
-                      period_type=None,
-                      period_amount=None,
-                      repetitions_amount=None,
-                      end_date=None) -> Repeat:
-        repeat = self.get_repeat_by_id(user_id=user_id, repeat_id=repeat_id)
+    def update_plan(self,
+                    user_id: int,
+                    plan_id: int,
+                    period_type=None,
+                    period_amount=None,
+                    repetitions_amount=None,
+                    end_date=None) -> Plan:
 
-        start_date = repeat.start_date
-        end_date = repeat.end_date
-        repetitions_amount = repeat.repetitions_amount
+        plan = self.get_plan_by_id(user_id=user_id, plan_id=plan_id)
+
+        start_date = plan.start_date
+        end_date = plan.end_date
+        repetitions_amount = plan.repetitions_amount
 
         args = {}
-        if period_type:
-            args[Repeat.period_type] = period_type
-        if period_amount:
-            args[Repeat.period_amount] = period_amount
-        if repetitions_amount:
-            args[Repeat.repetitions_amount] = repetitions_amount
-        if end_date:
-            args[Repeat.end_date] = end_date
 
-        args[Repeat.end_type] = get_end_type(start_date,
-                                             end_date,
-                                             repetitions_amount)
-        return repeat
+        if period_type:
+            try:
+                args[Plan.period] = Period[period_type.upper()]
+            except KeyError as e:
+                raise UpdateError('Period not found') from e
+
+        if period_amount:
+            args[Plan.period_amount] = period_amount
+        if repetitions_amount:
+            args[Plan.repetitions_amount] = repetitions_amount
+        if end_date:
+            args[Plan.end_date] = end_date
+
+        args[Plan.end_type] = get_end_type(start_date,
+                                           end_date,
+                                           repetitions_amount)
+
+        try:
+            self.session.query(Plan).filter_by(id=plan_id).update(args)
+        except exc.SQLAlchemyError as e:
+            raise UpdateError('Arguments Error. Check your arguments') from e
+        self.session.commit()
+        return self.session.query(Plan).get(plan_id)
+
+        return plan
 
     def get_obj_by_id(self, cls, id: int):
         """This method allows to get any object from the db without validation

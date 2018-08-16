@@ -6,7 +6,7 @@ from lib.models import TaskPriority, TaskStatus, Period
 
 def exclude_keys(namespace):
     namespace = vars(namespace)
-    keys = ['entity', 'action', 'user_id', 'task_id', 'folder_id', 'repeat_id']
+    keys = ['entity', 'action', 'user_id', 'task_id', 'folder_id', 'plan_id']
     return {x: namespace[x] for x in namespace if x not in keys and
             namespace[x]}
 
@@ -39,10 +39,10 @@ def task_show_parser(show_subparser: argparse):
     task_show.add_parser('archived',
                          help='Show archived tasks')
 
-    task_show.add_parser('repeat',
-                         help='Show tasks created by repeat')
-    task_show.add_parser('repeatless',
-                         help='Show tasks without repeat')
+    task_show.add_parser('plan',
+                         help='Show tasks created by plan')
+    task_show.add_parser('planless',
+                         help='Show tasks without plan')
 
 
 def task_parser(sup_parser: argparse):
@@ -187,10 +187,10 @@ def task_parser(sup_parser: argparse):
 
 def folder_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
-                                              title='Show repeat and its info',
+                                              title='Show plan and its info',
                                               metavar='')
     folder_id = task_show.add_parser('id',
-                                     help='Show repeat by id')
+                                     help='Show plan by id')
     folder_id.add_argument('folder_id',
                            help='Folder id', type=int)
     folder_id.add_argument('--tasks',
@@ -257,36 +257,36 @@ def folder_parser(sup_parser: argparse):
                         type=int)
 
 
-def repeat_show_parser(sup_parser: argparse):
-    repeat_show = sup_parser.add_subparsers(dest='show_type',
-                                            title='Show repeat and its info',
-                                            metavar='')
-    repeat_id = repeat_show.add_parser('id',
-                                       help='Show repeat by id')
+def plan_show_parser(sup_parser: argparse):
+    plan_show = sup_parser.add_subparsers(dest='show_type',
+                                          title='Show plan and its info',
+                                          metavar='')
+    plan_id = plan_show.add_parser('id',
+                                   help='Show plan by id')
 
-    repeat_id.add_argument('repeat_id',
-                           help='Repeat id',
-                           type=int)
-    repeat_id.add_argument('--tasks',
-                           action='store_true',
-                           help='Show repeat. Task and generated tasks')
+    plan_id.add_argument('plan_id',
+                         help='Plan id',
+                         type=int)
+    plan_id.add_argument('--tasks',
+                         action='store_true',
+                         help='Show plan. Task and generated tasks')
 
-    repeat_all = repeat_show.add_parser('all',
-                                        help='Show all folders')
-    repeat_all.add_argument('--tasks',
-                            action='store_true',
-                            help='Show repeat. Task and generated tasks')
+    plan_all = plan_show.add_parser('all',
+                                    help='Show all folders')
+    plan_all.add_argument('--tasks',
+                          action='store_true',
+                          help='Show plan. Task and generated tasks')
 
 
-def repeat_parser(sup_parser: argparse):
+def plan_parser(sup_parser: argparse):
 
-    repeat_parser = sup_parser.add_parser('repeat',
-                                          help='Manage repeat')
-    repeat_subparser = repeat_parser.add_subparsers(dest='action',
-                                                    metavar='')
+    plan_parser = sup_parser.add_parser('plan',
+                                        help='Manage plan')
+    plan_subparser = plan_parser.add_subparsers(dest='action',
+                                                metavar='')
 
-    create = repeat_subparser.add_parser('create',
-                                         help='Create repeat for existing task')
+    create = plan_subparser.add_parser('create',
+                                       help='Create plan for existing task')
     create.add_argument('task_id',
                         help='task id',
                         type=int)
@@ -297,20 +297,20 @@ def repeat_parser(sup_parser: argparse):
                         help='Period type',
                         choices=[x.name.lower() for x in Period])
 
-    create.add_argument('-r', '--repeat_amount',
+    create.add_argument('-r', '--plan_amount',
                         type=int,
-                        help='How much times repeat should be executed')
+                        help='How much times plan should be executed')
     create.add_argument('-e', '--end_date',
                         type=parse,
-                        help='Repeat end date.')
+                        help='Plan end date.')
 
-    show = repeat_subparser.add_parser('show', help='Show repeats info')
-    repeat_show_parser(show)
+    show = plan_subparser.add_parser('show', help='Show plans info')
+    plan_show_parser(show)
 
-    edit = repeat_subparser.add_parser('edit',
-                                       help='Edit repeat')
-    edit.add_argument('repeat_id',
-                      help='repeat_id',
+    edit = plan_subparser.add_parser('edit',
+                                     help='Edit plan')
+    edit.add_argument('plan_id',
+                      help='plan_id',
                       type=int)
     edit.add_argument('-p', '--period_amount',
                       help='Period amount',
@@ -318,16 +318,16 @@ def repeat_parser(sup_parser: argparse):
     edit.add_argument('-t', '--period_type',
                       help='Period type',
                       choices=[x.name.lower() for x in Period])
-    edit.add_argument('-r', '--repeat_amount',
+    edit.add_argument('-r', '--plan_amount',
                       type=int,
-                      help='How much repeat should be executed')
+                      help='How much plan should be executed')
     edit.add_argument('-e', '--end_date',
                       type=parse,
-                      help='Repeat end date.')
+                      help='Plan end date.')
 
-    delete = repeat_subparser.add_parser('delete',
-                                         help='Delete repeat by id')
-    delete.add_argument('repeat_id', type=int)
+    delete = plan_subparser.add_parser('delete',
+                                       help='Delete plan by id')
+    delete.add_argument('plan_id', type=int)
 
 
 def user_parser(sup_parser: argparse):
@@ -358,6 +358,6 @@ def get_args():
         description='Select entity', metavar='')
     task_parser(entity_parser)
     folder_parser(entity_parser)
-    repeat_parser(entity_parser)
+    plan_parser(entity_parser)
     user_parser(entity_parser)
     return main_parser.parse_args()

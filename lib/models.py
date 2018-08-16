@@ -85,14 +85,13 @@ class Task(Base):
 
     start_date = Column(DateTime)
     end_date = Column(DateTime)
-
     created = Column(DateTime, nullable=False, default=datetime.now())
     updated = Column(DateTime, nullable=False, default=datetime.now())
 
     editors = relationship('TaskUserEditors')
 
     #  uselist prop allows to set one to one relation
-    repeat = relationship("Repeat", uselist=False, back_populates='task')
+    plan = relationship("Plan", uselist=False, back_populates='task')
 
     def __init__(self, name, owner_id, description=None,
                  start_date=None, end_date=None,
@@ -146,13 +145,13 @@ class EndType(enum.Enum):
     DATE = 'Date'
 
 
-class Repeat(Base):
-    __tablename__ = 'repeats'
+class Plan(Base):
+    __tablename__ = 'plans'
     id = Column(Integer, primary_key=True)
     task_id = Column(Integer, ForeignKey('tasks.id'))
     user_id = Column(Integer)
 
-    task = relationship('Task', back_populates='repeat')
+    task = relationship('Task', back_populates='plan')
 
     period = Column(Enum(Period))
     period_amount = Column(Integer)
@@ -162,12 +161,14 @@ class Repeat(Base):
     last_activated = Column(DateTime)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
+    #interval = Column(DateTime)
 
     def __init__(self, user_id, task_id,
                  period, period_amount,
                  end_type,
                  repetitions_amount,
-                 end_date, start_date):
+                 end_date, start_date,
+                 interval):
         self.user_id = user_id
         self.task_id = task_id
         self.period = period
@@ -177,6 +178,7 @@ class Repeat(Base):
         self.end_date = end_date
         self.start_date = start_date
         self.last_activated = self.start_date
+        #self.interval = self.interval
 
     def __str__(self):
         if self.end_date:
