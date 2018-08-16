@@ -15,5 +15,9 @@ class UpdateError(BaseLibError):
     pass
 
 
+class CreateError(BaseLibError):
+    pass
+
+
 class ObjectNotFound(BaseLibError):
     pass

@@ -60,7 +60,8 @@ def task_parser(sup_parser: argparse):
                         help='Task description')
     create.add_argument('-sd', '--start_date',
                         type=parse,
-                        help='Start date. Current time by default')
+                        help='Start date',
+                        default=datetime.now().replace(microsecond=0))
     create.add_argument('-ed', '--end_date',
                         type=parse,
                         help='End date')
@@ -320,8 +321,7 @@ def repeat_parser(sup_parser: argparse):
 
     delete = repeat_subparser.add_parser('delete',
                                          help='Delete repeat by id')
-    delete.add_argument('repeat_id',
-                        type=int)
+    delete.add_argument('repeat_id', type=int)
 
 
 def user_parser(sup_parser: argparse):

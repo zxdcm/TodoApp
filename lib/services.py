@@ -20,7 +20,8 @@ from typing import List
 from lib.exceptions import (AccessError,
                             FolderExist,
                             UpdateError,
-                            ObjectNotFound)
+                            ObjectNotFound,
+                            CreateError)
 
 from lib.utils import (get_end_type,
                        get_interval,
@@ -59,8 +60,8 @@ class AppService:
                     name,
                     status='todo',
                     priority='medium',
-                    start_date=datetime.now(),
                     description=None,
+                    start_date=datetime.now(),
                     end_date=None,
                     parent_task_id=None,
                     assigned_id=None
@@ -95,20 +96,22 @@ class AppService:
             try:
                 priority = TaskPriority[priority.upper()]
             except KeyError as e:
-                raise UpdateError('Priority not found') from e
+                raise CreateError('Priority not found') from e
 
         if status:
             try:
                 status = TaskStatus[status.upper()]
             except KeyError as e:
-                raise UpdateError('Status not found') from e
+                raise CreateError('Status not found') from e
 
         if parent_task_id:
             self.user_can_access_task(user_id=user_id, task_id=parent_task_id)
 
         if start_date and end_date:
             if start_date > end_date:
-                raise UpdateError('End date has to be after start date')
+                raise CreateError('End date has to be after start date')
+        if start_date:
+            start_date.replace(microsecond=0)
 
         task = Task(owner_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
@@ -378,7 +381,7 @@ class AppService:
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
         if task.start_date is None:
-            task.start_date = datetime.now()  # TODO: raise exceptio
+            raise CreateError('Task should have start date')
 
         period = Period[period_type.upper()]
         start_date = task.start_date
@@ -411,15 +414,6 @@ class AppService:
 
     def get_own_repeats(self, user_id: int) ->Repeat:
         return self.session.query(Repeat).filter_by(user_id=user_id).all()
-
-    # def get_generated_tasks(self, user_id: int) -> List[Task]:
-    #     result = self.session.query(Task, Repeat).filter(
-    #         Task.parent_task_id == Repeat.task_id).join(
-    #         TaskUserEditors).all()
-    #     tasks = []
-    #     for task, junk in result:
-    #         tasks.append(task)
-    #     return tasks
 
     def get_generated_tasks_by_repeat(self, user_id: int,
                                       repeat_id: int) -> List[Task]:
