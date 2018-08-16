@@ -10,28 +10,32 @@ def task_show_handler(service: AppService, namespace):
         print(task)
 
     elif namespace.show_type == 'own':
-        [print(x) for x in service.get_own_tasks(
-            user_id=namespace.user_id)]
+        for x in service.get_own_tasks(user_id=namespace.user_id):
+            print(x)
 
     elif namespace.show_type == 'subtasks':
-        [print(x) for x in service.get_subtasks(
-            user_id=namespace.user_id, task_id=namespace.task_id)]
+        for x in service.get_subtasks(
+                user_id=namespace.user_id, task_id=namespace.task_id):
+            print(x)
 
     elif namespace.show_type == 'all':
-        [print(x) for x in service.get_available_tasks(
-            user_id=namespace.user_id)]
+        for x in service.get_available_tasks(
+                user_id=namespace.user_id):
+            print(x)
 
     elif namespace.show_type == 'assigned':
-        [print(x) for x in service.get_user_assigned_tasks(
-            user_id=namespace.user_id)]
+        for x in service.get_user_assigned_tasks(user_id=namespace.user_id):
+            print(x)
 
     elif namespace.show_type == 'repeat':
-        [print(x) for x in service.get_generated_tasks(
-            user_id=namespace.user_id)]
+        for x in service.get_generated_tasks(user_id=namespace.user_id):
+            print(x)
 
     elif namespace.show_type == 'repeatless':
-        [print(x) for x in service.get_available_tasks(
-            user_id=namespace.user_id) if x.repeat is None]
+        for task in service.get_available_tasks(
+                user_id=namespace.user_id):
+            if task.repeat is None:
+                print(x)
 
 
 def task_handler(service: AppService, namespace):
@@ -85,7 +89,7 @@ def task_handler(service: AppService, namespace):
         service.change_task_status(user_id=namespace.user_id,
                                    task_id=namespace.task_id,
                                    status='done',
-                                   apply_on_subtasks=namespace.archive_subs)
+                                   apply_on_subtasks=namespace.done_subs)
 
     elif namespace.action == 'archive':
         service.change_task_status(user_id=namespace.user_id,
@@ -108,7 +112,8 @@ def folder_show_handler(service: AppService, namespace):
         if namespace.tasks:
             if folder.tasks:
                 print('Folder tasks:')
-                [print(x) for x in folder.tasks]
+                for x in folder.tasks:
+                    print(x)
             else:
                 print('Folder dont have any tasks')
 
@@ -176,7 +181,8 @@ def repeat_show_handlers(service: AppService, namespace):
 
     elif namespace.show_type == 'all':
         repeats = service.get_all_repeats(user_id=namespace.user_id)
-        [print(x) for x in repeats]
+        for x in repeats:
+            print(x)
         #  TODO:
 
 
@@ -212,6 +218,23 @@ def repeat_handler(service: AppService, namespace):
                               repeat_id=namespace.repeat_id)
 
 
+def users_handler(service: AppService, namespace):
+    if namespace.action == 'show':
+        if namespace.show_type == 'id':
+            if service.user_with_id_exist(user_id=namespace.user_id):
+                print('User with followign id exist')
+            else:
+                print('User not found')
+        elif namespace.show_type == 'all':
+            users = service.get_all_users_ids()
+            if users:
+                print('Users:')
+                for user in users:
+                    print(user)
+            else:
+                print('There are no users')
+
+
 def commands_handler(service: AppService, namespace):
 
     if namespace.entity == 'task':
@@ -222,3 +245,6 @@ def commands_handler(service: AppService, namespace):
 
     elif namespace.entity == 'repeat':
         repeat_handler(service, namespace)
+
+    elif namespace.entity == 'users':
+        users_handler(service, namespace)

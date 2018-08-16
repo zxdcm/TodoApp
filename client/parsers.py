@@ -18,14 +18,15 @@ def task_show_parser(show_subparser: argparse):
     task_id = task_show.add_parser('id',
                                    help='Show task by id')
     task_id.add_argument('task_id',
-                         help='Task id')
+                         help='Task id',
+                         type=int)
 
     task_show.add_parser('own',
                          help='Show tasks created by user')
 
     subtasks = task_show.add_parser('subtasks',
                                     help='Show subtasks for task by id')
-    subtasks.add_argument('task_id')
+    subtasks.add_argument('task_id', type=int)
 
     task_show.add_parser('access',
                          help='Show tasks that user can access')
@@ -38,12 +39,15 @@ def task_show_parser(show_subparser: argparse):
 
     task_show.add_parser('repeat',
                          help='Show tasks created by repeat')
-    task_show.add_parser('repeatless', help='Show tasks without repeat')
+    task_show.add_parser('repeatless',
+                         help='Show tasks without repeat')
 
 
 def task_parser(sup_parser: argparse):
-    task_parser = sup_parser.add_parser('task', help='Manage tasks')
-    task_subparser = task_parser.add_subparsers(dest='action', metavar='')
+    task_parser = sup_parser.add_parser('task',
+                                        help='Manage tasks')
+    task_subparser = task_parser.add_subparsers(dest='action',
+                                                metavar='')
 
     create = task_subparser.add_parser('create',
                                        help='Create new task')
@@ -52,72 +56,124 @@ def task_parser(sup_parser: argparse):
     create.add_argument('-d',
                         '--description',
                         help='Task description')
-    create.add_argument('-sd', '--start_date', type=datetime,
+    create.add_argument('-sd', '--start_date',
+                        type=datetime,
                         help='Start date. Current time by default')
-    create.add_argument('-ed', '--end_date', type=datetime,
+    create.add_argument('-ed', '--end_date',
+                        type=datetime,
                         help='End date')
-    create.add_argument('-p', '--parent_task_id', type=int,
+    create.add_argument('-p',
+                        '--parent_task_id',
+                        type=int,
                         help='Parent task id')
-    create.add_argument('-priority', type=str,
+    create.add_argument('-priority',
+                        type=str,
                         choices=[x.name.lower() for x in TaskPriority])
 
-    show = task_subparser.add_parser('show', help='Show tasks')
+    show = task_subparser.add_parser('show',
+                                     help='Show tasks')
     task_show_parser(show)
 
-    edit = task_subparser.add_parser('edit', help='Edit task with provided id')
-    edit.add_argument('-tid', '--task_id', required=True)
-    edit.add_argument('-n', '--name',
+    edit = task_subparser.add_parser('edit',
+                                     help='Edit task with provided id')
+    edit.add_argument('-tid',
+                      '--task_id',
+                      required=True, type=int)
+    edit.add_argument('-n',
+                      '--name',
                       help='Task name')
-    edit.add_argument('-d', '--description',
+    edit.add_argument('-d',
+                      '--description',
                       help='Task description')
-    edit.add_argument('-sd', '--start_date', type=datetime,
+    edit.add_argument('-sd', '--start_date',
+                      type=datetime,
                       help='Start date')
-    edit.add_argument('-ed', '--end_date', type=datetime,
+    edit.add_argument('-ed', '--end_date',
+                      type=datetime,
                       help='End date')
-    edit.add_argument('-p', '--parent_task_id', type=int,
+    edit.add_argument('-p',
+                      '--parent_task_id',
+                      type=int,
                       help='Parent task id')
-    edit.add_argument('-priority', type=str,
+    edit.add_argument('-priority',
+                      type=str,
                       choices=[x.name.lower() for x in TaskPriority])
-    edit.add_argument('-status', type=str,
+    edit.add_argument('-status',
+                      type=str,
                       choices=[x.name.lower() for x in TaskStatus])
 
-    share = task_subparser.add_parser('share', help='Share task with user')
-    share.add_argument('-tid', '--task_id', type=int,
-                       help='Id of task to be shared', required=True)
-    share.add_argument('-uid', '--user_receiver_id', type=int,
-                       help='User id to share task with', required=True)
+    share = task_subparser.add_parser('share',
+                                      help='Share task with user')
+    share.add_argument('-tid',
+                       '--task_id',
+                       type=int,
+                       help='Id of task to be shared',
+                       required=True)
+    share.add_argument('-uid',
+                       '--user_receiver_id',
+                       type=int,
+                       help='User id to share task with',
+                       required=True)
 
     unshare = task_subparser.add_parser(
         'unshare', help='Unshare shared task with user')
-    unshare.add_argument('-tid', '--task_id', help='Task id', required=True)
-    unshare.add_argument('-uid', '--user_receiver_id',
-                         help='user id', required=True)
+    unshare.add_argument('-tid',
+                         '--task_id',
+                         help='Task id',
+                         required=True,
+                         type=int)
+    unshare.add_argument('-uid',
+                         '--user_receiver_id',
+                         help='user id',
+                         required=True,
+                         type=int)
 
     assign = task_subparser.add_parser(
         'assign', help='Assign task executor')
-    assign.add_argument('-tid', '--task_id', help='Task id', required=True)
-    assign.add_argument('-uid', '--assigner_user_id',
-                        help='user id', required=True)
+    assign.add_argument('-tid',
+                        '--task_id',
+                        help='Task id',
+                        required=True,
+                        type=int)
+    assign.add_argument('-uid',
+                        '--assigner_user_id',
+                        help='user id',
+                        required=True,
+                        type=int)
 
     subtask = task_subparser.add_parser('set_subtask',
                                         help='Set task with task_id as the subtask of task with parent_id')
-    subtask.add_argument('-tid', '--task_id', required=True, help='Task id')
-    subtask.add_argument('-pid', '--parent_task_id', help='Parent task id',
-                         required=True)
+    subtask.add_argument('-tid',
+                         '--task_id',
+                         required=True,
+                         help='Task id',
+                         type=int)
+    subtask.add_argument('-pid',
+                         '--parent_task_id',
+                         help='Parent task id',
+                         required=True,
+                         type=int)
 
-    archive = task_subparser.add_parser('archive', help='Archive task')
-    archive.add_argument('task_id', help='task id')
-    archive.add_argument('--archive_subs', action='store_true',
+    archive = task_subparser.add_parser('archive',
+                                        help='Archive task')
+    archive.add_argument('task_id',
+                         help='task id')
+    archive.add_argument('--archive_subs',
+                         action='store_true',
                          help='Archive subtasks')
 
-    done = task_subparser.add_parser('done', help='Done task')
-    done.add_argument('task_id', help='task id')
-    done.add_argument('--done_subs', action='store_true',
+    done = task_subparser.add_parser('done',
+                                     help='Done task')
+    done.add_argument('task_id',
+                      help='task id')
+    done.add_argument('--done_subs',
+                      action='store_true',
                       help='Done subtasks')
 
     delete = task_subparser.add_parser('delete',
                                        help='Delete task with provided id')
-    delete.add_argument('task_id', type=int)
+    delete.add_argument('task_id',
+                        type=int)
 
 
 def folder_show_parser(show_subparser: argparse):
@@ -141,27 +197,42 @@ def folder_show_parser(show_subparser: argparse):
 
 def folder_parser(sup_parser: argparse):
 
-    folder_parser = sup_parser.add_parser('folder', help='Manage folders')
-    folder_subparser = folder_parser.add_subparsers(dest='action', metavar='')
+    folder_parser = sup_parser.add_parser('folder',
+                                          help='Manage folders')
+    folder_subparser = folder_parser.add_subparsers(dest='action',
+                                                    metavar='')
 
-    create = folder_subparser.add_parser('create', help='Create new folder')
-    create.add_argument('name', help='Folder name')
+    create = folder_subparser.add_parser('create',
+                                         help='Create new folder')
+    create.add_argument('name',
+                        help='Folder name')
 
-    show = folder_subparser.add_parser('show', help='Show folders  info')
+    show = folder_subparser.add_parser('show',
+                                       help='Show folders  info')
     folder_show_parser(show)
 
     populate = folder_subparser.add_parser(
         'populate', help='Populate folder with provided task')
-    populate.add_argument('-fid', '--folder_id', required=True)
-    populate.add_argument('-tid', '--task_id', required=True)
+    populate.add_argument('-fid',
+                          '--folder_id',
+                          required=True)
+    populate.add_argument('-tid',
+                          '--task_id',
+                          required=True)
 
     unpopulate = folder_subparser.add_parser(
-        'unpopulate', help='delete task from folder')
-    unpopulate.add_argument('-fid', '--folder_id', required=True)
-    unpopulate.add_argument('-tid', '--task_id', required=True)
+        'unpopulate',
+        help='delete task from folder')
+    unpopulate.add_argument('-fid',
+                            '--folder_id',
+                            required=True)
+    unpopulate.add_argument('-tid',
+                            '--task_id',
+                            required=True)
 
     edit = folder_subparser.add_parser(
-        'edit', help='Edit folder with provided id')
+        'edit',
+        help='Edit folder with provided id')
     edit.add_argument('folder_id')
     edit.add_argument('name',
                       help='Folder name')
@@ -239,6 +310,24 @@ def repeat_parser(sup_parser: argparse):
     delete.add_argument('repeat_id')
 
 
+def user_parser(sup_parser: argparse):
+    user_parser = sup_parser.add_parser('users',
+                                        help='Manage users')
+    user_subparser = user_parser.add_subparsers(dest='action',
+                                                metavar='')
+    show = user_subparser.add_parser('show',
+                                     help='Show user and its info')
+
+    user_show = show.add_subparsers(dest='show_type',
+                                         title='Show user and its info',
+                                         metavar='')
+    user_id = user_show.add_parser('id',
+                                   help='Trying to find user by id')
+    user_id.add_argument('user_id', type=int)
+
+    user_show.add_parser('all', help='List all users')
+
+
 def get_args():
     main_parser = argparse.ArgumentParser(prog='Tracker',
                                           description='CLI for tracker',
@@ -250,4 +339,5 @@ def get_args():
     task_parser(entity_parser)
     folder_parser(entity_parser)
     repeat_parser(entity_parser)
+    user_parser(entity_parser)
     return main_parser.parse_args()

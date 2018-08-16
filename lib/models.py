@@ -80,13 +80,16 @@ class Task(Base):
     name = Column(String)
     description = Column(String)
 
-    priority = Column(Enum(TaskPriority), default=TaskPriority.NONE,
+    priority = Column(Enum(TaskPriority), default=TaskPriority.LOW,
                       nullable=False)
     status = Column(Enum(TaskStatus), default=TaskStatus.CREATED,
                     nullable=False)
 
     start_date = Column(DateTime)
     end_date = Column(DateTime)
+
+    created = Column(DateTime, nullable=False, default=datetime.now())
+    updated = Column(DateTime, nullable=False, default=datetime.now())
 
     editors = relationship('TaskUserEditors')
 
@@ -97,7 +100,7 @@ class Task(Base):
 
     def __init__(self, name, owner_id, description=None,
                  start_date=None, end_date=None,
-                 priority=None, parent_task_id=None, assigned_id=None):
+                 priority=None, status=None, parent_task_id=None, assigned_id=None):
         self.name = name
         self.owner_id = owner_id
         self.description = description
@@ -106,6 +109,7 @@ class Task(Base):
         self.parent_task_id = parent_task_id
         self.assigned_id = assigned_id
         self.priority = priority
+        self.status = status
 
     def __str__(self):
         return (
@@ -117,6 +121,8 @@ class Task(Base):
                 Description: {self.description}
                 Status: {self.status.value}
                 Priority: {self.priority.value}
+                Created: {self.created}
+                Updated: {self.updated}
                 Start Date: {self.start_date}
                 End Date: {self.end_date}
                 Repeat: {self.repeat}
@@ -173,16 +179,16 @@ class Repeat(Base):
 
     def __str__(self):
         return (f'''
-                        user_id : {self.user_id}
-                        task_id: {self.task_id}
-                        period: {self.period.value}
-                        period_amount: {self.period_amount}
-                        end_type: {self.end_type.value}
-                        repetitions_amount: {self.repetitions_amount}
-                        repetitions count: {self.repetitions_amount}
-                        start date: {self.start_date}
-                        end date: {self.end_date}
-                        last activated: {self.last_activated}
+                        Owner ID : {self.user_id}
+                        Task ID: {self.task_id}
+                        Period: {self.period.value}
+                        Period amount: {self.period_amount}
+                        End type: {self.end_type.value}
+                        Repetitions_amount: {self.repetitions_amount}
+                        Repetitions count: {self.repetitions_amount}
+                        Start date: {self.start_date}
+                        End date: {self.end_date}
+                        Last activated: {self.last_activated}
                 ''')
 
 

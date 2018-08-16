@@ -45,6 +45,15 @@ class AppService:
             return True
         raise AccessError('User doesnt have permissions to this task')
 
+    def user_with_id_exist(self, user_id: int):
+        user_tasks = self.session.query(TaskUserEditors).filter_by(user_id=user_id).all()
+        if user_tasks:
+            return True
+
+    def get_all_users_ids(self):
+        user_ids = [x.user_id for x in self.session.query(TaskUserEditors).all()]
+        return user_ids
+
     def create_task(self,
                     user_id,
                     name,
@@ -85,8 +94,14 @@ class AppService:
         if priority:
             try:
                 priority = TaskPriority[priority.upper()]
-            except KeyError:
-                raise UpdateError('Priority not found')
+            except KeyError as e:
+                raise UpdateError('Priority not found') from e
+
+        if status:
+            try:
+                status = TaskStatus[status.upper()]
+            except KeyError as e:
+                raise UpdateError('Status not found') from e
 
         if parent_task_id:
             self.user_can_access_task(user_id=user_id, task_id=parent_task_id)
@@ -94,7 +109,7 @@ class AppService:
         task = Task(owner_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
-                    assigned_id=assigned_id)
+                    assigned_id=assigned_id, status=status)
         task.editors.append(TaskUserEditors(user_id=user_id, task_id=task.id))
 
         self.session.add(task)
@@ -120,6 +135,7 @@ class AppService:
         self.user_can_access_task(user_id=user_id, task_id=task_id)
 
         try:
+            args['updated'] = datetime.now()
             self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
             raise UpdateError('Args error. Args dict can not be empty') from e
@@ -230,11 +246,6 @@ class AppService:
         return self.session.query(Task).filter_by(
             parent_task_id=task_id).join(
                 TaskUserEditors).filter_by(user_id=user_id)
-        # return self.session.query(Task).filter_by(  # TODO: fix join
-        #     parent_task_id=task_id).join(TaskUserEditors).filter(or_(
-        #         Task.owner_id == user_id,
-        #         Task.assigned_id == user_id,
-        #         TaskUserEditors.user_id == user_id)).all()
 
     def change_task_status(self,
                            user_id: int,
