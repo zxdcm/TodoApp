@@ -16,6 +16,7 @@ import enum
 
 Base = declarative_base()
 DATABASE = 'todoapp.db'
+HUMANIZE = '%Y-%m-%d %H:%M'
 
 
 def set_up_connection(connection_string=None):
@@ -67,6 +68,14 @@ class Folder(Base):
     def __str__(self):
         return self.name
 
+#
+# class SubTaskRelation(Base):
+#     __tablename__ = 'sub_tasks_relation'
+#     id = Column(Integer, primary_key=True)
+#     task_id = Column(Integer, ForeignKey('tasks.id'))
+#     parent_task_id = Column(Integer, ForeignKey('tasks.id'))
+#
+
 
 class Task(Base):
     __tablename__ = 'tasks'
@@ -89,6 +98,12 @@ class Task(Base):
     updated = Column(DateTime, nullable=False, default=datetime.now())
 
     editors = relationship('TaskUserEditors')
+    #
+    # subtasks = relationship('Task',
+    #                         secondary='sub_tasks_relation',
+    #                         primaryjoin=SubTaskRelation.task_id == id,
+    #                         secondaryjoin=SubTaskRelation.parent_task_id == id,
+    #                         backref='children')
 
     #  uselist prop allows to set one to one relation
     plan = relationship("Plan", uselist=False, back_populates='task')
@@ -107,12 +122,12 @@ class Task(Base):
         self.status = status
 
     def __str__(self):
-        created = self.created.strftime('%Y-%m-%d %H:%M')
-        updated = self.updated.strftime('%Y-%m-%d %H:%M')
+        created = self.created.strftime(HUMANIZE)
+        updated = self.updated.strftime(HUMANIZE)
         if self.start_date:
-            start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
+            start_date = self.start_date.strftime(HUMANIZE)
         if self.end_date:
-            end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
+            end_date = self.end_date.strftime(HUMANIZE)
         return (
             f'\n'
             f'ID : {self.id}\n'
@@ -161,7 +176,6 @@ class Plan(Base):
     last_activated = Column(DateTime)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
-    #interval = Column(DateTime)
 
     def __init__(self, user_id, task_id,
                  period, period_amount,
@@ -182,9 +196,9 @@ class Plan(Base):
 
     def __str__(self):
         if self.end_date:
-            end_date = self.end_date.strftime('%Y-%m-%d %H:%M')
-        start_date = self.start_date.strftime('%Y-%m-%d %H:%M')
-        last_activated = self.last_activated.strftime('%Y-%m-%d %H:%M')
+            end_date = self.end_date.strftime(HUMANIZE)
+        start_date = self.start_date.strftime(HUMANIZE)
+        last_activated = self.last_activated.strftime(HUMANIZE)
         return (f'\n'
                 f'ID: {self.id}\n'
                 f'Owner ID: {self.user_id}\n'

@@ -2,6 +2,14 @@ from datetime import datetime
 from dateutil.parser import parse
 import argparse
 from lib.models import TaskPriority, TaskStatus, Period
+from os import sys
+
+
+class DefaultHelpParser(argparse.ArgumentParser):
+    def error(self, message):
+        print('error: %s\n' % message, file=sys.stderr)
+        self.print_help()
+        sys.exit(2)
 
 
 def exclude_keys(namespace):
@@ -349,9 +357,9 @@ def user_parser(sup_parser: argparse):
 
 
 def get_args():
-    main_parser = argparse.ArgumentParser(prog='Tracker',
-                                          description='CLI for tracker',
-                                          usage='Tracker')
+    main_parser = DefaultHelpParser(prog='Tracker',
+                                    description='CLI for tracker',
+                                    usage='Tracker <entity> [<args>]')
     entity_parser = main_parser.add_subparsers(
         dest='entity',
         title='Entities',

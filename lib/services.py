@@ -8,13 +8,13 @@ from lib.models import (
     EndType,
     task_folder_association_table,
     TaskUserEditors,
-    set_up_connection,
-)
+    set_up_connection)
 
 
 from sqlalchemy import (orm,
                         exc,
                         or_)
+
 from typing import List
 
 from lib.exceptions import (AccessError,
@@ -40,9 +40,6 @@ class AppService:
         self.session = session
 
     def user_can_access_task(self, user_id: int, task_id: int):
-        if self.session.query(Task).filter_by(
-                id=task_id, owner_id=user_id).one_or_none():
-            return True
         if self.session.query(Task).join(TaskUserEditors).filter_by(
                 user_id=user_id, task_id=task_id).all():
             return True
@@ -119,10 +116,19 @@ class AppService:
                     start_date=start_date, priority=priority,
                     end_date=end_date, parent_task_id=parent_task_id,
                     assigned_id=assigned_id, status=status)
+
         task.editors.append(TaskUserEditors(user_id=user_id, task_id=task.id))
 
         self.session.add(task)
         self.session.commit()
+        return task
+
+    def get_task_by_id(self,
+                       user_id: int,
+                       task_id: int) -> Task:
+        self.user_can_access_task(user_id, task_id)
+        task = self.session.query(Task).get(task_id)
+
         return task
 
     def update_task(self,
@@ -136,9 +142,10 @@ class AppService:
                     start_date=None,
                     parent_task_id=None) -> Task:
 
-        self.user_can_access_task(user_id=user_id, task_id=task_id)
+        task = self.get_task_by_id(user_id, task_id)
 
         args = {}
+
         if name:
             args[Task.name] = name
         if description:
@@ -149,6 +156,7 @@ class AppService:
                 args[Task.status] = TaskStatus[status.upper()]
             except KeyError:
                 raise UpdateError('Status not found')
+
         if priority:
             try:
                 args[Task.priority] = TaskPriority[priority.upper()]
@@ -169,35 +177,26 @@ class AppService:
         try:
             args[Task.updated] = datetime.now()
             self.session.query(Task).filter_by(id=task_id).update(args)
+
         except exc.SQLAlchemyError as e:
             raise UpdateError('Arguments Error. Check your arguments') from e
-        self.session.commit()
-        return self.session.query(Task).get(task_id)
 
-    def get_task_by_id(self,
-                       user_id: int,
-                       task_id: int) -> Task:
-        task = self.session.query(Task).get(task_id)
-        check_object_exist(task,
-                           f'user_id : {user_id} & task_id : {task_id}',
-                           'Task')
-        self.user_can_access_task(user_id, task_id)
+        self.session.commit()
         return task
 
     def assign_user(self, user_id: int,
                     task_id: int,
                     user_receiver_id: int):
 
-        self.user_can_access_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
+        task = self.get_task_by_id(user_id=user_id, task_id=task_id)
         if task.assigned_id == user_receiver_id:
             raise UpdateError(
                 f'User(ID={user_id}) already assigned as Task(ID={task_id}) executor')
 
         new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
         task.editors.append(new_editor)
-
         task.assigned_id = user_receiver_id
+
         self.session.commit()
 
     def share_task(self,
@@ -206,33 +205,37 @@ class AppService:
                    user_receiver_id: int):
 
         self.user_can_access_task(user_id, task_id)
+
         editor = self.session.query(TaskUserEditors).filter_by(
             user_id=user_receiver_id, task_id=task_id).one_or_none()
         if editor:
             raise DuplicateRelation(
                 f'Task(ID={task_id}) already shared with user(ID={user_receiver_id})')
+
         new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
         self.session.add(new_editor)
+
         self.session.commit()
 
     def unshare_task(self,
                      user_id: int,
                      task_id: int,
                      user_receiver_id: int):
-        self.user_can_access_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
+
+        task = self.get_task_by_id(user_id=user_id, task_id=task_id)
 
         if user_receiver_id == task.owner_id:
             raise AccessError(
                 'User(ID={user_id}) cant unshare task with its owner')
+
         editor = self.session.query(TaskUserEditors).filter_by(
             user_id=user_receiver_id,
-            task_id=task.id).one_or_none()
+            task_id=task_id).one_or_none()
         if editor is None:
             raise UpdateError(
                 f'Task(ID{task_id}) wasnt shared with the user(ID={user_receiver_id})')
-        task.editors.remove(editor)
 
+        task.editors.remove(editor)
         self.session.commit()
 
     def get_own_tasks(self, user_id: int) -> List[Task]:
@@ -269,20 +272,23 @@ class AppService:
                 user_id=user_id).all()
 
     def delete_task(self, user_id: int, task_id: int, delete_plan=True):
-        self.user_can_access_task(user_id, task_id)
-        self.session.query(Task).filter_by(id=task_id).delete()
+        task = self.get_task_by_id(user_id=user_id, task_id=task_id)
+        self.session.delete(task)
         if delete_plan:
             self.session.query(Plan).filter_by(task_id=task_id).delete()
+
         self.session.commit()
 
     def add_subtask(self, user_id: int, task_id: int, subtask_id: int):
         self.user_can_access_task(user_id, task_id)
-        self.user_can_access_task(user_id, subtask_id)
-        subtask = self.session.query(Task).get(subtask_id)
+
+        subtask = self.get_task_by_id(user_id=user_id, task_id=subtask_id)
+
         if subtask.parent_task_id:
             raise UpdateError(
                 f'Subtask(ID={subtask_id}) already has parent task')
         subtask.parent_task_id = task_id
+
         self.session.commit()
 
     def get_subtasks(self, user_id: int, task_id: int):
@@ -291,13 +297,25 @@ class AppService:
             parent_task_id=task_id).join(
                 TaskUserEditors).filter_by(user_id=user_id).all()
 
+    # def get_subtasks_t(self, user_id, task_id):
+    #     task = self.get_task_by_id(user_id=user_id, task_id=task_id)
+    #     return task.subtasks
+
+    # def add_subtask(self, user_id, task_id, parent_task_id):
+    #     task = self.get_task_by_id(user_id=user_id, task_id=task_id)
+    #     rel = SubTaskRelation(task_id=task_id, parent_task_id=parent_task_id)
+    #     if rel in task.subtasks:
+    #         pass
+    #     self.session.add(rel)
+    #     self.session.commit()
+
     def change_task_status(self,
                            user_id: int,
                            task_id: int,
                            status: str,
                            apply_on_subtasks=None):
-        self.user_can_access_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
+
+        task = self.get_task_by_id(user_id=user_id, task_id=task_id)
 
         try:
             status = TaskStatus[status.upper()]
@@ -371,8 +389,10 @@ class AppService:
 
     def update_folder(self, user_id: int, folder_id: int, name):
         folder = self.get_folder_by_id(user_id=user_id, folder_id=folder_id)
+
         dupl = self.session.query(Folder).filter_by(
             user_id=user_id, name=name).all()
+
         if len(dupl) > 1:
             raise UpdateError(
                 f'User(ID={user_id}) already has folder {name}')
@@ -384,6 +404,7 @@ class AppService:
     def delete_folder(self, user_id: int, folder_id: int):
         folder = self.get_folder_by_id(user_id, folder_id)
         self.session.delete(folder)
+
         self.session.commit()
 
     def get_task_folders(self, user_id: int, task_id: int):
@@ -417,8 +438,8 @@ class AppService:
                     repetitions_amount=None,
                     end_date=None) -> Plan:
 
-        self.user_can_access_task(user_id, task_id)
-        task = self.session.query(Task).get(task_id)
+        task = self.get_task_by_id(user_id=user_id, task_id=task_id)
+
         if task.start_date is None:
             raise CreateError('Task should have start date')
 
@@ -430,12 +451,14 @@ class AppService:
         start_date = task.start_date
         end_type = get_end_type(start_date, period, period_amount,
                                 end_date, repetitions_amount)
+
         plan = Plan(user_id=user_id, task_id=task_id, period=period,
                     period_amount=period_amount,
                     end_type=end_type,
                     repetitions_amount=repetitions_amount,
                     end_date=end_date,
                     start_date=start_date)
+
         self.session.add(plan)
         self.session.commit()
         return plan
@@ -443,6 +466,7 @@ class AppService:
     def get_plan_by_id(self, user_id: int, plan_id: int) -> Plan:
         plan = self.session.query(Plan).get(plan_id)
         check_object_exist(plan, plan_id, 'Plan')
+
         try:
             self.user_can_access_task(user_id, plan.task_id)
         except AccessError as e:
@@ -460,9 +484,10 @@ class AppService:
 
     def get_generated_tasks_by_plan(self, user_id: int,
                                     plan_id: int) -> List[Task]:
-        plan = self.session.query(Plan).get(plan_id)
+        plan = self.get_plan_by_id(user_id=user_id, plan_id=plan_id)
+
         return self.session.query(Task).filter(
-            Task.parent_task_id == plan.task_id).all()
+            Task.parent_task_id == plan.task_id).join(TaskUserEditors).all()
 
     def get_active_plans(self, user_id: int, plans=None) -> List[Plan]:
         if plans is None:
@@ -550,7 +575,6 @@ class AppService:
                         TaskUserEditors(user_id=x.user_id,
                                         task_id=task.id))
                 self.session.add(task)
-
         self.session.commit()
 
     def delete_plan(self, user_id: int, plan_id: int):

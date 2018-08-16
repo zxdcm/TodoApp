@@ -250,8 +250,8 @@ def plan_show_handlers(service: AppService, namespace):
         print_plan(plan, tasks)
 
     elif namespace.show_type == 'all':
-        print('test')
         plans = service.get_all_plans(user_id=namespace.user_id)
+        print('Your plans:')
         if namespace.tasks:
             for plan in plans:
                 tasks = service.get_generated_tasks_by_plan(user_id=namespace.user_id,
@@ -312,6 +312,7 @@ def users_handler(service: AppService, namespace):
                 print('App dont have any users')
 
 
+@error_catcher
 def commands_handler(service: AppService, namespace):
 
     if namespace.entity == 'task':
