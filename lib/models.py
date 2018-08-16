@@ -88,8 +88,8 @@ class Task(Base):
     start_date = Column(DateTime)
     end_date = Column(DateTime)
 
-    created = Column(DateTime, nullable=False, default=datetime.now().replace(microsecond=0))
-    updated = Column(DateTime, nullable=False, default=datetime.now().replace(microsecond=0))
+    created = Column(DateTime, nullable=False, default=datetime.now())
+    updated = Column(DateTime, nullable=False, default=datetime.now())
 
     editors = relationship('TaskUserEditors')
 

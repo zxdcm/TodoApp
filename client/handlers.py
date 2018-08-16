@@ -193,7 +193,6 @@ def repeat_show_handlers(service: AppService, namespace):
         if namespace.tasks:
             tasks = service.get_generated_tasks_by_repeat(user_id=namespace.user_id,
                                                           repeat_id=repeat.id)
-            print('tasks:', tasks)
         print_repeat(repeat, tasks)
 
     elif namespace.show_type == 'all':

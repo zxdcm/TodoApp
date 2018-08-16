@@ -110,8 +110,6 @@ class AppService:
         if start_date and end_date:
             if start_date > end_date:
                 raise CreateError('End date has to be after start date')
-        if start_date:
-            start_date.replace(microsecond=0)
 
         task = Task(owner_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
@@ -181,8 +179,11 @@ class AppService:
                    user_receiver_id: int):
 
         self.user_can_access_task(user_id, task_id)
+        editor = self.sesion.query(TaskUserEditors).filter_by(
+            user_id=user_receiver_id, task_id=task_id)
+        if editor:
+            raise UpdateError('Task already shared with this user')
         new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
-
         self.session.add(new_editor)
         self.session.commit()
 
@@ -198,7 +199,8 @@ class AppService:
         editor = self.session.query(TaskUserEditors).filter_by(
             user_id=user_id,
             task=task.id)
-
+        if editor is None:
+            raise UpdateError('Task wasnt shared with this user')
         task.editors.remove(editor)
 
         self.session.commit()
@@ -276,7 +278,7 @@ class AppService:
             self.session.query(Task).filter_by(
                 parent_task_id=task_id).join(
                     TaskUserEditors).filter_by(
-                        user_id=user_id).update({'status': status})
+                        user_id=user_id).update({'status': status, 'updated': datetime.now()})
         self.session.commit()
 
     def create_folder(self, user_id: int, name: str) -> Folder:
@@ -315,7 +317,7 @@ class AppService:
     def get_folder_by_name(self, user_id: int, folder_name: int) -> Folder:
         folder = self.session.query(Folder).filter_by(
             folder_name=folder_name, user_id=user_id)
-        check_object_exist(folder, (user_id, folder_name), 'Folder')
+        check_object_exist(folder, f'name: {folder_name}, 'Folder')
         return folder
 
     def get_or_create_folder(self, user_id: int, name: str) -> Folder:
