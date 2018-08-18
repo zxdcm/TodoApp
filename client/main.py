@@ -11,9 +11,9 @@ def main():
 
     setup_lib_logging(FILEPATH, FORMAT)
     args = get_args()
-    service = AppService()
-    args.user_id = 2
-    service.execute_plans(args.user_id)
+    service = AppService(None)
+    args.user = 'test'
+    service.execute_plans(args.user)
     commands_handler(service, args)
 
 

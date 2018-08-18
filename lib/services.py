@@ -53,7 +53,7 @@ class AppService:
         if self.get_task_user_relation(user=user, task_id=task_id):
             return True
         raise AccessError(
-            f'User{user}) doesnt have permissions to task(ID={task_id})')
+            f'User({user}) doesnt have permissions to task(ID={task_id})')
 
     @log_decorator
     def user_exist(self, user: str):
@@ -242,7 +242,7 @@ class AppService:
                                    task_id=task_id)
 
         if user_receiver == task.owner:
-            raise AccessError(
+            raise UpdateError(
                 'User({user}) cant unshare task with its owner')
 
         relation = self.get_task_user_relation(user=user_receiver,
@@ -313,7 +313,7 @@ class AppService:
             raise UpdateError(
                 f'Task(ID={task_id}) already have parent task')
         if task_id == parent_task_id:
-            raise UpdateError('Loop tasks dependency error')
+            raise UpdateError('You cant attach task to itself')
 
         subtask.parent_task_id = parent_task_id
         self.session.commit()

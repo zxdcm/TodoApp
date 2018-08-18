@@ -22,7 +22,7 @@ FORMAT = '%Y-%m-%d %H:%M'
 def set_up_connection(connection_string=None):
     if connection_string is None:
         connection_string = DATABASE
-    engine = create_engine(f'sqlite:///{connection_string}')
+    engine = create_engine('sqlite://'.format(connection_string))
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     return session()
