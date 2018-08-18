@@ -21,3 +21,7 @@ class ObjectNotFound(BaseLibError):
 
 class DuplicateRelation(UpdateError):
     pass
+
+
+class TimeError(BaseLibError):
+    pass

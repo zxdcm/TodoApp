@@ -8,7 +8,7 @@ from sqlalchemy import (
     Enum)
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy import create_engine
 
 from datetime import datetime
@@ -16,11 +16,13 @@ import enum
 
 Base = declarative_base()
 DATABASE = 'todoapp.db'
-HUMANIZE = '%Y-%m-%d %H:%M'
+FORMAT = '%Y-%m-%d %H:%M'
 
 
 def set_up_connection(connection_string=None):
-    engine = create_engine(f'sqlite:///todoapp.db')
+    if connection_string is None:
+        connection_string = DATABASE
+    engine = create_engine(f'sqlite:///{connection_string}')
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     return session()
@@ -42,7 +44,7 @@ task_folder_association_table = Table(
 
 class TaskStatus(enum.Enum):
     TODO = 'Todo'
-    INWORK = 'In work'
+    INWORK = 'InWork'
     DONE = 'Done'
     ARCHIVED = 'Archived'
 
@@ -66,15 +68,9 @@ class Folder(Base):
         self.user_id = user_id
 
     def __str__(self):
-        return self.name
-
-#
-# class SubTaskRelation(Base):
-#     __tablename__ = 'sub_tasks_relation'
-#     id = Column(Integer, primary_key=True)
-#     task_id = Column(Integer, ForeignKey('tasks.id'))
-#     parent_task_id = Column(Integer, ForeignKey('tasks.id'))
-#
+        return '\n'.join([f'name: {self.name}',
+                          f"tasks ids: {', '.join(str(task.id) for task in self.tasks)} "
+                          ])
 
 
 class Task(Base):
@@ -96,21 +92,23 @@ class Task(Base):
     end_date = Column(DateTime)
     created = Column(DateTime, nullable=False, default=datetime.now())
     updated = Column(DateTime, nullable=False, default=datetime.now())
+    subtasks = relationship("Task", backref=backref('parent', remote_side="Task.id"))
 
     editors = relationship('TaskUserEditors')
-    #
-    # subtasks = relationship('Task',
-    #                         secondary='sub_tasks_relation',
-    #                         primaryjoin=SubTaskRelation.task_id == id,
-    #                         secondaryjoin=SubTaskRelation.parent_task_id == id,
-    #                         backref='children')
 
     #  uselist prop allows to set one to one relation
     plan = relationship("Plan", uselist=False, back_populates='task')
 
-    def __init__(self, name, owner_id, description=None,
-                 start_date=None, end_date=None,
-                 priority=None, status=None, parent_task_id=None, assigned_id=None):
+    def __init__(self,
+                 name,
+                 owner_id,
+                 description=None,
+                 start_date=None,
+                 end_date=None,
+                 priority=None,
+                 status=None,
+                 parent_task_id=None,
+                 assigned_id=None):
         self.name = name
         self.owner_id = owner_id
         self.description = description
@@ -122,27 +120,21 @@ class Task(Base):
         self.status = status
 
     def __str__(self):
-        created = self.created.strftime(HUMANIZE)
-        updated = self.updated.strftime(HUMANIZE)
-        if self.start_date:
-            start_date = self.start_date.strftime(HUMANIZE)
-        if self.end_date:
-            end_date = self.end_date.strftime(HUMANIZE)
-        return (
-            f'\n'
-            f'ID : {self.id}\n'
-            f'Owner id: {self.owner_id}\n'
-            f'Parent taskid: {self.parent_task_id}\n'
-            f'Name: {self.name}\n'
-            f'Description: {self.description}\n'
-            f'Status: {self.status.value}\n'
-            f'Priority: {self.priority.value}\n'
-            f'Created: {created}\n'
-            f'Updated: {updated}\n'
-            f'Start Date: {start_date if self.start_date else None}\n'
-            f'End Date: {end_date if self.end_date else None}\n'
-            f'Assigned user id: {self.assigned_id}'
-        )
+        return(
+            ''.join([
+                f'id: {self.id}\n',
+                f'name: {self.name}\n',
+                f'owner: {self.owner_id}\n',
+                f'parent task: {self.parent_task_id}\n' if self.parent_task_id else '',
+                f'assigned user: {self.assigned_id}\n' if self.assigned_id else '',
+                f'description: {self.description}\n' if self.description else '',
+                f'status: {self.status.value}\n',
+                f'priority: {self.priority.value}\n',
+                f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
+                f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
+                f'created: {self.updated.strftime(FORMAT)}\n',
+                f'updated: {self.updated.strftime(FORMAT)}\n',
+            ]))
 
 
 class Period(enum.Enum):
@@ -177,12 +169,15 @@ class Plan(Base):
     start_date = Column(DateTime)
     end_date = Column(DateTime)
 
-    def __init__(self, user_id, task_id,
-                 period, period_amount,
+    def __init__(self,
+                 user_id,
+                 task_id,
+                 period,
+                 period_amount,
                  end_type,
                  repetitions_amount,
-                 end_date, start_date,
-                 interval):
+                 end_date,
+                 start_date):
         self.user_id = user_id
         self.task_id = task_id
         self.period = period
@@ -192,23 +187,17 @@ class Plan(Base):
         self.end_date = end_date
         self.start_date = start_date
         self.last_activated = self.start_date
-        #self.interval = self.interval
 
     def __str__(self):
-        if self.end_date:
-            end_date = self.end_date.strftime(HUMANIZE)
-        start_date = self.start_date.strftime(HUMANIZE)
-        last_activated = self.last_activated.strftime(HUMANIZE)
-        return (f'\n'
-                f'ID: {self.id}\n'
-                f'Owner ID: {self.user_id}\n'
-                f'Task ID: {self.task_id}\n'
-                f'Period: {self.period.value}\n'
-                f'Period amount: {self.period_amount}\n'
-                f'End type: {self.end_type.value}\n'
-                f'Repetitions_amount: {self.repetitions_amount}\n'
-                f'Repetitions count: {self.repetitions_amount}\n'
-                f'Start date: {start_date if self.start_date else None}\n'
-                f'End date: {end_date if self.end_date else None}\n'
-                f'Last activated: {last_activated if self.last_activated else None}\n'
-                f'')
+        return (''.join([
+            f'id: {self.id}\n',
+            f'owner: {self.user_id}\n',
+            f'task id: {self.task_id}\n',
+            f'period: {self.period.value}\n',
+            f'period amount: {self.period_amount}\n',
+            f'end type: {self.end_type.value}\n',
+            f'repetitions_amount: {self.repetitions_amount}\n',
+            f'repetitions counter: {self.repetitions_counter}\n',
+            f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
+            f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
+        ]))

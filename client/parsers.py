@@ -12,13 +12,6 @@ class DefaultHelpParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
-def exclude_keys(namespace):
-    namespace = vars(namespace)
-    keys = ['entity', 'action', 'user_id', 'task_id', 'folder_id', 'plan_id']
-    return {x: namespace[x] for x in namespace if x not in keys and
-            namespace[x]}
-
-
 def task_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
                                               title='Show tasks info',
@@ -47,8 +40,6 @@ def task_show_parser(show_subparser: argparse):
     task_show.add_parser('archived',
                          help='Show archived tasks')
 
-    task_show.add_parser('plan',
-                         help='Show tasks created by plan')
     task_show.add_parser('planless',
                          help='Show tasks without plan')
 
@@ -115,7 +106,7 @@ def task_parser(sup_parser: argparse):
                       choices=[x.name.lower() for x in TaskPriority])
     edit.add_argument('--status',
                       type=str,
-                      choices=[x.name.lower() for x in TaskStatus])
+                      choices=['todo', 'inwork'])
 
     share = task_subparser.add_parser('share',
                                       help='Share task with user')
@@ -156,7 +147,7 @@ def task_parser(sup_parser: argparse):
                         required=True,
                         type=int)
 
-    subtask = task_subparser.add_parser('set_subtask',
+    subtask = task_subparser.add_parser('add_subtask',
                                         help='Set task with task_id as the subtask of task with parent_id')
     subtask.add_argument('-tid',
                          '--task_id',
@@ -169,23 +160,24 @@ def task_parser(sup_parser: argparse):
                          required=True,
                          type=int)
 
+    subtask = task_subparser.add_parser('rm_subtask',
+                                        help='Remove relation between task and parent task')
+    subtask.add_argument('-tid',
+                         '--task_id',
+                         required=True,
+                         help='Task id',
+                         type=int)
+
     archive = task_subparser.add_parser('archive',
                                         help='Archive task')
     archive.add_argument('task_id',
                          help='task id',
                          type=int)
-    archive.add_argument('--archive_subs',
-                         action='store_true',
-                         help='Archive subtasks')
-
     done = task_subparser.add_parser('done',
                                      help='Done task')
     done.add_argument('task_id',
                       help='task id',
                       type=int)
-    done.add_argument('--done_subs',
-                      action='store_true',
-                      help='Done subtasks')
 
     delete = task_subparser.add_parser('delete',
                                        help='Delete task with provided id')
@@ -280,7 +272,7 @@ def plan_show_parser(sup_parser: argparse):
                          help='Show plan. Task and generated tasks')
 
     plan_all = plan_show.add_parser('all',
-                                    help='Show all folders')
+                                    help='Show all plans')
     plan_all.add_argument('--tasks',
                           action='store_true',
                           help='Show plan. Task and generated tasks')
@@ -353,7 +345,7 @@ def user_parser(sup_parser: argparse):
                                    help='Trying to find user by id')
     user_id.add_argument('user_id', type=int)
 
-    user_show.add_parser('all', help='List all users')
+    user_show.add_parser('all', help='List all users id')
 
 
 def get_args():

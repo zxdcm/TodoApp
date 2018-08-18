@@ -10,7 +10,6 @@ from lib.models import (
     TaskUserEditors,
     set_up_connection)
 
-
 from sqlalchemy import (orm,
                         exc,
                         or_)
@@ -28,20 +27,22 @@ from lib.utils import (get_end_type,
                        check_object_exist)
 
 from lib.validators import validate_dates
-
 from datetime import datetime
 
 
 class AppService:
 
-    def __init__(self, session=None):
-        if session is None:
-            session = set_up_connection()
-        self.session = session
+    def __init__(self):
+        self.session = set_up_connection()
+
+    def get_task_user_relation(self,
+                               user_id,
+                               task_id):
+        return self.session.query(TaskUserEditors).filter_by(
+            user_id=user_id, task_id=task_id).one_or_none()
 
     def user_can_access_task(self, user_id: int, task_id: int):
-        if self.session.query(Task).join(TaskUserEditors).filter_by(
-                user_id=user_id, task_id=task_id).all():
+        if self.get_task_user_relation(user_id=user_id, task_id=task_id):
             return True
         raise AccessError(
             f'User(ID={user_id}) doesnt have permissions to task(ID={task_id})')
@@ -53,7 +54,8 @@ class AppService:
             return True
 
     def get_all_users_ids(self):
-        user_ids = set(x.user_id for x in self.session.query(TaskUserEditors).all())
+        user_ids = set(x.user_id for x in self.session.query(
+            TaskUserEditors).all())
         return user_ids
 
     def create_task(self,
@@ -108,9 +110,7 @@ class AppService:
         if parent_task_id:
             self.user_can_access_task(user_id=user_id, task_id=parent_task_id)
 
-        if start_date and end_date:
-            if start_date > end_date:
-                raise CreateError('End date has to be after start date')
+        validate_dates(start_date, end_date)
 
         task = Task(owner_id=user_id, name=name, description=description,
                     start_date=start_date, priority=priority,
@@ -126,9 +126,9 @@ class AppService:
     def get_task_by_id(self,
                        user_id: int,
                        task_id: int) -> Task:
+
         self.user_can_access_task(user_id, task_id)
         task = self.session.query(Task).get(task_id)
-
         return task
 
     def update_task(self,
@@ -150,7 +150,6 @@ class AppService:
             args[Task.name] = name
         if description:
             args[Task.description] = description
-
         if status:
             try:
                 args[Task.status] = TaskStatus[status.upper()]
@@ -163,8 +162,6 @@ class AppService:
             except KeyError:
                 raise UpdateError('Priority not found')
 
-        task = self.session.query(Task).get(task_id)
-
         if start_date or end_date:
             if start_date is None:
                 start_date = task.start_date
@@ -174,12 +171,13 @@ class AppService:
             args[Task.start_date] = start_date
             args[Task.end_date] = end_date
 
+        args[Task.updated] = datetime.now()
+
         try:
-            args[Task.updated] = datetime.now()
             self.session.query(Task).filter_by(id=task_id).update(args)
 
         except exc.SQLAlchemyError as e:
-            raise UpdateError('Arguments Error. Check your arguments') from e
+            raise UpdateError('Internal Error') from e
 
         self.session.commit()
         return task
@@ -192,9 +190,8 @@ class AppService:
         if task.assigned_id == user_receiver_id:
             raise UpdateError(
                 f'User(ID={user_id}) already assigned as Task(ID={task_id}) executor')
-
-        new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
-        task.editors.append(new_editor)
+        editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
+        task.editors.append(editor)
         task.assigned_id = user_receiver_id
 
         self.session.commit()
@@ -204,17 +201,15 @@ class AppService:
                    task_id: int,
                    user_receiver_id: int):
 
-        self.user_can_access_task(user_id, task_id)
-
-        editor = self.session.query(TaskUserEditors).filter_by(
-            user_id=user_receiver_id, task_id=task_id).one_or_none()
-        if editor:
+        self.user_can_access_task(user_id=user_id, task_id=task_id)
+        relation = self.get_task_user_relation(user_id=user_receiver_id,
+                                               task_id=task_id)
+        if relation:
             raise DuplicateRelation(
                 f'Task(ID={task_id}) already shared with user(ID={user_receiver_id})')
 
-        new_editor = TaskUserEditors(user_id=user_receiver_id, task_id=task_id)
-        self.session.add(new_editor)
-
+        self.session.add(TaskUserEditors(user_id=user_receiver_id,
+                                         task_id=task_id))
         self.session.commit()
 
     def unshare_task(self,
@@ -222,20 +217,20 @@ class AppService:
                      task_id: int,
                      user_receiver_id: int):
 
-        task = self.get_task_by_id(user_id=user_id, task_id=task_id)
+        task = self.get_task_by_id(user_id=user_id,
+                                   task_id=task_id)
 
         if user_receiver_id == task.owner_id:
             raise AccessError(
                 'User(ID={user_id}) cant unshare task with its owner')
 
-        editor = self.session.query(TaskUserEditors).filter_by(
-            user_id=user_receiver_id,
-            task_id=task_id).one_or_none()
-        if editor is None:
+        relation = self.get_task_user_relation(user_id=user_receiver_id,
+                                               task_id=task_id)
+        print(relation)
+        if relation is None:
             raise UpdateError(
                 f'Task(ID{task_id}) wasnt shared with the user(ID={user_receiver_id})')
-
-        task.editors.remove(editor)
+        self.session.delete(relation)
         self.session.commit()
 
     def get_own_tasks(self, user_id: int) -> List[Task]:
@@ -271,24 +266,34 @@ class AppService:
             TaskUserEditors).filter_by(
                 user_id=user_id).all()
 
-    def delete_task(self, user_id: int, task_id: int, delete_plan=True):
+    def delete_task(self, user_id: int, task_id: int):
         task = self.get_task_by_id(user_id=user_id, task_id=task_id)
         self.session.delete(task)
-        if delete_plan:
+        if task.plan:
             self.session.query(Plan).filter_by(task_id=task_id).delete()
-
+        for task in task.subtasks:
+            task.parent_task_id = None
         self.session.commit()
 
-    def add_subtask(self, user_id: int, task_id: int, subtask_id: int):
-        self.user_can_access_task(user_id, task_id)
-
-        subtask = self.get_task_by_id(user_id=user_id, task_id=subtask_id)
-
+    def add_subtask(self, user_id: int, task_id: int, parent_task_id: int):
+        parent_task = self.get_task_by_id(user_id, parent_task_id)
+        subtask = self.get_task_by_id(user_id=user_id, task_id=task_id)
+        if parent_task.plan:
+            raise UpdateError('You cant add subtasks to task with plan directly')
         if subtask.parent_task_id:
             raise UpdateError(
-                f'Subtask(ID={subtask_id}) already has parent task')
-        subtask.parent_task_id = task_id
+                f'Task(ID={task_id}) already have parent task')
+        if task_id == parent_task_id:
+            raise UpdateError('Loop tasks dependency error')
+        subtask.parent_task_id = parent_task_id
+        print('test')
+        self.session.commit()
 
+    def rm_subtask(self, user_id: int, task_id):
+        subtask = self.get_task_by_id(user_id=user_id, task_id=task_id)
+        if subtask.parent_task_id:
+            raise UpdateError(
+                '{Task(ID={subtask_id}) isnt have parent task')
         self.session.commit()
 
     def get_subtasks(self, user_id: int, task_id: int):
@@ -297,23 +302,11 @@ class AppService:
             parent_task_id=task_id).join(
                 TaskUserEditors).filter_by(user_id=user_id).all()
 
-    # def get_subtasks_t(self, user_id, task_id):
-    #     task = self.get_task_by_id(user_id=user_id, task_id=task_id)
-    #     return task.subtasks
-
-    # def add_subtask(self, user_id, task_id, parent_task_id):
-    #     task = self.get_task_by_id(user_id=user_id, task_id=task_id)
-    #     rel = SubTaskRelation(task_id=task_id, parent_task_id=parent_task_id)
-    #     if rel in task.subtasks:
-    #         pass
-    #     self.session.add(rel)
-    #     self.session.commit()
-
     def change_task_status(self,
                            user_id: int,
                            task_id: int,
                            status: str,
-                           apply_on_subtasks=None):
+                           apply_on_subtasks=False):
 
         task = self.get_task_by_id(user_id=user_id, task_id=task_id)
 
@@ -324,13 +317,13 @@ class AppService:
 
         task.status = status
         task.updated = datetime.now()
-
-        if apply_on_subtasks:
+        print(task.status)
+        if (task.status is TaskStatus.DONE or
+                task.status is TaskStatus.ARCHIVED or apply_on_subtasks):
             self.session.query(Task).filter_by(
-                parent_task_id=task_id).join(
-                    TaskUserEditors).filter_by(
-                        user_id=user_id).update({Task.status: status,
-                                                 Task.updated: datetime.now()})
+                parent_task_id=task_id).update({Task.status: status,
+                                                Task.updated: datetime.now()})
+
         self.session.commit()
         return self.session.query(Task).get(task_id)
 
@@ -355,7 +348,6 @@ class AppService:
         if folder:
             raise CreateError(f'User(ID={user_id}) already has folder {folder.name}')
         folder = Folder(user_id=user_id, name=name)
-
         self.session.add(folder)
         self.session.commit()
         return folder
@@ -439,7 +431,10 @@ class AppService:
                     end_date=None) -> Plan:
 
         task = self.get_task_by_id(user_id=user_id, task_id=task_id)
-
+        if task.subtasks:
+            raise CreateError('Task should be without subtasks')
+        if task.plan:
+            raise CreateError('Task already has a plan')
         if task.start_date is None:
             raise CreateError('Task should have start date')
 
@@ -485,7 +480,6 @@ class AppService:
     def get_generated_tasks_by_plan(self, user_id: int,
                                     plan_id: int) -> List[Task]:
         plan = self.get_plan_by_id(user_id=user_id, plan_id=plan_id)
-
         return self.session.query(Task).filter(
             Task.parent_task_id == plan.task_id).join(TaskUserEditors).all()
 
@@ -502,13 +496,11 @@ class AppService:
             near_activation = plan.last_activated + interval
 
             if plan.end_type == EndType.AMOUNT:
-
                 if (near_activation < datetime.now() and
                         plan.repetitions_counter < plan.repetitions_amount):
                     active_list.append(plan)
 
             elif plan.end_type == EndType.DATE:
-
                 if (near_activation < datetime.now() and
                         near_activation < plan.end_date):
                     active_list.append(plan)
@@ -518,7 +510,7 @@ class AppService:
 
         return active_list
 
-    def execute_plan(self, user_id: int, active_plans=None) -> List[Task]:
+    def execute_plans(self, user_id: int, active_plans=None) -> List[Task]:
         """
 
         Parameters
@@ -581,22 +573,18 @@ class AppService:
         self.get_plan_by_id(user_id, plan_id).delete()
         self.session.commit()
 
-    def update_plan(self,
-                    user_id: int,
-                    plan_id: int,
+    def update_plan(self, user_id: int, plan_id: int,
                     period_type=None,
                     period_amount=None,
                     repetitions_amount=None,
                     end_date=None) -> Plan:
 
         plan = self.get_plan_by_id(user_id=user_id, plan_id=plan_id)
-
-        start_date = plan.start_date
-        end_date = plan.end_date
-        repetitions_amount = plan.repetitions_amount
-
         args = {}
-
+        args[Plan.period] = plan.period
+        args[Plan.period_amount] = plan.period_amount
+        args[Plan.repetitions_amount] = plan.repetitions_amount
+        args[Plan.end_date] = plan.end_date
         if period_type:
             try:
                 args[Plan.period] = Period[period_type.upper()]
@@ -610,10 +598,11 @@ class AppService:
         if end_date:
             args[Plan.end_date] = end_date
 
-        args[Plan.end_type] = get_end_type(start_date,
-                                           end_date,
-                                           repetitions_amount)
-
+        args[Plan.end_type] = get_end_type(plan.start_date,
+                                           args[Plan.period],
+                                           args[Plan.period_amount],
+                                           args[Plan.end_date],
+                                           args[Plan.repetitions_amount])
         try:
             self.session.query(Plan).filter_by(id=plan_id).update(args)
         except exc.SQLAlchemyError as e:
@@ -647,5 +636,6 @@ class AppService:
         self.session.delete(obj)
 
         # Allows to commit updates made out of the lib
+
     def save_updates(self):
         self.session.commit()

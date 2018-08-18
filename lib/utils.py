@@ -11,7 +11,7 @@ def check_object_exist(obj, params, type):
 def get_interval(period_type: Period, period_quantity):
     if period_type.value == 'Min':
         return relativedelta(minutes=period_quantity)
-    if period_type.value == 'Hour':
+    elif period_type.value == 'Hour':
         return relativedelta(hours=period_quantity)
     elif period_type.value == 'Day':
         return relativedelta(days=period_quantity)
@@ -23,12 +23,12 @@ def get_interval(period_type: Period, period_quantity):
         return relativedelta(years=period_quantity)
 
 
-def get_end_type(task_start_date, period_type, period_amount,
+def get_end_type(start_date, period_type, period_amount,
                  end_date=None, repetitions_amount=None) -> EndType:
 
     if end_date and repetitions_amount:
         interval = get_interval(period_type, period_amount)
-        if interval * repetitions_amount + task_start_date < end_date:
+        if interval * repetitions_amount + start_date < end_date:
             return EndType.AMOUNT
         return EndType.DATE
     '''

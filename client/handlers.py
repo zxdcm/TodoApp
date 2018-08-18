@@ -1,5 +1,7 @@
-from lib.services import AppService, TaskStatus, TaskPriority
-from client.parsers import exclude_keys
+from lib.services import (AppService,
+                          TaskStatus,
+                          TaskPriority)
+
 from lib.exceptions import BaseLibError
 
 
@@ -56,19 +58,12 @@ def task_show_handler(service: AppService, namespace):
                          mes1='Assigned tasks:',
                          mes2='You dont have assigned tasks')
 
-    elif namespace.show_type == 'plan':
-        generated_tasks = service.get_generated_tasks(
-            user_id=namespace.user_id)
-        print_collection(generated_tasks,
-                         mes1='Tasks created by plan:',
-                         mes2='You dont any created tasks by plan')
-
     elif namespace.show_type == 'planless':
         planless = [task for task in service.get_available_tasks(user_id=namespace.user_id)
                     if task.plan is None]
         print_collection(planless,
-                         mes1='Tasks created by plan:',
-                         mes2='You dont any created tasks by plan')
+                         mes1='Tasks without plan:',
+                         mes2='You dont have any tasks without a plan')
 
 
 def task_handler(service: AppService, namespace):
@@ -88,21 +83,17 @@ def task_handler(service: AppService, namespace):
         task_show_handler(service, namespace)
 
     elif namespace.action == 'edit':
-        args = exclude_keys(namespace)
-        if not args:
-            print('Nothing to update.')
-        else:
-
-            task = service.update_task(user_id=namespace.user_id,
-                                       task_id=namespace.task_id,
-                                       name=namespace.name,
-                                       description=namespace.description,
-                                       status=namespace.status,
-                                       priority=namespace.priority,
-                                       start_date=namespace.start_date,
-                                       end_date=namespace.end_date,
-                                       parent_task_id=namespace.parent_task_id)
-            print('Updated task:', task)
+        task = service.update_task(user_id=namespace.user_id,
+                                   task_id=namespace.task_id,
+                                   name=namespace.name,
+                                   description=namespace.description,
+                                   status=namespace.status,
+                                   priority=namespace.priority,
+                                   start_date=namespace.start_date,
+                                   end_date=namespace.end_date,
+                                   parent_task_id=namespace.parent_task_id)
+        print('Updated task:')
+        print(task)
 
     elif namespace.action == 'share':
         service.share_task(user_id=namespace.user_id,
@@ -123,43 +114,33 @@ def task_handler(service: AppService, namespace):
                             user_receiver_id=namespace.user_receiver_id)
         print(f'User(ID={namespace.user_receiver_id}) assigned as task(ID={namespace.task_id}) executor')
 
-    elif namespace.action == 'set_subtask':
+    elif namespace.action == 'add_subtask':
         service.add_subtask(user_id=namespace.user_id,
-                            task_id=namespace.parent_task_id,
-                            subtask_id=namespace.task_id)
-        print(f'Task(ID={namespace.task_id}) set as parent task of task(ID={namespace.subtask_id})')
+                            task_id=namespace.task_id,
+                            parent_task_id=namespace.parent_task_id)
+        print(
+            f'Subtask(ID={namespace.task_id}) set as parent task of task(ID={namespace.parent_task_id})')
+
+    elif namespace.action == 'rm_subtask':
+        service.rm_subtask(user_id=namespace.user_id,
+                           task_id=namespace.task_id)
+        print(
+            f'Subtask(ID={namespace.task_id}) is detached from parent task now')
 
     elif namespace.action == 'done':
         task = service.get_task_by_id(user_id=namespace.user_id,
                                       task_id=namespace.task_id)
-
-        if task.status == TaskStatus.DONE:
-            print('Task already done')
-            return
-
         service.change_task_status(user_id=namespace.user_id,
                                    task_id=namespace.task_id,
-                                   status='done',
-                                   apply_on_subtasks=namespace.done_subs)
+                                   status='done')
 
-        print(f'Task(ID={namespace.task_id}) successfully done')
-
-        if namespace.done_subs:
-            print('Subtasks were done too')
+        print(f'Task(ID={namespace.task_id}) and its subtasks successfully done')
 
     elif namespace.action == 'archive':
-        if task.status == TaskStatus.ARCHIVED:
-            print('Task already archived')
-            return
-
         service.change_task_status(user_id=namespace.user_id,
                                    task_id=namespace.task_id,
-                                   status='archived',
-                                   apply_on_subtasks=namespace.archive_subs)
-        print(f'Task(ID={namespace.task_id}) has been archived')
-
-        if namespace.archive_subs:
-            print('Subtasks were archived too')
+                                   status='archived')
+        print(f'Task(ID={namespace.task_id}) and has been archived')
 
     elif namespace.action == 'delete':
         service.delete_task(user_id=namespace.user_id,
@@ -222,7 +203,7 @@ def folder_handler(service: AppService, namespace):
         service.unpopulate_folder(user_id=namespace.user_id,
                                   folder_id=namespace.folder_id,
                                   task_id=namespace.task_id)
-        print('Task(ID={namespace.task_id}) no longer in this folder')
+        print(f'Task(ID={namespace.task_id}) no longer in this folder')
 
     elif namespace.action == 'delete':
         service.delete_folder(user_id=namespace.user_id,
@@ -312,7 +293,6 @@ def users_handler(service: AppService, namespace):
                 print('App dont have any users')
 
 
-@error_catcher
 def commands_handler(service: AppService, namespace):
 
     if namespace.entity == 'task':
