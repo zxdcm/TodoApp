@@ -31,7 +31,7 @@ def set_up_connection(connection_string=None):
 class TaskUserEditors(Base):
     __tablename__ = 'task_users_editors'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    user = Column(String)
     task_id = Column(Integer, ForeignKey('tasks.id'))
 
 
@@ -58,14 +58,14 @@ class TaskPriority(enum.Enum):
 class Folder(Base):
     __tablename__ = 'folders'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    user = Column(String)
 
     name = Column(String)
     tasks = relationship('Task', secondary=task_folder_association_table)
 
-    def __init__(self, name, user_id):
+    def __init__(self, name, user):
         self.name = name
-        self.user_id = user_id
+        self.user = user
 
     def __str__(self):
         return '\n'.join([f'name: {self.name}',
@@ -76,9 +76,9 @@ class Folder(Base):
 class Task(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
-    owner_id = Column(Integer)
+    owner = Column(Integer)
     parent_task_id = Column(Integer, ForeignKey('tasks.id'), nullable=True)
-    assigned_id = Column(Integer, nullable=True)
+    assigned = Column(Integer, nullable=True)
 
     name = Column(String)
     description = Column(String)
@@ -101,21 +101,21 @@ class Task(Base):
 
     def __init__(self,
                  name,
-                 owner_id,
+                 owner,
                  description=None,
                  start_date=None,
                  end_date=None,
                  priority=None,
                  status=None,
                  parent_task_id=None,
-                 assigned_id=None):
+                 assigned=None):
         self.name = name
-        self.owner_id = owner_id
+        self.owner = owner
         self.description = description
         self.start_date = start_date
         self.end_date = end_date
         self.parent_task_id = parent_task_id
-        self.assigned_id = assigned_id
+        self.assigned = assigned
         self.priority = priority
         self.status = status
 
@@ -124,9 +124,9 @@ class Task(Base):
             ''.join([
                 f'id: {self.id}\n',
                 f'name: {self.name}\n',
-                f'owner: {self.owner_id}\n',
+                f'owner: {self.owner}\n',
                 f'parent task: {self.parent_task_id}\n' if self.parent_task_id else '',
-                f'assigned user: {self.assigned_id}\n' if self.assigned_id else '',
+                f'assigned user: {self.assigned}\n' if self.assigned else '',
                 f'description: {self.description}\n' if self.description else '',
                 f'status: {self.status.value}\n',
                 f'priority: {self.priority.value}\n',
@@ -156,7 +156,7 @@ class Plan(Base):
     __tablename__ = 'plans'
     id = Column(Integer, primary_key=True)
     task_id = Column(Integer, ForeignKey('tasks.id'))
-    user_id = Column(Integer)
+    user = Column(String)
 
     task = relationship('Task', back_populates='plan')
 
@@ -170,7 +170,7 @@ class Plan(Base):
     end_date = Column(DateTime)
 
     def __init__(self,
-                 user_id,
+                 user,
                  task_id,
                  period,
                  period_amount,
@@ -178,7 +178,7 @@ class Plan(Base):
                  repetitions_amount,
                  end_date,
                  start_date):
-        self.user_id = user_id
+        self.user = user
         self.task_id = task_id
         self.period = period
         self.period_amount = period_amount
@@ -191,7 +191,7 @@ class Plan(Base):
     def __str__(self):
         return (''.join([
             f'id: {self.id}\n',
-            f'owner: {self.user_id}\n',
+            f'owner: {self.user}\n',
             f'task id: {self.task_id}\n',
             f'period: {self.period.value}\n',
             f'period amount: {self.period_amount}\n',

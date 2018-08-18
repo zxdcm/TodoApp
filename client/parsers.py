@@ -123,10 +123,10 @@ def task_parser(sup_parser: argparse):
                        type=int,
                        help='Id of task to be shared',
                        required=True)
-    share.add_argument('-uid',
-                       '--user_receiver_id',
-                       type=int,
-                       help='User id to share task with',
+    share.add_argument('-urn',
+                       '--user_receiver_name',
+                       type=str,
+                       help='User name to share task with',
                        required=True)
 
     unshare = task_subparser.add_parser(
@@ -136,11 +136,11 @@ def task_parser(sup_parser: argparse):
                          help='Task id',
                          required=True,
                          type=int)
-    unshare.add_argument('-uid',
-                         '--user_receiver_id',
-                         help='user id',
+    unshare.add_argument('-urn',
+                         '--user_receiver_name',
+                         help='username',
                          required=True,
-                         type=int)
+                         type=str)
 
     assign = task_subparser.add_parser(
         'assign', help='Assign task executor')
@@ -149,11 +149,11 @@ def task_parser(sup_parser: argparse):
                         help='Task id',
                         required=True,
                         type=int)
-    assign.add_argument('-uid',
-                        '--user_receiver_id',
-                        help='user id',
+    assign.add_argument('-urn',
+                        '--user_receiver_name',
+                        help='username',
                         required=True,
-                        type=int)
+                        type=str)
 
     subtask = task_subparser.add_parser('add_subtask',
                                         help='Set task with task_id as the subtask of task with parent_id')
@@ -343,7 +343,7 @@ def plan_parser(sup_parser: argparse):
 
 
 def user_parser(sup_parser: argparse):
-    user_parser = sup_parser.add_parser('users',
+    user_parser = sup_parser.add_parser('user',
                                         help='Manage users')
     user_subparser = user_parser.add_subparsers(dest='action',
                                                 metavar='',
@@ -354,11 +354,11 @@ def user_parser(sup_parser: argparse):
     user_show = show.add_subparsers(dest='show_type',
                                          title='Show user and its info',
                                          metavar='')
-    user_id = user_show.add_parser('id',
-                                   help='Trying to find user by id')
-    user_id.add_argument('search_user_id', type=int)
+    user = user_show.add_parser('username',
+                                help='Find user by user name')
+    user.add_argument('username', type=str)
 
-    user_show.add_parser('all', help='List all users id')
+    user_show.add_parser('all', help='List all users')
 
 
 def get_args():

@@ -28,18 +28,18 @@ def print_collection(collection, mes1=None, mes2=None):
 
 def task_show_handler(service: AppService, namespace):
     if namespace.show_type == 'id':
-        task = service.get_task_by_id(user_id=namespace.user_id,
+        task = service.get_task_by_id(user=namespace.user,
                                       task_id=namespace.task_id)
         print(task)
 
     elif namespace.show_type == 'own':
-        own_tasks = service.get_own_tasks(user_id=namespace.user_id)
+        own_tasks = service.get_own_tasks(user=namespace.user)
         print_collection(own_tasks,
                          mes1='Your own tasks:',
                          mes2='You dont have any tasks')
 
     elif namespace.show_type == 'subtasks':
-        subtasks = service.get_subtasks(user_id=namespace.user_id,
+        subtasks = service.get_subtasks(user=namespace.user,
                                         task_id=namespace.task_id)
         print_collection(subtasks,
                          mes1='Task subtasks:',
@@ -47,40 +47,40 @@ def task_show_handler(service: AppService, namespace):
 
     elif namespace.show_type == 'all':
         available_tasks = service.get_available_tasks(
-            user_id=namespace.user_id)
+            user=namespace.user)
         print_collection(available_tasks,
                          mes1='Accessible tasks:',
                          mes2='You dont have any tasks')
 
     elif namespace.show_type == 'assigned':
-        assigned_tasks = service.get_user_assigned_tasks(user_id=namespace.user_id)
+        assigned_tasks = service.get_user_assigned_tasks(user=namespace.user)
         print_collection(assigned_tasks,
                          mes1='Assigned tasks:',
                          mes2='You dont have assigned tasks')
 
     elif namespace.show_type == 'todo':
-        todo_tasks = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+        todo_tasks = [task for task in service.get_available_tasks(user=namespace.user)
                       if task.status is TaskStatus.TODO]
         print_collection(todo_tasks,
                          mes1='Todo tasks:',
                          mes2='You dont have todo tasks')
 
     elif namespace.show_type == 'done':
-        done_tasks = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+        done_tasks = [task for task in service.get_available_tasks(user=namespace.user)
                       if task.status is TaskStatus.DONE]
         print_collection(done_tasks,
                          mes1='Done tasks:',
                          mes2='You dont have any done tasks')
 
     elif namespace.show_type == 'archived':
-        done_tasks = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+        done_tasks = [task for task in service.get_available_tasks(user=namespace.user)
                       if task.status is TaskStatus.ARCHIVED]
         print_collection(done_tasks,
                          mes1='Archived tasks:',
                          mes2='You dont have any archived tasks')
 
     elif namespace.show_type == 'planless':
-        planless = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+        planless = [task for task in service.get_available_tasks(user=namespace.user)
                     if task.plan is None]
         print_collection(planless,
                          mes1='Tasks without plan:',
@@ -89,7 +89,7 @@ def task_show_handler(service: AppService, namespace):
 
 def task_handler(service: AppService, namespace):
     if namespace.action == 'create':
-        task = service.create_task(user_id=namespace.user_id,
+        task = service.create_task(user=namespace.user,
                                    name=namespace.name,
                                    description=namespace.description,
                                    start_date=namespace.start_date,
@@ -104,7 +104,7 @@ def task_handler(service: AppService, namespace):
         task_show_handler(service, namespace)
 
     elif namespace.action == 'edit':
-        task = service.update_task(user_id=namespace.user_id,
+        task = service.update_task(user=namespace.user,
                                    task_id=namespace.task_id,
                                    name=namespace.name,
                                    description=namespace.description,
@@ -117,54 +117,54 @@ def task_handler(service: AppService, namespace):
         print(task)
 
     elif namespace.action == 'share':
-        service.share_task(user_id=namespace.user_id,
-                           user_receiver_id=namespace.user_receiver_id,
+        service.share_task(user=namespace.user,
+                           user_receiver=namespace.user_receiver,
                            task_id=namespace.task_id)
-        print(f'Task(ID={namespace.task_id}) shared with user(ID={namespace.user_receiver_id})')
+        print(f'Task(ID={namespace.task_id}) shared with user({namespace.user_receiver})')
 
     elif namespace.action == 'unshare':
-        service.unshare_task(user_id=namespace.user_id,
-                             user_receiver_id=namespace.user_receiver_id,
+        service.unshare_task(user=namespace.user,
+                             user_receiver=namespace.user_receiver,
                              task_id=namespace.task_id)
 
-        print(f'Task(ID={namespace.task_id}) unshared with user(ID={namespace.user_receiver_id})')
+        print(f'Task(ID={namespace.task_id}) unshared with user({namespace.user_receiver})')
 
     elif namespace.action == 'assign':
-        service.assign_user(user_id=namespace.user_id,
+        service.assign_user(user=namespace.user,
                             task_id=namespace.task_id,
-                            user_receiver_id=namespace.user_receiver_id)
-        print(f'User(ID={namespace.user_receiver_id}) assigned as task(ID={namespace.task_id}) executor')
+                            user_receiver=namespace.user_receiver)
+        print(f'User({namespace.user_receiver}) assigned as task(ID={namespace.task_id}) executor')
 
     elif namespace.action == 'add_subtask':
-        service.add_subtask(user_id=namespace.user_id,
+        service.add_subtask(user=namespace.user,
                             task_id=namespace.task_id,
                             parent_task_id=namespace.parent_task_id)
         print(
             f'Subtask(ID={namespace.task_id}) set as parent task of task(ID={namespace.parent_task_id})')
 
     elif namespace.action == 'rm_subtask':
-        service.rm_subtask(user_id=namespace.user_id,
+        service.rm_subtask(user=namespace.user,
                            task_id=namespace.task_id)
         print(
             f'Subtask(ID={namespace.task_id}) is detached from parent task now')
 
     elif namespace.action == 'done':
-        task = service.get_task_by_id(user_id=namespace.user_id,
+        task = service.get_task_by_id(user=namespace.user,
                                       task_id=namespace.task_id)
-        service.change_task_status(user_id=namespace.user_id,
+        service.change_task_status(user=namespace.user,
                                    task_id=namespace.task_id,
                                    status='done')
 
         print(f'Task(ID={namespace.task_id}) and its subtasks successfully done')
 
     elif namespace.action == 'archive':
-        service.change_task_status(user_id=namespace.user_id,
+        service.change_task_status(user=namespace.user,
                                    task_id=namespace.task_id,
                                    status='archived')
         print(f'Task(ID={namespace.task_id}) and has been archived')
 
     elif namespace.action == 'delete':
-        service.delete_task(user_id=namespace.user_id,
+        service.delete_task(user=namespace.user,
                             task_id=namespace.task_id)
         print(f'Task(ID={namespace.task_id}) has been deleted')
 
@@ -172,7 +172,7 @@ def task_handler(service: AppService, namespace):
 def folder_show_handler(service: AppService, namespace):
 
     if namespace.show_type == 'id':
-        folder = service.get_folder_by_id(user_id=namespace.user_id,
+        folder = service.get_folder_by_id(user=namespace.user,
                                           folder_id=namespace.folder_id)
         print(folder)
         if folder and namespace.tasks:
@@ -181,7 +181,7 @@ def folder_show_handler(service: AppService, namespace):
                              mes2='Folder is empty')
 
     elif namespace.show_type == 'all':
-        folders = service.get_all_folders(user_id=namespace.user_id)
+        folders = service.get_all_folders(user=namespace.user)
         if folders and namespace.tasks:
             for folder in folders:
                 print(folder)
@@ -194,7 +194,7 @@ def folder_show_handler(service: AppService, namespace):
 
 def folder_handler(service: AppService, namespace):
     if namespace.action == 'create':
-        folder = service.create_folder(user_id=namespace.user_id,
+        folder = service.create_folder(user=namespace.user,
                                        name=namespace.name)
         print('Created folder:')
         print(folder)
@@ -205,7 +205,7 @@ def folder_handler(service: AppService, namespace):
     elif namespace.action == 'edit':
         if namespace.name:
             folder = service.update_folder(folder_id=namespace.folder_id,
-                                           user_id=namespace.user_id,
+                                           user=namespace.user,
                                            name=namespace.name)
             print(f'Folder has been updated. New folder name = {folder.name}')
         else:
@@ -213,7 +213,7 @@ def folder_handler(service: AppService, namespace):
 
     elif namespace.action == 'populate':
 
-        service.populate_folder(user_id=namespace.user_id,
+        service.populate_folder(user=namespace.user,
                                 folder_id=namespace.folder_id,
                                 task_id=namespace.task_id)
         print(
@@ -221,13 +221,13 @@ def folder_handler(service: AppService, namespace):
 
     elif namespace.action == 'unpopulate':
 
-        service.unpopulate_folder(user_id=namespace.user_id,
+        service.unpopulate_folder(user=namespace.user,
                                   folder_id=namespace.folder_id,
                                   task_id=namespace.task_id)
         print(f'Task(ID={namespace.task_id}) no longer in this folder')
 
     elif namespace.action == 'delete':
-        service.delete_folder(user_id=namespace.user_id,
+        service.delete_folder(user=namespace.user,
                               folder_id=namespace.folder_id)
         print(f'Folder(ID={namespace.folder_id}) has been deleted')
 
@@ -243,20 +243,20 @@ def print_plan(plan, gen_tasks):
 
 def plan_show_handlers(service: AppService, namespace):
     if namespace.show_type == 'id':
-        plan = service.get_plan_by_id(user_id=namespace.user_id,
+        plan = service.get_plan_by_id(user=namespace.user,
                                       plan_id=namespace.plan_id)
         tasks = None
         if namespace.tasks:
-            tasks = service.get_generated_tasks_by_plan(user_id=namespace.user_id,
+            tasks = service.get_generated_tasks_by_plan(user=namespace.user,
                                                         plan_id=plan.id)
         print_plan(plan, tasks)
 
     elif namespace.show_type == 'all':
-        plans = service.get_all_plans(user_id=namespace.user_id)
+        plans = service.get_all_plans(user=namespace.user)
         print('Your plans:')
         if namespace.tasks:
             for plan in plans:
-                tasks = service.get_generated_tasks_by_plan(user_id=namespace.user_id,
+                tasks = service.get_generated_tasks_by_plan(user=namespace.user,
                                                             plan_id=plan.id)
                 print_plan(plan, tasks)
         else:
@@ -267,7 +267,7 @@ def plan_show_handlers(service: AppService, namespace):
 def plan_handler(service: AppService, namespace):
     if namespace.action == 'create':
 
-        plan = service.create_plan(user_id=namespace.user_id,
+        plan = service.create_plan(user=namespace.user,
                                    task_id=namespace.task_id,
                                    period_amount=namespace.period_amount,
                                    period_type=namespace.period_type,
@@ -282,7 +282,7 @@ def plan_handler(service: AppService, namespace):
 
     elif namespace.action == 'edit':
 
-        plan = service.update_plan(user_id=namespace.user_id,
+        plan = service.update_plan(user=namespace.user,
                                    plan_id=namespace.plan_id,
                                    period_amount=namespace.period_amount,
                                    period_type=namespace.period_type,
@@ -292,20 +292,20 @@ def plan_handler(service: AppService, namespace):
         print(plan)
 
     elif namespace.action == 'delete':
-        service.delete_plan(user_id=namespace.user_id,
+        service.delete_plan(user=namespace.user,
                             plan_id=namespace.plan_id)
         print('Plan{ID={namespace.plan_id}) has been deleted')
 
 
 def users_handler(service: AppService, namespace):
     if namespace.action == 'show':
-        if namespace.show_type == 'id':
-            if service.user_with_id_exist(user_id=namespace.search_user_id):
-                print('User with following id exist')
+        if namespace.show_type == 'username':
+            if service.user_exist(user=namespace.username):
+                print('User with following username exist')
             else:
                 print('User not found')
         elif namespace.show_type == 'all':
-            users = service.get_all_users_ids()
+            users = service.get_all_users()
             if users:
                 print('Users:')
                 for user in users:
