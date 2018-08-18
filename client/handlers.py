@@ -58,6 +58,27 @@ def task_show_handler(service: AppService, namespace):
                          mes1='Assigned tasks:',
                          mes2='You dont have assigned tasks')
 
+    elif namespace.show_type == 'todo':
+        todo_tasks = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+                      if task.status is TaskStatus.TODO]
+        print_collection(todo_tasks,
+                         mes1='Todo tasks:',
+                         mes2='You dont have todo tasks')
+
+    elif namespace.show_type == 'done':
+        done_tasks = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+                      if task.status is TaskStatus.DONE]
+        print_collection(done_tasks,
+                         mes1='Done tasks:',
+                         mes2='You dont have any done tasks')
+
+    elif namespace.show_type == 'archived':
+        done_tasks = [task for task in service.get_available_tasks(user_id=namespace.user_id)
+                      if task.status is TaskStatus.ARCHIVED]
+        print_collection(done_tasks,
+                         mes1='Archived tasks:',
+                         mes2='You dont have any archived tasks')
+
     elif namespace.show_type == 'planless':
         planless = [task for task in service.get_available_tasks(user_id=namespace.user_id)
                     if task.plan is None]
@@ -186,7 +207,7 @@ def folder_handler(service: AppService, namespace):
             folder = service.update_folder(folder_id=namespace.folder_id,
                                            user_id=namespace.user_id,
                                            name=namespace.name)
-            print(f'Folder has been updated. New folder name = {folder}')
+            print(f'Folder has been updated. New folder name = {folder.name}')
         else:
             print('Nothing to update')
 
@@ -279,7 +300,7 @@ def plan_handler(service: AppService, namespace):
 def users_handler(service: AppService, namespace):
     if namespace.action == 'show':
         if namespace.show_type == 'id':
-            if service.user_with_id_exist(user_id=namespace.user_id):
+            if service.user_with_id_exist(user_id=namespace.search_user_id):
                 print('User with following id exist')
             else:
                 print('User not found')
@@ -293,6 +314,7 @@ def users_handler(service: AppService, namespace):
                 print('App dont have any users')
 
 
+@error_catcher
 def commands_handler(service: AppService, namespace):
 
     if namespace.entity == 'task':
@@ -304,5 +326,5 @@ def commands_handler(service: AppService, namespace):
     elif namespace.entity == 'plan':
         plan_handler(service, namespace)
 
-    elif namespace.entity == 'users':
+    elif namespace.entity == 'user':
         users_handler(service, namespace)
