@@ -15,8 +15,7 @@ class DefaultHelpParser(argparse.ArgumentParser):
 def task_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
                                               title='Show tasks info',
-                                              metavar='',
-                                              description='Commands to show tasks')
+                                              metavar='')
 
     task_id = task_show.add_parser('id',
                                    help='Show task by id')
@@ -41,12 +40,6 @@ def task_show_parser(show_subparser: argparse):
     task_show.add_parser('archived',
                          help='Show archived tasks')
 
-    task_show.add_parser('todo',
-                         help='Show todo tasks')
-
-    task_show.add_parser('done',
-                         help='Show done tasks')
-
     task_show.add_parser('planless',
                          help='Show tasks without plan')
 
@@ -55,8 +48,7 @@ def task_parser(sup_parser: argparse):
     task_parser = sup_parser.add_parser('task',
                                         help='Manage tasks')
     task_subparser = task_parser.add_subparsers(dest='action',
-                                                metavar='',
-                                                description='Commands to work with tasks')
+                                                metavar='')
 
     create = task_subparser.add_parser('create',
                                        help='Create new task')
@@ -196,8 +188,7 @@ def task_parser(sup_parser: argparse):
 def folder_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
                                               title='Show plan and its info',
-                                              metavar='',
-                                              description='Commands to show folders')
+                                              metavar='')
     folder_id = task_show.add_parser('id',
                                      help='Show plan by id')
     folder_id.add_argument('folder_id',
@@ -218,8 +209,7 @@ def folder_parser(sup_parser: argparse):
     folder_parser = sup_parser.add_parser('folder',
                                           help='Manage folders')
     folder_subparser = folder_parser.add_subparsers(dest='action',
-                                                    metavar='',
-                                                    description='Commands to work with folders')
+                                                    metavar='')
 
     create = folder_subparser.add_parser('create',
                                          help='Create new folder')
@@ -270,8 +260,7 @@ def folder_parser(sup_parser: argparse):
 def plan_show_parser(sup_parser: argparse):
     plan_show = sup_parser.add_subparsers(dest='show_type',
                                           title='Show plan and its info',
-                                          metavar='',
-                                          description='Commands to show plans')
+                                          metavar='')
     plan_id = plan_show.add_parser('id',
                                    help='Show plan by id')
 
@@ -294,8 +283,7 @@ def plan_parser(sup_parser: argparse):
     plan_parser = sup_parser.add_parser('plan',
                                         help='Manage plan')
     plan_subparser = plan_parser.add_subparsers(dest='action',
-                                                metavar='',
-                                                description='Commands to work with plans')
+                                                metavar='')
 
     create = plan_subparser.add_parser('create',
                                        help='Create plan for existing task')
@@ -346,8 +334,7 @@ def user_parser(sup_parser: argparse):
     user_parser = sup_parser.add_parser('users',
                                         help='Manage users')
     user_subparser = user_parser.add_subparsers(dest='action',
-                                                metavar='',
-                                                description='Commands to work with user')
+                                                metavar='')
     show = user_subparser.add_parser('show',
                                      help='Show user and its info')
 
@@ -356,19 +343,19 @@ def user_parser(sup_parser: argparse):
                                          metavar='')
     user_id = user_show.add_parser('id',
                                    help='Trying to find user by id')
-    user_id.add_argument('search_user_id', type=int)
+    user_id.add_argument('user_id', type=int)
 
     user_show.add_parser('all', help='List all users id')
 
 
 def get_args():
-    main_parser = DefaultHelpParser(prog='todo',
-                                    description='todo tracker',
-                                    usage='todo <entity> [<args>]')
+    main_parser = DefaultHelpParser(prog='Tracker',
+                                    description='CLI for tracker',
+                                    usage='Tracker <entity> [<args>]')
     entity_parser = main_parser.add_subparsers(
         dest='entity',
         title='Entities',
-        description='Select entity you want to work with', metavar='')
+        description='Select entity', metavar='')
     task_parser(entity_parser)
     folder_parser(entity_parser)
     plan_parser(entity_parser)
