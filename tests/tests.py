@@ -16,6 +16,7 @@ TEST_PRIORITY_VALUE = 'high'
 TEST_PRIORITY = mo.TaskPriority.HIGH
 TEST_DATE_FIRST = datetime(2018, 8, 15, 20, 00)
 TEST_DATE_SECOND = datetime.now()
+TEST_DATE_THIRD = datetime.now() + timedelta(days=10)
 TEST_RECEIVER = 'receiver'
 TEST_RANDOM_INT = 100
 TEST_RANDOM_STR = 'string'
@@ -446,39 +447,65 @@ class PlanTest(unittest.TestCase):
         task = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
                                      start_date=TEST_DATE_FIRST)
         plan = self.serv.create_plan(user=TEST_USER, task_id=task.id,
-                                     period_amount=TEST_RANDOM_INT,
-                                     period=TEST_PERIOD_VALUE,
+                                     period_amount=10,
+                                     period=mo.Period.MONTH.value,
                                      end_date=TEST_PLAN_END_DATE,
-                                     repetitions_amount=TEST_RANDOM_INT)
-
+                                     repetitions_amount=100)
         with self.assertRaises(ex.UpdateError):
             self.serv.update_plan(user=TEST_USER, plan_id=plan.id,
-                                  period='STR')
+                                  period=TEST_RANDOM_STR)
+        with self.assertRaises(ex.TimeError):
+            self.serv.update_plan(user=TEST_USER, plan_id=plan.id,
+                                  end_date=TEST_DATE_FIRST)
 
-    def test_get_active_plans(self):
-        pass
-        # plans = self.serv.get_active_plans(TEST_USER)
-        # self.assertEqual(len(plans), 0)
-        #
-        # task1 = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
-        #
-        # plan1 = self.serv.create_plan(user=TEST_USER, task_id=task1.id,
-        #                               period_amount=TEST_RANDOM_INT,
-        #                               period=TEST_PERIOD_VALUE,
-        #                               end_date=TEST_PLAN_END_DATE)
-        #
-        # self.assertEqual(plan1.task.id, task1.id)
-        #
-        # task2 = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
-        # plan2 = self.serv.create_plan(user=TEST_USER, task_id=task2.id,
-        #                               period_amount='0.1',
-        #                               period=TEST_PERIOD_VALUE,
-        #                               repetitions_amount=100)
-        #
-        # task3 = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
-        # plan3 = self.serv.create_plan(user=TEST_USER, task_id=task3.id,
-        #                               period_amount=TEST_RANDOM_INT,
-        #                               period=TEST_PERIOD_VALUE)
-        #
-        # plans = self.serv.get_active_plans(TEST_USER)
-        # self.assertEqual(len(plans), 3)
+        plan = self.serv.update_plan(user=TEST_USER, plan_id=plan.id,
+                                     period=TEST_PERIOD_VALUE,
+                                     period_amount=TEST_RANDOM_INT,
+                                     end_date=TEST_DATE_THIRD,
+                                     repetitions_amount=TEST_RANDOM_INT)
+
+        self.assertEqual(plan.period, TEST_PERIOD)
+        self.assertEqual(plan.period_amount, TEST_RANDOM_INT)
+        self.assertEqual(plan.end_date, TEST_DATE_THIRD)
+        self.assertEqual(plan.repetitions_amount, TEST_RANDOM_INT)
+
+    def test_execute_and_get_active_plans(self):
+        taskslen = len(self.serv.get_available_tasks(user=TEST_USER))
+        self.assertEqual(taskslen, 0)
+        plans = self.serv.get_active_plans(TEST_USER)
+        self.assertEqual(len(plans), 0)
+
+        task1 = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                      start_date=TEST_DATE_FIRST)
+
+        plan1 = self.serv.create_plan(user=TEST_USER, task_id=task1.id,
+                                      period_amount=1,
+                                      period=TEST_PERIOD_VALUE,
+                                      end_date=TEST_PLAN_END_DATE)
+
+        self.assertEqual(plan1.task.id, task1.id)
+
+        task2 = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                      start_date=TEST_DATE_FIRST)
+        plan2 = self.serv.create_plan(user=TEST_USER, task_id=task2.id,
+                                      period_amount=1,
+                                      period=TEST_PERIOD_VALUE,
+                                      repetitions_amount=100)
+
+        task3 = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                      start_date=TEST_DATE_FIRST)
+        plan3 = self.serv.create_plan(user=TEST_USER, task_id=task3.id,
+                                      period_amount=1,
+                                      period=TEST_PERIOD_VALUE)
+
+        plans = self.serv.get_active_plans(TEST_USER)
+        self.assertEqual(len(plans), 3)
+        self.assertEqual(plan1.end_type, mo.EndType.DATE)
+        self.assertEqual(plan2.end_type, mo.EndType.AMOUNT)
+        self.assertEqual(plan3.end_type, mo.EndType.NEVER)
+
+        self.serv.execute_plans(user=TEST_USER)
+        taskslen = len(self.serv.get_available_tasks(user=TEST_USER))
+        res = plan1.repetitions_counter + plan2.repetitions_counter
+        res += plan3.repetitions_counter + 3
+        self.assertTrue(len, res)
