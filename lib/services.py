@@ -26,7 +26,7 @@ from lib.utils import (get_end_type,
                        get_interval,
                        check_object_exist)
 
-from lib.validators import validate_dates
+from lib.validators import validate_task_dates, validate_plan_end_date
 from datetime import datetime
 from lib.logging import get_logger, log_decorator
 
@@ -119,9 +119,10 @@ class AppService:
                 raise CreateError('Status not found') from e
 
         if parent_task_id:
-            self.user_can_access_task(user=user, task_id=parent_task_id)
+            self.user_can_access_task(user=user,
+                                      task_id=parent_task_id)
 
-        validate_dates(start_date, end_date)
+        validate_task_dates(start_date, end_date)
 
         task = Task(owner=user,
                     name=name,
@@ -133,7 +134,12 @@ class AppService:
                     assigned=assigned,
                     status=status)
 
-        task.editors.append(TaskUserEditors(user=user, task_id=task.id))
+        task.editors.append(TaskUserEditors(user=user,
+                                            task_id=task.id))
+
+        if assigned and assigned is not user:
+            task.editors.append(TaskUserEditors(user=assigned,
+                                                task_id=task.id))
 
         self.session.add(task)
         self.session.commit()
@@ -157,8 +163,7 @@ class AppService:
                     status=None,
                     priority=None,
                     end_date=None,
-                    start_date=None,
-                    parent_task_id=None) -> Task:
+                    start_date=None) -> Task:
 
         task = self.get_task_by_id(user, task_id)
 
@@ -185,18 +190,13 @@ class AppService:
                 start_date = task.start_date
             elif end_date is None:
                 end_date = task.end_date
-            validate_dates(start_date, end_date)
+            validate_task_dates(start_date, end_date)
             args[Task.start_date] = start_date
             args[Task.end_date] = end_date
 
         args[Task.updated] = datetime.now()
 
-        try:
-            self.session.query(Task).filter_by(id=task_id).update(args)
-
-        except exc.SQLAlchemyError as e:
-            raise UpdateError('Internal Error') from e
-
+        self.session.query(Task).filter_by(id=task_id).update(args)
         self.session.commit()
         return task
 
@@ -204,13 +204,17 @@ class AppService:
     def assign_user(self, user: str,
                     task_id: int,
                     user_receiver: str):
-
         task = self.get_task_by_id(user=user, task_id=task_id)
+
         if task.assigned == user_receiver:
             raise UpdateError(
                 f'User({user}) already assigned as Task(ID={task_id}) executor')
-        editor = TaskUserEditors(user=user_receiver, task_id=task_id)
-        task.editors.append(editor)
+        editor = self.get_task_user_relation(user=user_receiver, task_id=task_id)
+
+        if editor is None:
+            editor = TaskUserEditors(user=user_receiver, task_id=task_id)
+            task.editors.append(editor)
+
         task.assigned = user_receiver
 
         self.session.commit()
@@ -304,11 +308,15 @@ class AppService:
                     user: str,
                     task_id: int,
                     parent_task_id: int):
-        parent_task = self.get_task_by_id(user, parent_task_id)
+        parent_task = self.get_task_by_id(user=user, task_id=parent_task_id)
         subtask = self.get_task_by_id(user=user, task_id=task_id)
 
         if parent_task.plan:
             raise UpdateError('You cant add subtasks to task with plan directly')
+
+        if parent_task.parent_task_id == task_id:
+            raise UpdateError('Loop dependecy error')
+
         if subtask.parent_task_id:
             raise UpdateError(
                 f'Task(ID={task_id}) already have parent task')
@@ -324,7 +332,7 @@ class AppService:
 
         if subtask.parent_task_id is None:
             raise UpdateError(
-                '{Task(ID={subtask_id}) dont have parent task')
+                f'Task(ID={task_id}) dont have parent task')
         else:
             subtask.parent_task_id = None
 
@@ -354,8 +362,7 @@ class AppService:
 
         task.status = status
         task.updated = datetime.now()
-        if (task.status is TaskStatus.DONE or
-                task.status is TaskStatus.ARCHIVED or apply_on_subtasks):
+        if (task.status is TaskStatus.DONE or apply_on_subtasks):
             self.session.query(Task).filter_by(
                 parent_task_id=task_id).update({Task.status: status,
                                                 Task.updated: datetime.now()})
@@ -478,7 +485,7 @@ class AppService:
     @log_decorator
     def create_plan(self, user, task_id,
                     period_amount,
-                    period_type,
+                    period,
                     repetitions_amount=None,
                     end_date=None) -> Plan:
 
@@ -490,8 +497,11 @@ class AppService:
         if task.start_date is None:
             raise CreateError('Task should have start date')
 
+        if end_date:
+            validate_plan_end_date(end_date)
+
         try:
-            period = Period[period_type.upper()]
+            period = Period[period.upper()]
         except KeyError as e:
             raise CreateError('Period not found') from e
 
@@ -620,9 +630,8 @@ class AppService:
                 near_activation = plan.last_activated + interval
                 plan.repetitions_counter += 1
 
-                for x in plan.task.editors:
-                    if x.user is user:
-                        continue
+                editors = [x for x in plan.task.editors if x is not user]
+                for x in editors:
                     task.editors.append(
                         TaskUserEditors(user=x.user,
                                         task_id=task.id))
@@ -639,20 +648,22 @@ class AppService:
     @log_decorator
     def update_plan(self, user: str,
                     plan_id: int,
-                    period_type=None,
+                    period=None,
                     period_amount=None,
                     repetitions_amount=None,
                     end_date=None) -> Plan:
 
         plan = self.get_plan_by_id(user=user, plan_id=plan_id)
         args = {}
+
         args[Plan.period] = plan.period
         args[Plan.period_amount] = plan.period_amount
         args[Plan.repetitions_amount] = plan.repetitions_amount
         args[Plan.end_date] = plan.end_date
-        if period_type:
+
+        if period:
             try:
-                args[Plan.period] = Period[period_type.upper()]
+                args[Plan.period] = Period[period.upper()]
             except KeyError as e:
                 raise UpdateError('Period not found') from e
 
@@ -663,6 +674,7 @@ class AppService:
         if end_date:
             args[Plan.end_date] = end_date
 
+        validate_plan_end_date(args[Plan.end_date])
         args[Plan.end_type] = get_end_type(plan.start_date,
                                            args[Plan.period],
                                            args[Plan.period_amount],

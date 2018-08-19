@@ -105,10 +105,6 @@ def task_parser(sup_parser: argparse):
     edit.add_argument('-e', '--end_date',
                       type=parse,
                       help='End date')
-    edit.add_argument('-p',
-                      '--parent_task_id',
-                      type=int,
-                      help='Parent task id')
     edit.add_argument('--priority',
                       type=str,
                       choices=[x.name.lower() for x in TaskPriority])
@@ -123,8 +119,8 @@ def task_parser(sup_parser: argparse):
                        type=int,
                        help='Id of task to be shared',
                        required=True)
-    share.add_argument('-urn',
-                       '--user_receiver_name',
+    share.add_argument('-ur',
+                       '--user_receiver',
                        type=str,
                        help='User name to share task with',
                        required=True)
@@ -137,8 +133,8 @@ def task_parser(sup_parser: argparse):
                          required=True,
                          type=int)
     unshare.add_argument('-urn',
-                         '--user_receiver_name',
-                         help='username',
+                         '--user_receiver',
+                         help='User name to unshare task with',
                          required=True,
                          type=str)
 
@@ -150,8 +146,8 @@ def task_parser(sup_parser: argparse):
                         required=True,
                         type=int)
     assign.add_argument('-urn',
-                        '--user_receiver_name',
-                        help='username',
+                        '--user_receiver',
+                        help='User name to assign task',
                         required=True,
                         type=str)
 
@@ -178,6 +174,10 @@ def task_parser(sup_parser: argparse):
 
     archive = task_subparser.add_parser('archive',
                                         help='Archive task')
+    archive.add_argument('--subtasks',
+                         action='store_true',
+                         help='Archive subtasks too')
+
     archive.add_argument('task_id',
                          help='task id',
                          type=int)
@@ -305,7 +305,7 @@ def plan_parser(sup_parser: argparse):
     create.add_argument('period_amount',
                         help='Period amount',
                         type=int)
-    create.add_argument('period_type',
+    create.add_argument('period',
                         help='Period type',
                         choices=[x.name.lower() for x in Period])
 
@@ -327,7 +327,7 @@ def plan_parser(sup_parser: argparse):
     edit.add_argument('-p', '--period_amount',
                       help='Period amount',
                       type=int)
-    edit.add_argument('-t', '--period_type',
+    edit.add_argument('-t', '--period',
                       help='Period type',
                       choices=[x.name.lower() for x in Period])
     edit.add_argument('-r', '--plan_amount',

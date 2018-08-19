@@ -22,7 +22,7 @@ FORMAT = '%Y-%m-%d %H:%M'
 def set_up_connection(connection_string=None):
     if connection_string is None:
         connection_string = DATABASE
-    engine = create_engine('sqlite://'.format(connection_string))
+    engine = create_engine('sqlite:///{}'.format(connection_string))
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     return session()
@@ -76,9 +76,9 @@ class Folder(Base):
 class Task(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
-    owner = Column(Integer)
+    owner = Column(String)
     parent_task_id = Column(Integer, ForeignKey('tasks.id'), nullable=True)
-    assigned = Column(Integer, nullable=True)
+    assigned = Column(String, nullable=True)
 
     name = Column(String)
     description = Column(String)
@@ -121,6 +121,7 @@ class Task(Base):
 
     def __str__(self):
         return(
+
             ''.join([
                 f'id: {self.id}\n',
                 f'name: {self.name}\n',

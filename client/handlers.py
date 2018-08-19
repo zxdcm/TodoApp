@@ -111,8 +111,7 @@ def task_handler(service: AppService, namespace):
                                    status=namespace.status,
                                    priority=namespace.priority,
                                    start_date=namespace.start_date,
-                                   end_date=namespace.end_date,
-                                   parent_task_id=namespace.parent_task_id)
+                                   end_date=namespace.end_date)
         print('Updated task:')
         print(task)
 
@@ -160,7 +159,8 @@ def task_handler(service: AppService, namespace):
     elif namespace.action == 'archive':
         service.change_task_status(user=namespace.user,
                                    task_id=namespace.task_id,
-                                   status='archived')
+                                   status='archived',
+                                   apply_on_subtasks=namespace.subtasks)
         print(f'Task(ID={namespace.task_id}) and has been archived')
 
     elif namespace.action == 'delete':
@@ -270,7 +270,7 @@ def plan_handler(service: AppService, namespace):
         plan = service.create_plan(user=namespace.user,
                                    task_id=namespace.task_id,
                                    period_amount=namespace.period_amount,
-                                   period_type=namespace.period_type,
+                                   period=namespace.period,
                                    repetitions_amount=namespace.plan_amount,
                                    end_date=namespace.end_date)
         print('Created plan:')
@@ -285,7 +285,7 @@ def plan_handler(service: AppService, namespace):
         plan = service.update_plan(user=namespace.user,
                                    plan_id=namespace.plan_id,
                                    period_amount=namespace.period_amount,
-                                   period_type=namespace.period_type,
+                                   period=namespace.period,
                                    repetitions_amount=namespace.plan_amount,
                                    end_date=namespace.end_date)
         print('Updated plan:')
@@ -314,7 +314,6 @@ def users_handler(service: AppService, namespace):
                 print('App dont have any users')
 
 
-@error_catcher
 def commands_handler(service: AppService, namespace):
 
     if namespace.entity == 'task':

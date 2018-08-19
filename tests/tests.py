@@ -3,7 +3,7 @@ import unittest
 from lib.services import AppService
 from lib import models as mo
 from lib import exceptions as ex
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 CONNECTIONSTRING = ':memory:'
@@ -19,15 +19,21 @@ TEST_DATE_SECOND = datetime.now()
 TEST_RECEIVER = 'receiver'
 TEST_RANDOM_INT = 100
 TEST_RANDOM_STR = 'string'
+TEST_PERIOD = mo.Period.DAY
+TEST_PERIOD_VALUE = mo.Period.DAY.value
+TEST_PLAN_END_DATE = datetime.now() + timedelta(days=TEST_RANDOM_INT)
 
 
 class TaskTest(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.serv = AppService(CONNECTIONSTRING)
+    def setUp(self):
+        self.serv = AppService(CONNECTIONSTRING)
 
     def test_create_task(self):
+        parent_task = self.serv.create_task(
+            user=TEST_USER,
+            name=TEST_NAME,
+        )
         task = self.serv.create_task(
             user=TEST_USER,
             name=TEST_NAME,
@@ -35,7 +41,8 @@ class TaskTest(unittest.TestCase):
             start_date=TEST_DATE_FIRST,
             end_date=TEST_DATE_SECOND,
             priority=TEST_PRIORITY_VALUE,
-            status=TEST_STATUS_VALUE)
+            status=TEST_STATUS_VALUE,
+            parent_task_id=parent_task.id)
         self.assertEqual(task.owner, TEST_USER)
         self.assertEqual(task.name, TEST_NAME)
         self.assertEqual(task.description, TEST_DESCRIPTION)
@@ -43,13 +50,15 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(task.status, TEST_STATUS)
         self.assertEqual(task.start_date, TEST_DATE_FIRST)
         self.assertEqual(task.end_date, TEST_DATE_SECOND)
+        self.assertEqual(task.parent_task_id, parent_task.id)
 
+        with self.assertRaises(ex.CreateError):
+            self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                  status=TEST_RANDOM_STR)
         with self.assertRaises(ex.CreateError):
             self.serv.create_task(user=TEST_USER,
                                   name=TEST_NAME,
                                   priority=TEST_RANDOM_STR)
-            self.serv.create_task(user=TEST_USER, name=TEST_NAME,
-                                  status=TEST_RANDOM_STR)
 
     def test_update_task(self):
         task = self.serv.create_task(
@@ -81,10 +90,14 @@ class TaskTest(unittest.TestCase):
                                   name=TEST_NAME,
                                   start_date=TEST_DATE_SECOND,
                                   end_date=TEST_DATE_FIRST)
+
+        with self.assertRaises(ex.TimeError):
             self.serv.update_task(user=TEST_USER,
                                   task_id=task.id,
                                   name=TEST_NAME,
                                   end_date=TEST_DATE_FIRST)
+
+        with self.assertRaises(ex.TimeError):
             self.serv.update_task(user=TEST_USER,
                                   task_id=task.id,
                                   name=TEST_NAME,
@@ -95,6 +108,14 @@ class TaskTest(unittest.TestCase):
                                   task_id=task.id,
                                   name=TEST_NAME,
                                   priority=TEST_RANDOM_STR)
+
+        with self.assertRaises(ex.UpdateError):
+            self.serv.update_task(user=TEST_USER,
+                                  task_id=task.id,
+                                  name=TEST_NAME,
+                                  status=TEST_RANDOM_STR)
+
+        with self.assertRaises(ex.UpdateError):
             self.serv.update_task(user=TEST_USER,
                                   task_id=task.id,
                                   name=TEST_NAME,
@@ -143,6 +164,23 @@ class TaskTest(unittest.TestCase):
             self.serv.get_task_by_id(user=TEST_USER,
                                      task_id=TEST_RANDOM_INT)
 
+    def test_assign_user(self):
+        task = self.serv.create_task(
+            user=TEST_USER,
+            name=TEST_NAME)
+
+        self.serv.assign_user(user=TEST_USER,
+                              task_id=task.id,
+                              user_receiver=TEST_RECEIVER)
+
+        self.assertTrue(task.assigned, TEST_RECEIVER)
+        self.assertIn(TEST_RECEIVER, [rel.user for rel in task.editors])
+
+        with self.assertRaises(ex.UpdateError):
+            self.serv.assign_user(user=TEST_USER,
+                                  task_id=task.id,
+                                  user_receiver=TEST_RECEIVER)
+
     def test_share_task(self):
         task = self.serv.create_task(
             user=TEST_USER,
@@ -173,6 +211,7 @@ class TaskTest(unittest.TestCase):
             self.serv.unshare_task(user=TEST_USER,
                                    task_id=task.id,
                                    user_receiver=TEST_USER)
+        with self.assertRaises(ex.UpdateError):
             self.serv.unshare_task(user=TEST_USER,
                                    task_id=task.id,
                                    user_receiver=TEST_RECEIVER)
@@ -180,7 +219,10 @@ class TaskTest(unittest.TestCase):
         self.serv.share_task(user=TEST_USER,
                              task_id=task.id,
                              user_receiver=TEST_RECEIVER)
-        self.assertIn(TEST_RECEIVER, [rel.user for rel in task.editors])
+        self.serv.unshare_task(user=TEST_USER,
+                               task_id=task.id,
+                               user_receiver=TEST_RECEIVER)
+        self.assertNotIn(TEST_RECEIVER, [rel.user for rel in task.editors])
 
     def test_delete_task(self):
         with self.assertRaises(ex.AccessError):
@@ -201,20 +243,37 @@ class TaskTest(unittest.TestCase):
             user=TEST_USER,
             name=TEST_NAME)
 
+        plan = self.serv.create_plan(user=TEST_USER,
+                                     task_id=task.id,
+                                     period='min',
+                                     period_amount=10)
+
         with self.assertRaises(ex.UpdateError):
+
             self.serv.add_subtask(user=TEST_USER,
-                                  task_id=task.id,
+                                  task_id=subtask.id,
                                   parent_task_id=task.id)
+
+        self.serv.delete_plan(user=TEST_USER,
+                              plan_id=plan.id)
 
         self.serv.add_subtask(user=TEST_USER,
                               task_id=subtask.id,
                               parent_task_id=task.id)
-        self.assertEqual(subtask.parent_task_id, task.id)
+
+        with self.assertRaises(ex.UpdateError):
+            self.serv.add_subtask(user=TEST_USER,
+                                  task_id=subtask.id,
+                                  parent_task_id=task.id)
 
         with self.assertRaises(ex.UpdateError):
             self.serv.add_subtask(user=TEST_USER,
                                   task_id=task.id,
                                   parent_task_id=task.id)
+        with self.assertRaises(ex.UpdateError):
+            self.serv.add_subtask(user=TEST_USER,
+                                  task_id=task.id,
+                                  parent_task_id=subtask.id)
 
     def test_change_task_status(self):
         task = self.serv.create_task(
@@ -238,33 +297,48 @@ class TaskTest(unittest.TestCase):
 
         self.assertEqual(subtask.status, mo.TaskStatus.DONE)
 
+        with self.assertRaises(ex.UpdateError):
+            self.serv.change_task_status(user=TEST_USER,
+                                         task_id=task.id,
+                                         status=TEST_RANDOM_STR)
+
 
 class FolderTest(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.serv = AppService(CONNECTIONSTRING)
+    def setUp(self):
+        self.serv = AppService(CONNECTIONSTRING)
 
     def test_create_folder(self):
         folder = self.serv.create_folder(user=TEST_USER,
-                                         name='TESTNAME')
-
+                                         name=TEST_RANDOM_STR)
         self.assertEqual(folder.user, TEST_USER)
-        self.assertEqual(folder.name, 'TESTNAME')
+        self.assertEqual(folder.name, TEST_RANDOM_STR)
+        with self.assertRaises(ex.CreateError):
+            folder = self.serv.create_folder(user=TEST_USER,
+                                             name=TEST_RANDOM_STR)
 
     def test_update_folder(self):
-        folder = self.serv.create_folder(user=TEST_USER,
-                                         name=TEST_RANDOM_STR)
+        folder1 = self.serv.create_folder(user=TEST_USER,
+                                          name='folder1')
+        folder2 = self.serv.create_folder(user=TEST_USER,
+                                          name='folder2')
         self.serv.update_folder(user=TEST_USER,
-                                folder_id=folder.id,
-                                name=TEST_NAME)
+                                folder_id=folder1.id,
+                                name='newfoldername')
 
-        self.assertEqual(folder.name, TEST_NAME)
+        self.assertEqual(folder1.name, 'newfoldername')
 
         with self.assertRaises(ex.UpdateError):
             self.serv.update_folder(user=TEST_USER,
-                                    folder_id=folder.id,
-                                    name=TEST_NAME)
+                                    folder_id=folder1.id,
+                                    name='folder2')
+
+    def test_get_folder_by_name(self):
+        folder = self.serv.create_folder(user=TEST_USER,
+                                         name=TEST_RANDOM_STR)
+        got_folder = self.serv.get_folder_by_name(user=TEST_USER,
+                                                  name=TEST_RANDOM_STR)
+        self.assertEqual(folder, got_folder)
 
     def test_get_folder(self):
         folder = self.serv.create_folder(user=TEST_USER,
@@ -283,3 +357,128 @@ class FolderTest(unittest.TestCase):
                                 folder_id=folder.id)
         with self.assertRaises(ex.ObjectNotFound):
             self.serv.get_folder_by_id(user=TEST_USER, folder_id=folder.id)
+
+    def test_populate_folder(self):
+        folder = self.serv.create_folder(user=TEST_USER, name='rand')
+        self.assertEqual(len(folder.tasks), 0)
+        task = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
+        self.serv.populate_folder(user=TEST_USER,
+                                  folder_id=folder.id,
+                                  task_id=task.id)
+        self.assertEqual(len(folder.tasks), 1)
+
+        with self.assertRaises(ex.DuplicateRelation):
+            self.serv.populate_folder(user=TEST_USER,
+                                      folder_id=folder.id,
+                                      task_id=task.id)
+
+        self.serv.unpopulate_folder(user=TEST_USER, folder_id=folder.id,
+                                    task_id=task.id)
+
+        self.assertEqual(len(folder.tasks), 0)
+
+        with self.assertRaises(ex.UpdateError):
+            self.serv.unpopulate_folder(user=TEST_USER,
+                                        folder_id=folder.id,
+                                        task_id=task.id)
+
+
+class PlanTest(unittest.TestCase):
+
+    def setUp(self):
+        self.serv = AppService(CONNECTIONSTRING)
+
+    def test_create_plan(self):
+
+        task = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                     start_date=TEST_DATE_FIRST)
+
+        with self.assertRaises(ex.AccessError):
+            plan = self.serv.create_plan(user=TEST_RECEIVER, task_id=task.id,
+                                         period_amount=TEST_RANDOM_INT,
+                                         period=TEST_PERIOD_VALUE)
+
+        plan = self.serv.create_plan(user=TEST_USER, task_id=task.id,
+                                     period_amount=TEST_RANDOM_INT,
+                                     period=TEST_PERIOD_VALUE,
+                                     end_date=TEST_PLAN_END_DATE,
+                                     repetitions_amount=TEST_RANDOM_INT)
+
+        self.assertEqual(plan.user, TEST_USER)
+        self.assertEqual(plan.task.id, task.id)
+        self.assertEqual(plan.period_amount, TEST_RANDOM_INT)
+        self.assertEqual(plan.period, TEST_PERIOD)
+        self.assertEqual(plan.end_date, TEST_PLAN_END_DATE)
+        self.assertEqual(plan.repetitions_amount, TEST_RANDOM_INT)
+
+        with self.assertRaises(ex.CreateError):
+            plan = self.serv.create_plan(user=TEST_USER,
+                                         task_id=task.id,
+                                         period=TEST_PERIOD_VALUE,
+                                         period_amount=TEST_RANDOM_INT)
+
+        with self.assertRaises(ex.CreateError):
+            task.plan = None
+            plan = self.serv.create_plan(user=TEST_USER,
+                                         task_id=task.id,
+                                         period=TEST_RANDOM_STR,
+                                         period_amount=TEST_RANDOM_INT)
+        with self.assertRaises(ex.CreateError):
+            task.start_date = None
+            plan = self.serv.create_plan(user=TEST_USER,
+                                         task_id=task.id,
+                                         period=TEST_PERIOD_VALUE,
+                                         period_amount=TEST_RANDOM_INT)
+        with self.assertRaises(ex.CreateError):
+            plan = self.serv.create_plan(user=TEST_USER,
+                                         task_id=task.id,
+                                         period=TEST_PERIOD_VALUE,
+                                         period_amount=TEST_RANDOM_INT)
+        with self.assertRaises(ex.CreateError):
+            subtask = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                            parent_task_id=task.id)
+            plan = self.serv.create_plan(user=TEST_USER,
+                                         task_id=task.id,
+                                         period=TEST_PERIOD_VALUE,
+                                         period_amount=TEST_RANDOM_INT)
+
+    def test_update_plan(self):
+        task = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
+                                     start_date=TEST_DATE_FIRST)
+        plan = self.serv.create_plan(user=TEST_USER, task_id=task.id,
+                                     period_amount=TEST_RANDOM_INT,
+                                     period=TEST_PERIOD_VALUE,
+                                     end_date=TEST_PLAN_END_DATE,
+                                     repetitions_amount=TEST_RANDOM_INT)
+
+        with self.assertRaises(ex.UpdateError):
+            self.serv.update_plan(user=TEST_USER, plan_id=plan.id,
+                                  period='STR')
+
+    def test_get_active_plans(self):
+        pass
+        # plans = self.serv.get_active_plans(TEST_USER)
+        # self.assertEqual(len(plans), 0)
+        #
+        # task1 = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
+        #
+        # plan1 = self.serv.create_plan(user=TEST_USER, task_id=task1.id,
+        #                               period_amount=TEST_RANDOM_INT,
+        #                               period=TEST_PERIOD_VALUE,
+        #                               end_date=TEST_PLAN_END_DATE)
+        #
+        # self.assertEqual(plan1.task.id, task1.id)
+        #
+        # task2 = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
+        # plan2 = self.serv.create_plan(user=TEST_USER, task_id=task2.id,
+        #                               period_amount='0.1',
+        #                               period=TEST_PERIOD_VALUE,
+        #                               repetitions_amount=100)
+        #
+        # task3 = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
+        # plan3 = self.serv.create_plan(user=TEST_USER, task_id=task3.id,
+        #                               period_amount=TEST_RANDOM_INT,
+        #                               period=TEST_PERIOD_VALUE)
+        #
+        # plans = self.serv.get_active_plans(TEST_USER)
+        # self.assertEqual(len(plans), 3)
