@@ -8,7 +8,8 @@ from lib.models import (
     EndType,
     task_folder_association_table,
     TaskUserEditors,
-    set_up_connection)
+    set_up_connection,
+    Reminder)
 
 from sqlalchemy import (orm,
                         exc,
@@ -27,7 +28,10 @@ from lib.utils import (get_end_type,
                        check_object_exist,
                        enum_converter)
 
-from lib.validators import validate_task_dates, validate_plan_end_date
+from lib.validators import (validate_task_dates,
+                            validate_plan_end_date,
+                            validate_reminder_date)
+
 from datetime import datetime
 from lib.logging import get_logger, log_decorator
 
@@ -358,6 +362,8 @@ class AppService:
             self.session.delete(rel)
         for folder in self.get_task_folders(user=user, task_id=task.id):
             folder.tasks.remove(task)
+        for reminder in self.get_task_reminders(user=user, task_id=task.id):
+            self.session.delete(reminder)
 
         self.session.delete(task)
         self.session.commit()
@@ -566,7 +572,7 @@ class AppService:
     @log_decorator
     def get_task_folders(self, user: str, task_id: int):
         return self.session.query(Folder).join(
-            task_folder_association_table).all()
+            task_folder_association_table).filter_by(task_id=task_id).all()
 
     @log_decorator
     def populate_folder(self, user: str, folder_id: int, task_id: int):
@@ -823,7 +829,63 @@ class AppService:
         return self.session.query(Plan).get(plan_id)
 
         logger.info(f'Plan({plan.id}) updated by User({user})')
+
         return plan
+
+    def create_reminder(self, user, task_id, date):
+
+        self.user_can_access_task(user, task_id)
+
+        validate_reminder_date(date)
+
+        reminder = Reminder(task_id=task_id, date=date, user=user)
+
+        self.session.add(reminder)
+        self.session.commit()
+
+        logger.info(f'Reminder({reminder.id}) created by User({user})')
+
+        return reminder
+
+    def get_reminder_by_id(self, user: str, reminder_id: int):
+        reminder = self.session.query(Reminder).filter_by(user=user,
+                                                          id=reminder_id).one_or_none()
+        check_object_exist(reminder,
+                           f'id : {reminder_id}',
+                           'Reminder')
+        return reminder
+
+    def get_all_reminders(self, user: str):
+        return self.session.query(Reminder).filter_by(user=user).all()
+
+    def get_task_reminders(self, user: str, task_id: int):
+        return self.session.query(Reminder).filter_by(user=user,
+                                                      task_id=task_id).all()
+
+    def update_reminder(self, user: str,
+                        reminder_id: int,
+                        task_id=None,
+                        date=None):
+        reminder = self.get_reminder_by_id(user, reminder_id)
+
+        if date:
+            validate_reminder_date(date)
+            reminder.date = date
+
+        self.session.commit()
+
+        logger.info(f'Reminder({reminder.id}) updated by User({user})')
+
+        return reminder
+
+    def delete_reminder(self, user: str,
+                        reminder_id: int):
+        reminder = self.get_reminder_by_id(user, reminder_id)
+
+        self.session.delete(reminder)
+        self.session.commit()
+
+        logger.info(f'Reminder({reminder.id}) deleted by User({user})')
 
     @log_decorator
     def get_obj_by_id(self, cls, id: int):
