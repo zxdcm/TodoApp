@@ -163,7 +163,7 @@ def task_handler(service: AppService, namespace):
                                    task_id=namespace.task_id,
                                    status='archived',
                                    apply_on_subtasks=namespace.subtasks)
-        print(f'Task(ID={namespace.task_id}) and has been archived')
+        print(f'Task(ID={namespace.task_id}) has been archived')
 
     elif namespace.action == 'delete':
         service.delete_task(user=namespace.user,

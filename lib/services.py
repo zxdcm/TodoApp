@@ -43,6 +43,16 @@ class AppService:
     def get_task_user_relation(self,
                                user,
                                task_id):
+        """Method allows to get TaskUserEditor relation object.
+           That indicates does the user has rights to access the task
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        Returns
+        -------
+        TaskUserEditor object or None
+        """
         return self.session.query(TaskUserEditors).filter_by(
             user=user, task_id=task_id).one_or_none()
 
@@ -50,6 +60,15 @@ class AppService:
     def user_can_access_task(self,
                              user: str,
                              task_id: int):
+        """Method allow to check, does the user has access rights to particular task.
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        Returns
+        -------
+        Bool or Exception
+        """
         if self.get_task_user_relation(user=user, task_id=task_id):
             return True
         raise AccessError(
@@ -67,30 +86,21 @@ class AppService:
                     parent_task_id=None,
                     assigned=None
                     ) -> Task:
-        """Allow create task with provided parameters
-
+        """Method allows to create task instance with provided arguments.
         Parameters
         ----------
         user : str
-            username of user who create task
         name : str
-        start_date : datetime
-
-        Optional
-        ----------
-        status   : str
+        status : str
         priority : str
+        start_date : datetime
         description : str
-        end_date  : datetime
+        end_date : datetime
         parent_task_id : int
-        assigned : str
-            username of assigned user
-
+        assigned : str : assigned user username
         Returns
         -------
-        Task
-            Task object
-
+        Task object or Exception
         """
 
         if priority:
@@ -137,7 +147,15 @@ class AppService:
     def get_task_by_id(self,
                        user: str,
                        task_id: int) -> Task:
-
+        """Allows to get task object .
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        Returns
+        -------
+        Task
+        """
         self.user_can_access_task(user, task_id)
         task = self.session.query(Task).get(task_id)
         return task
@@ -156,7 +174,6 @@ class AppService:
         task = self.get_task_by_id(user, task_id)
 
         args = {}
-
         if name:
             args[Task.name] = name
         if description:
@@ -166,13 +183,11 @@ class AppService:
                 args[Task.status] = TaskStatus[status.upper()]
             except KeyError:
                 raise UpdateError('Status not found')
-
         if priority:
             try:
                 args[Task.priority] = TaskPriority[priority.upper()]
             except KeyError:
                 raise UpdateError('Priority not found')
-
         if start_date or end_date:
             if start_date is None:
                 start_date = task.start_date
@@ -195,6 +210,16 @@ class AppService:
     def assign_user(self, user: str,
                     task_id: int,
                     user_receiver: str):
+        """Assign user as task executor.
+        Parameters
+        ----------
+        user : str : user who assign receiver
+        task_id : int
+        user_receiver : str user who become task executor
+        Returns
+        -------
+        None or Exception
+        """
         task = self.get_task_by_id(user=user, task_id=task_id)
 
         if task.assigned == user_receiver:
@@ -216,6 +241,21 @@ class AppService:
                    user: str,
                    task_id: int,
                    user_receiver: str):
+        """Short summary.
+
+        Parameters
+        ----------
+        user : str
+            Description of parameter `user`.
+        task_id : int
+            Description of parameter `task_id`.
+        user_receiver : str
+            Description of parameter `user_receiver`.
+
+        Returns
+        -------
+        None or Exception
+        """
 
         self.user_can_access_task(user=user, task_id=task_id)
         relation = self.get_task_user_relation(user=user_receiver,
@@ -226,6 +266,7 @@ class AppService:
 
         self.session.add(TaskUserEditors(user=user_receiver,
                                          task_id=task_id))
+
         self.session.commit()
         logger.info(f'Task ID({task_id}) shared with User({user})')
 
@@ -234,6 +275,16 @@ class AppService:
                      user: str,
                      task_id: int,
                      user_receiver: str):
+        """Unshare access rights with particular user.
+        Parameters
+        ----------
+        user : str : user who unshare task
+        task_id : int
+        user_receiver : str : user that will lose access rights
+        Returns
+        -------
+        None or Exception
+        """
 
         task = self.get_task_by_id(user=user,
                                    task_id=task_id)
@@ -247,6 +298,7 @@ class AppService:
         if relation is None:
             raise UpdateError(
                 f'Task(ID{task_id}) wasnt shared with the user({user_receiver})')
+
         self.session.delete(relation)
         self.session.commit()
         logger.info(f'Task ID({task_id}) unshared with User({user})')
@@ -254,16 +306,12 @@ class AppService:
     @log_decorator
     def get_own_tasks(self, user: str) -> List[Task]:
         """Method allows to get all tasks created by user.
-
         Parameters
         ----------
         user : str
-
         Returns
         -------
-        List[Task]
-            List of tasks
-
+        List[Task] List of Tasks
         """
         return self.session.query(
             Task).filter_by(owner=user).all()
@@ -276,12 +324,9 @@ class AppService:
     @log_decorator
     def get_available_tasks(self, user: str) -> List[Task]:
         """Method allows to get all available tasks.
-
         Returns
         -------
         List[Task]
-            List of tasks
-
         """
         return self.session.query(Task).join(
             TaskUserEditors).filter_by(
@@ -291,6 +336,15 @@ class AppService:
     def delete_task(self,
                     user: str,
                     task_id: int):
+        """Delete task
+        Parameters
+        ----------
+        user : str : user who delete task
+        task_id : int
+        Returns
+        -------
+        None or Exception
+        """
         task = self.get_task_by_id(user=user, task_id=task_id)
         if task.plan:
             self.session.delete(task.plan)
@@ -307,6 +361,16 @@ class AppService:
                     user: str,
                     task_id: int,
                     parent_task_id: int):
+        """Add task as the subtaks of task with parent_task_id.
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        parent_task_id : int
+        Returns
+        -------
+        None or Exception
+        """
         parent_task = self.get_task_by_id(user=user, task_id=parent_task_id)
         subtask = self.get_task_by_id(user=user, task_id=task_id)
 
@@ -314,7 +378,7 @@ class AppService:
             raise UpdateError('You cant add subtasks to task with plan directly')
 
         if parent_task.parent_task_id == task_id:
-            raise UpdateError('Loop dependecy error')
+            raise UpdateError('Loop dependecy error.')
 
         if subtask.parent_task_id:
             raise UpdateError(
@@ -329,6 +393,15 @@ class AppService:
 
     @log_decorator
     def rm_subtask(self, user: str, task_id: int):
+        """Remove relation between task with task_id and its parent task.
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        Returns
+        -------
+        None or Exception
+        """
         subtask = self.get_task_by_id(user=user, task_id=task_id)
 
         if subtask.parent_task_id is None:
@@ -343,6 +416,15 @@ class AppService:
 
     @log_decorator
     def get_subtasks(self, user: str, task_id: int):
+        """Allows to get task subtasks.
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        Returns
+        -------
+        Task[List] or Exception
+        """
         self.user_can_access_task(user, task_id)
 
         return self.session.query(Task).filter_by(
@@ -355,6 +437,18 @@ class AppService:
                            task_id: int,
                            status: str,
                            apply_on_subtasks=False):
+        """Method changes task and its subtasks(depends on status or
+        apply_on_subtasks argument) status
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        status : str
+        apply_on_subtasks : Bool
+        Returns
+        -------
+        Task
+        """
 
         task = self.get_task_by_id(user=user, task_id=task_id)
 
@@ -378,19 +472,13 @@ class AppService:
     @log_decorator
     def create_folder(self, user: str, name: str) -> Folder:
         """Allow create folder with provided name for user
-
         Parameters
         ----------
         user: str
-            id of user who create folder
         name : str
-            Folder name
-
         Returns
         -------
-        Folder
-            Folder object
-
+        Folder or Exception
         """
         folder = self.session.query(Folder).filter_by(user=user,
                                                       name=name).one_or_none()
@@ -566,12 +654,29 @@ class AppService:
     @log_decorator
     def get_generated_tasks_by_plan(self, user: str,
                                     plan_id: int) -> List[Task]:
+        """Return all tasks created by Plan
+        ----------
+        user : str
+        plan_id : int
+        Returns
+        -------
+        List[Task]
+        """
         plan = self.get_plan_by_id(user=user, plan_id=plan_id)
         return self.session.query(Task).filter(
             Task.parent_task_id == plan.task_id).join(TaskUserEditors).all()
 
     @log_decorator
     def get_active_plans(self, user: str, plans=None) -> List[Plan]:
+        """Method allows to get active plans.
+        Parameters
+        ----------
+        user : str
+        plans* : List[Plan] list of plans from which to get activeplans
+        Returns
+        -------
+        List[Plan]
+        """
         if plans is None:
             plans = self.get_all_plans(user)
 
@@ -600,17 +705,14 @@ class AppService:
 
     @log_decorator
     def execute_plans(self, user: str, active_plans=None) -> List[Task]:
-        """
-
+        """Method passes through active plans and create proper amount tasks
         Parameters
         ----------
         user : str
-        active_plans :
-
+        active_plans* :
         Returns
         -------
         None
-
         """
         '''
        foreach plan:
@@ -718,27 +820,34 @@ class AppService:
         """This method allows to get any object from the db without validation
            Use this only if you are confident what are you doing
            After work with object - commit changes via save_updates method
-
         Parameters
         ----------
-        cls : Library type
-            Library type. (Any entity type from models.py)
+        cls : Library type (type from models.py)
         id : int
             Object id
-
         Returns
         -------
         Model
             Model or None
-
         """
         return self.session.query(cls).get(id)
 
     @log_decorator
     def delete_obj(self, obj):
+        """Short summary.
+
+        Parameters
+        ----------
+        obj : object from models module
+        Returns
+        -------
+        None
+        """
         self.session.delete(obj)
 
     # Allows to commit updates made out of the lib
     @log_decorator
     def save_updates(self):
+        """Allow to commit updates made out of the lib.
+        """
         self.session.commit()

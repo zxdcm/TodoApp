@@ -16,7 +16,8 @@ def valid_date(text):
     try:
         return parse(text)
     except ValueError:
-        raise argparse.ArgumentTypeError('Invalid date format')
+        raise argparse.ArgumentTypeError(
+            'Invalid date format. Supported format:  ')
 
 
 def task_show_parser(show_subparser: argparse):
@@ -74,7 +75,7 @@ def task_parser(sup_parser: argparse):
                         help='Task description')
     create.add_argument('-s', '--start_date',
                         type=valid_date,
-                        help='Start date',
+                        help='Start date (current time by default)',
                         default=datetime.now())
     create.add_argument('-e',
                         '--end_date',
@@ -202,11 +203,11 @@ def task_parser(sup_parser: argparse):
 
 def folder_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
-                                              title='Show plan and its info',
+                                              title='Show folders and its info',
                                               metavar='',
                                               description='Commands to show folders')
     folder_id = task_show.add_parser('id',
-                                     help='Show plan by id')
+                                     help='Show folder by id')
     folder_id.add_argument('folder_id',
                            help='Folder id', type=int)
     folder_id.add_argument('--tasks',
