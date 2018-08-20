@@ -2,19 +2,33 @@ from client.parsers import get_args
 from client.handlers import commands_handler
 from lib.services import AppService
 from lib.logging import setup_lib_logging
-
-FILEPATH = './todolib.log'
-FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+from lib.models import set_up_connection
+from client.user_service import UserService
+import client.config as config
+import os
 
 
 def main():
 
-    setup_lib_logging(FILEPATH, FORMAT)
+    log_file_path = os.path.join(config.LOGS_DIRECTORY, config.LOG_FILE)
+
+    setup_lib_logging(log_file_path=log_file_path,
+                      format=config.LOG_FORMAT,
+                      log_enabled=config.LOG_ENABLED,
+                      log_level=config.LOG_LEVEL)
+
+    session = set_up_connection(config.CONNECTION_STRING)
+
+    service = AppService(session)
+    user_serv = UserService(session, config.CONFIG_FILE)
+
     args = get_args()
-    service = AppService(None)
-    args.user = 'test'
-    service.execute_plans(args.user)
-    commands_handler(service, args)
+
+    user = user_serv.get_current_user()
+    if user:
+        service.execute_plans(user.username)
+
+    commands_handler(service, args, user_serv)
 
 
 main()

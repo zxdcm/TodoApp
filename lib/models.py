@@ -15,13 +15,10 @@ from datetime import datetime
 import enum
 
 Base = declarative_base()
-DATABASE = 'todoapp.db'
 FORMAT = '%Y-%m-%d %H:%M'
 
 
 def set_up_connection(connection_string=None):
-    if connection_string is None:
-        connection_string = DATABASE
     engine = create_engine('sqlite:///{}'.format(connection_string))
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
@@ -68,7 +65,8 @@ class Folder(Base):
         self.user = user
 
     def __str__(self):
-        return '\n'.join([f'name: {self.name}',
+        return '\n'.join([f'id: {self.id}',
+                          f'name: {self.name}',
                           f"tasks ids: {', '.join(str(task.id) for task in self.tasks)} "
                           ])
 
@@ -92,12 +90,12 @@ class Task(Base):
     end_date = Column(DateTime)
     created = Column(DateTime, nullable=False, default=datetime.now())
     updated = Column(DateTime, nullable=False, default=datetime.now())
-    subtasks = relationship("Task", backref=backref('parent', remote_side="Task.id"))
+    subtasks = relationship('Task', backref=backref('parent', remote_side='Task.id'))
 
     editors = relationship('TaskUserEditors')
 
     #  uselist prop allows to set one to one relation
-    plan = relationship("Plan", uselist=False, back_populates='task')
+    plan = relationship('Plan', uselist=False, back_populates='task')
 
     def __init__(self,
                  name,
@@ -178,7 +176,8 @@ class Plan(Base):
                  end_type,
                  repetitions_amount,
                  end_date,
-                 start_date):
+                 start_date,
+                 interval):
         self.user = user
         self.task_id = task_id
         self.period = period
