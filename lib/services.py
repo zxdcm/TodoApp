@@ -30,14 +30,14 @@ from lib.validators import validate_task_dates, validate_plan_end_date
 from datetime import datetime
 from lib.logging import get_logger, log_decorator
 
-Logger = get_logger()
+logger = get_logger()
 
 
 class AppService:
 
     @log_decorator
-    def __init__(self, connection_string):
-        self.session = set_up_connection(connection_string)
+    def __init__(self, session):
+        self.session = session
 
     @log_decorator
     def get_task_user_relation(self,
@@ -54,19 +54,6 @@ class AppService:
             return True
         raise AccessError(
             f'User({user}) doesnt have permissions to task(ID={task_id})')
-
-    @log_decorator
-    def user_exist(self, user: str):
-        user_tasks = self.session.query(
-            TaskUserEditors).filter_by(user=user).all()
-        if user_tasks:
-            return True
-
-    @log_decorator
-    def get_all_users(self):
-        users = set(x.user for x in self.session.query(
-            TaskUserEditors).all())
-        return users
 
     @log_decorator
     def create_task(self,
@@ -143,6 +130,7 @@ class AppService:
 
         self.session.add(task)
         self.session.commit()
+        logger.info(f'Task ID({task.id}) created by User({user})')
         return task
 
     @log_decorator
@@ -195,9 +183,12 @@ class AppService:
             args[Task.end_date] = end_date
 
         args[Task.updated] = datetime.now()
-
-        self.session.query(Task).filter_by(id=task_id).update(args)
+        try:
+            self.session.query(Task).filter_by(id=task_id).update(args)
+        except exc.SQLAlchemyError as e:
+            raise UpdateError('Internal Error') from e
         self.session.commit()
+        logger.info(f'Task ID({task.id}) updated by User({user})')
         return task
 
     @log_decorator
@@ -209,15 +200,16 @@ class AppService:
         if task.assigned == user_receiver:
             raise UpdateError(
                 f'User({user}) already assigned as Task(ID={task_id}) executor')
-        editor = self.get_task_user_relation(user=user_receiver, task_id=task_id)
+        editor = self.get_task_user_relation(user=user_receiver,
+                                             task_id=task_id)
 
         if editor is None:
             editor = TaskUserEditors(user=user_receiver, task_id=task_id)
             task.editors.append(editor)
 
         task.assigned = user_receiver
-
         self.session.commit()
+        logger.info(f'User({user}) assigned as task(id={task.id}) executor')
 
     @log_decorator
     def share_task(self,
@@ -235,6 +227,7 @@ class AppService:
         self.session.add(TaskUserEditors(user=user_receiver,
                                          task_id=task_id))
         self.session.commit()
+        logger.info(f'Task ID({task_id}) shared with User({user})')
 
     @log_decorator
     def unshare_task(self,
@@ -256,6 +249,7 @@ class AppService:
                 f'Task(ID{task_id}) wasnt shared with the user({user_receiver})')
         self.session.delete(relation)
         self.session.commit()
+        logger.info(f'Task ID({task_id}) unshared with User({user})')
 
     @log_decorator
     def get_own_tasks(self, user: str) -> List[Task]:
@@ -302,6 +296,7 @@ class AppService:
             self.session.delete(task.plan)
         self.session.delete(task)
         self.session.commit()
+        logger.info(f'User({user}) deleted task ID({task_id})')
 
     @log_decorator
     def add_subtask(self,
@@ -325,6 +320,8 @@ class AppService:
 
         subtask.parent_task_id = parent_task_id
         self.session.commit()
+        logger.info(
+            f'User({user}) added Task(ID{task_id}) as the subtask of Task ID({parent_task_id})')
 
     @log_decorator
     def rm_subtask(self, user: str, task_id: int):
@@ -337,6 +334,8 @@ class AppService:
             subtask.parent_task_id = None
 
         self.session.commit()
+        logger.info(
+            f'User({user}) removed Task(ID{task_id}) from subtasks of Task ID({subtask.parent_task_id})')
 
     @log_decorator
     def get_subtasks(self, user: str, task_id: int):
@@ -369,6 +368,8 @@ class AppService:
 
         self.session.commit()
         return self.session.query(Task).get(task_id)
+        logger.info(
+            f'User({user}) has changed Task(ID{task_id}) status to {task.status.value})')
 
     @log_decorator
     def create_folder(self, user: str, name: str) -> Folder:
@@ -393,8 +394,8 @@ class AppService:
             raise CreateError(f'User({user}) already has folder {folder.name}')
         folder = Folder(user=user, name=name)
         self.session.add(folder)
-
         self.session.commit()
+        logger.info(f'Folder ID({folder.id}) created by User({user})')
         return folder
 
     @log_decorator
@@ -443,14 +444,19 @@ class AppService:
         folder.name = name
 
         self.session.commit()
+
+        logger.info(f'Folder ID({folder.id}) updated by User({user})')
         return folder
 
     @log_decorator
     def delete_folder(self, user: str, folder_id: int):
         folder = self.get_folder_by_id(user, folder_id)
-        self.session.delete(folder)
 
+        self.session.delete(folder)
         self.session.commit()
+
+        logger.info(
+            f'Folder ID({folder_id}) deleted by User({user})')
 
     @log_decorator
     def get_task_folders(self, user: str, task_id: int):
@@ -468,6 +474,9 @@ class AppService:
 
         self.session.commit()
 
+        logger.info(
+            f'Folder ID({task_id}) populated with Task({task_id}) by User({user})')
+
     @log_decorator
     def unpopulate_folder(self,
                           user: str,
@@ -481,6 +490,9 @@ class AppService:
         folder.tasks.remove(task)
 
         self.session.commit()
+
+        logger.info(
+            f'Task({task_id}) removed from Folder ID({task.id}) by User({user})')
 
     @log_decorator
     def create_plan(self, user, task_id,
@@ -520,6 +532,9 @@ class AppService:
 
         self.session.add(plan)
         self.session.commit()
+
+        logger.info(f'Plan({plan.id}) created by User({user})')
+
         return plan
 
     @log_decorator
@@ -630,14 +645,19 @@ class AppService:
                 near_activation = plan.last_activated + interval
                 plan.repetitions_counter += 1
 
-                editors = [x for x in plan.task.editors if x is not user]
+                editors = [x.user for x in plan.task.editors
+                           if x.user is not user]
                 for x in editors:
                     task.editors.append(
-                        TaskUserEditors(user=x.user,
+                        TaskUserEditors(user=x,
                                         task_id=task.id))
 
                 self.session.add(task)
+
         self.session.commit()
+
+        logger.info(
+            f'({len(active_plans)}) Plans were executed. Tasks related to plan created')
 
     @log_decorator
     def delete_plan(self, user: str, plan_id: int):
@@ -672,9 +692,8 @@ class AppService:
         if repetitions_amount:
             args[Plan.repetitions_amount] = repetitions_amount
         if end_date:
+            validate_plan_end_date(end_date)
             args[Plan.end_date] = end_date
-
-        validate_plan_end_date(args[Plan.end_date])
         args[Plan.end_type] = get_end_type(plan.start_date,
                                            args[Plan.period],
                                            args[Plan.period_amount],
@@ -687,6 +706,7 @@ class AppService:
         self.session.commit()
         return self.session.query(Plan).get(plan_id)
 
+        logger.info(f'Plan({plan.id}) updated by User({user})')
         return plan
 
     @log_decorator
