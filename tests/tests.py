@@ -28,7 +28,8 @@ TEST_PLAN_END_DATE = datetime.now() + timedelta(days=TEST_RANDOM_INT)
 class TaskTest(unittest.TestCase):
 
     def setUp(self):
-        self.serv = AppService(CONNECTIONSTRING)
+        session = mo.set_up_connection(CONNECTIONSTRING)
+        self.serv = AppService(session)
 
     def test_create_task(self):
         parent_task = self.serv.create_task(
@@ -307,7 +308,8 @@ class TaskTest(unittest.TestCase):
 class FolderTest(unittest.TestCase):
 
     def setUp(self):
-        self.serv = AppService(CONNECTIONSTRING)
+        session = mo.set_up_connection(CONNECTIONSTRING)
+        self.serv = AppService(session)
 
     def test_create_folder(self):
         folder = self.serv.create_folder(user=TEST_USER,
@@ -387,7 +389,8 @@ class FolderTest(unittest.TestCase):
 class PlanTest(unittest.TestCase):
 
     def setUp(self):
-        self.serv = AppService(CONNECTIONSTRING)
+        session = mo.set_up_connection(CONNECTIONSTRING)
+        self.serv = AppService(session)
 
     def test_create_plan(self):
 
