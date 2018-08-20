@@ -512,3 +512,48 @@ class PlanTest(unittest.TestCase):
         res = plan1.repetitions_counter + plan2.repetitions_counter
         res += plan3.repetitions_counter + 3
         self.assertTrue(len, res)
+
+
+class ReminderTest(unittest.TestCase):
+
+    def setUp(self):
+        session = mo.set_up_connection(CONNECTIONSTRING)
+        self.serv = AppService(session)
+        self.task = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
+        self.reminder = self.serv.create_reminder(task_id=self.task.id,
+                                                  user=TEST_USER,
+                                                  date=TEST_DATE_THIRD)
+
+    def test_create_reminder(self):
+
+        self.assertTrue(self.reminder.task, self.task)
+        self.assertTrue(self.reminder.date, TEST_DATE_FIRST)
+        self.serv.update_task(user=TEST_USER,
+                              task_id=self.task.id,
+                              end_date=TEST_DATE_THIRD)
+        with self.assertRaises(ex.TimeError):
+            reminder = self.serv.create_reminder(task_id=self.task.id,
+                                                 user=TEST_USER,
+                                                 date=TEST_DATE_FIRST)
+
+    def test_delete_reminder(self):
+        with self.assertRaises(ex.ObjectNotFound):
+            self.serv.delete_reminder(user=TEST_USER,
+                                      reminder_id=TEST_RANDOM_INT)
+        self.serv.delete_reminder(user=TEST_USER,
+                                  reminder_id=self.reminder.id)
+
+    def test_update_reminder(self):
+        with self.assertRaises(ex.ObjectNotFound):
+            self.serv.update_reminder(user=TEST_USER,
+                                      reminder_id=TEST_RANDOM_INT)
+
+        reminder = self.serv.update_reminder(user=TEST_USER,
+                                             reminder_id=self.reminder.id,
+                                             date=TEST_DATE_THIRD)
+        self.assertEqual(reminder.date, TEST_DATE_THIRD)
+
+        with self.assertRaises(ex.TimeError):
+            reminder = self.serv.update_reminder(user=TEST_USER,
+                                                 reminder_id=self.reminder.id,
+                                                 date=TEST_DATE_FIRST)
