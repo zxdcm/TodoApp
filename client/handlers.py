@@ -299,6 +299,54 @@ def plan_handler(service: AppService, namespace):
         print('Plan{ID={namespace.plan_id}) has been deleted')
 
 
+def reminder_show_handler(service, namespace):
+    if namespace.show_type == 'id':
+        reminder = service.get_reminder_by_id(user=namespace.user,
+                                              reminder_id=namespace.reminder_id)
+        print(reminder)
+        if namespace.task:
+            print()
+            print(reminder.task)
+
+    elif namespace.show_type == 'all':
+        reminders = service.get_all_reminders(user=namespace.user)
+        if not reminders:
+            print('You dont have any reminders')
+            return
+        if namespace.tasks:
+            for reminder in reminders:
+                print(reminder, end='\n\n')
+                print(reminder.task)
+        else:
+            for reminder in reminders:
+                print(reminder)
+
+
+def reminder_handler(service: AppService, namespace):
+    if namespace.action == 'create':
+        reminder = service.create_reminder(user=namespace.user,
+                                           task_id=namespace.task_id,
+                                           date=namespace.date)
+        print('Created reminder:')
+        print(reminder)
+
+    elif namespace.action == 'show':
+
+        reminder_show_handler(service, namespace)
+
+    elif namespace.action == 'edit':
+        reminder = service.update_reminder(user=namespace.user,
+                                           reminder_id=namespace.reminder_id,
+                                           date=namespace.date)
+        print('Updated reminder:')
+        print(reminder)
+
+    elif namespace.action == 'delete':
+        service.delete_reminder(user=namespace.user,
+                                reminder_id=namespace.reminder_id)
+        print(f'Reminder(ID={namespace.reminder_id}) has been deleted')
+
+
 def users_handler(service: AppService, namespace, user_serv: UserService):
 
     if namespace.action == 'create':
@@ -357,7 +405,6 @@ def check_auth(user_serv):
     quit()
 
 
-@error_catcher
 def commands_handler(service: AppService, namespace,
                      user_serv: UserService):
 
@@ -377,3 +424,7 @@ def commands_handler(service: AppService, namespace,
     elif namespace.entity == 'plan':
         namespace.user = check_auth(user_serv)
         plan_handler(service, namespace)
+
+    elif namespace.entity == 'reminder':
+        namespace.user = check_auth(user_serv)
+        reminder_handler(service, namespace)

@@ -17,7 +17,7 @@ def valid_date(text):
         return parse(text)
     except ValueError:
         raise argparse.ArgumentTypeError(
-            f'Invalid date format. Example: {datetime.now():%Y-%m-%d %H:%M} ')
+            f'Invalid date format. Date example: "{datetime.now():%Y-%m-%d %H:%M}" ')
 
 
 def task_show_parser(show_subparser: argparse):
@@ -300,7 +300,7 @@ def plan_show_parser(sup_parser: argparse):
 def plan_parser(sup_parser: argparse):
 
     plan_parser = sup_parser.add_parser('plan',
-                                        help='Manage plan')
+                                        help='Manage plans')
     plan_subparser = plan_parser.add_subparsers(dest='action',
                                                 metavar='',
                                                 description='Commands to work with plans')
@@ -366,6 +366,64 @@ def user_parser(sup_parser: argparse):
     user_subparser.add_parser('all', help='Show all users in app')
 
 
+def reminder_show_parser(sup_parser: argparse):
+    reminder_show = sup_parser.add_subparsers(dest='show_type',
+                                              title='Show reminders and its info',
+                                              metavar='',
+                                              description='Commands to show reminders')
+
+    reminder_id = reminder_show.add_parser('id',
+                                           help='Show reminder by id')
+
+    reminder_id.add_argument('reminder_id',
+                             help='Reminder id',
+                             type=int)
+
+    reminder_id.add_argument('--task',
+                             action='store_true',
+                             help='Show reminder and its task')
+
+    reminder_all = reminder_show.add_parser('all',
+                                            help='Show all reminders')
+
+    reminder_all.add_argument('--tasks',
+                              action='store_true',
+                              help='Show reminders and its tasks')
+
+
+def reminder_parser(sup_parser: argparse):
+    reminder_parser = sup_parser.add_parser('reminder',
+                                            help='Manage reminders')
+    reminder_subparser = reminder_parser.add_subparsers(dest='action',
+                                                        metavar='',
+                                                        description='Commands to work with reminders')
+
+    create = reminder_subparser.add_parser('create',
+                                           help='Create reminder for existing task')
+    create.add_argument('task_id',
+                        help='Task id',
+                        type=int)
+    create.add_argument('date',
+                        help='Reminder date',
+                        type=valid_date)
+
+    show = reminder_subparser.add_parser('show', help='Show reminders info')
+    reminder_show_parser(show)
+
+    edit = reminder_subparser.add_parser('edit',
+                                         help='Edit reminder')
+    edit.add_argument('reminder_id',
+                      help='Reminder id',
+                      type=int)
+    edit.add_argument('date',
+                      help='Reminder date',
+                      type=valid_date)
+
+    delete = reminder_subparser.add_parser('delete',
+                                           help='Delete reminder by id')
+    delete.add_argument('reminder_id', type=int)
+
+
 def get_args():
     main_parser = DefaultHelpParser(prog='todo',
                                     description='todo tracker',
@@ -375,8 +433,10 @@ def get_args():
         title='Entities',
         description='Select entity you want to work with', metavar='')
 
+    user_parser(entity_parser)
     task_parser(entity_parser)
     folder_parser(entity_parser)
     plan_parser(entity_parser)
-    user_parser(entity_parser)
+    reminder_parser(entity_parser)
+
     return main_parser.parse_args()
