@@ -96,6 +96,7 @@ class Task(Base):
 
     #  uselist prop allows to set one to one relation
     plan = relationship('Plan', uselist=False, back_populates='task')
+    reminders = relationship('Reminder', back_populates='task')
 
     def __init__(self,
                  name,
@@ -200,3 +201,24 @@ class Plan(Base):
             f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
             f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
         ]))
+
+
+class Reminder(Base):
+    __tablename__ = 'reminders'
+    id = Column(Integer, primary_key=True)
+    date = Column(DateTime)
+    task_id = Column(Integer, ForeignKey('tasks.id'))
+    task = relationship('Task')
+    user = Column(String)
+    #active = Column(Integer)
+
+    def __init__(self, user, task_id, date):
+        self.user = user
+        self.task_id = task_id
+        self.date = date
+
+    def __str__(self):
+        return ('\n'.join([
+            f'id: {self.id}',
+            f'task id: {self.task_id}',
+            f'date: {self.date}']))
