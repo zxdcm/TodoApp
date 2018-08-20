@@ -357,6 +357,7 @@ def check_auth(user_serv):
     quit()
 
 
+@error_catcher
 def commands_handler(service: AppService, namespace,
                      user_serv: UserService):
 

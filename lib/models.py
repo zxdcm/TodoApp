@@ -125,6 +125,7 @@ class Task(Base):
                 f'name: {self.name}\n',
                 f'owner: {self.owner}\n',
                 f'parent task: {self.parent_task_id}\n' if self.parent_task_id else '',
+                f'subtasks ids: {([x.id for x in self.subtasks])}\n' if self.subtasks else '',
                 f'assigned user: {self.assigned}\n' if self.assigned else '',
                 f'description: {self.description}\n' if self.description else '',
                 f'status: {self.status.value}\n',
