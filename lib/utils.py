@@ -23,6 +23,14 @@ def get_interval(period_type: Period, period_quantity):
         return relativedelta(years=period_quantity)
 
 
+def enum_converter(value, type, ex, type_str):
+    try:
+        value = type[value.upper()]
+    except KeyError as e:
+        raise ex(f'{type_str} not Found') from e
+    return value
+
+
 def get_end_type(start_date, period_type, period_amount,
                  end_date=None, repetitions_amount=None) -> EndType:
 

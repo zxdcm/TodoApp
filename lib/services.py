@@ -24,7 +24,8 @@ from lib.exceptions import (AccessError,
 
 from lib.utils import (get_end_type,
                        get_interval,
-                       check_object_exist)
+                       check_object_exist,
+                       enum_converter)
 
 from lib.validators import validate_task_dates, validate_plan_end_date
 from datetime import datetime
@@ -104,16 +105,12 @@ class AppService:
         """
 
         if priority:
-            try:
-                priority = TaskPriority[priority.upper()]
-            except KeyError as e:
-                raise CreateError('Priority not found') from e
+            priority = enum_converter(priority, TaskPriority,
+                                      CreateError, 'Priority')
 
         if status:
-            try:
-                status = TaskStatus[status.upper()]
-            except KeyError as e:
-                raise CreateError('Status not found') from e
+            status = enum_converter(status, TaskStatus,
+                                    CreateError, 'Status')
 
         if parent_task_id:
             self.user_can_access_task(user=user,
@@ -174,20 +171,23 @@ class AppService:
         task = self.get_task_by_id(user, task_id)
 
         args = {}
+
         if name:
             args[Task.name] = name
+
         if description:
             args[Task.description] = description
+
         if status:
-            try:
-                args[Task.status] = TaskStatus[status.upper()]
-            except KeyError:
-                raise UpdateError('Status not found')
+            status = enum_converter(status, TaskStatus,
+                                    UpdateError, 'Status')
+            args[Task.status] = status
+
         if priority:
-            try:
-                args[Task.priority] = TaskPriority[priority.upper()]
-            except KeyError:
-                raise UpdateError('Priority not found')
+            priority = enum_converter(priority, TaskPriority,
+                                      UpdateError, 'Priority')
+            args[Task.priority] = priority
+
         if start_date or end_date:
             if start_date is None:
                 start_date = task.start_date
@@ -198,11 +198,13 @@ class AppService:
             args[Task.end_date] = end_date
 
         args[Task.updated] = datetime.now()
+
         try:
             self.session.query(Task).filter_by(id=task_id).update(args)
         except exc.SQLAlchemyError as e:
             raise UpdateError('Internal Error') from e
         self.session.commit()
+
         logger.info(f'Task ID({task.id}) updated by User({user})')
         return task
 
@@ -233,7 +235,9 @@ class AppService:
             task.editors.append(editor)
 
         task.assigned = user_receiver
+
         self.session.commit()
+
         logger.info(f'User({user}) assigned as task(id={task.id}) executor')
 
     @log_decorator
@@ -268,6 +272,7 @@ class AppService:
                                          task_id=task_id))
 
         self.session.commit()
+
         logger.info(f'Task ID({task_id}) shared with User({user})')
 
     @log_decorator
@@ -301,6 +306,7 @@ class AppService:
 
         self.session.delete(relation)
         self.session.commit()
+
         logger.info(f'Task ID({task_id}) unshared with User({user})')
 
     @log_decorator
@@ -352,8 +358,10 @@ class AppService:
             self.session.delete(rel)
         for folder in self.get_task_folders(user=user, task_id=task.id):
             folder.tasks.remove(task)
+
         self.session.delete(task)
         self.session.commit()
+
         logger.info(f'User({user}) deleted task ID({task_id})')
 
     @log_decorator
@@ -387,7 +395,9 @@ class AppService:
             raise UpdateError('You cant attach task to itself')
 
         subtask.parent_task_id = parent_task_id
+
         self.session.commit()
+
         logger.info(
             f'User({user}) added Task(ID{task_id}) as the subtask of Task ID({parent_task_id})')
 
@@ -411,6 +421,7 @@ class AppService:
             subtask.parent_task_id = None
 
         self.session.commit()
+
         logger.info(
             f'User({user}) removed Task(ID{task_id}) from subtasks of Task ID({subtask.parent_task_id})')
 
@@ -452,22 +463,21 @@ class AppService:
 
         task = self.get_task_by_id(user=user, task_id=task_id)
 
-        try:
-            status = TaskStatus[status.upper()]
-        except KeyError:
-            raise UpdateError('Status not found')
-
+        status = enum_converter(status, TaskStatus, UpdateError, 'Status')
         task.status = status
         task.updated = datetime.now()
+
         if (task.status is TaskStatus.DONE or apply_on_subtasks):
             self.session.query(Task).filter_by(
                 parent_task_id=task_id).update({Task.status: status,
                                                 Task.updated: datetime.now()})
 
         self.session.commit()
-        return self.session.query(Task).get(task_id)
+
         logger.info(
             f'User({user}) has changed Task(ID{task_id}) status to {task.status.value})')
+
+        return self.session.query(Task).get(task_id)
 
     @log_decorator
     def create_folder(self, user: str, name: str) -> Folder:
@@ -485,9 +495,12 @@ class AppService:
         if folder:
             raise CreateError(f'User({user}) already has folder {folder.name}')
         folder = Folder(user=user, name=name)
+
         self.session.add(folder)
         self.session.commit()
+
         logger.info(f'Folder ID({folder.id}) created by User({user})')
+
         return folder
 
     @log_decorator
@@ -604,10 +617,8 @@ class AppService:
         if end_date:
             validate_plan_end_date(end_date)
 
-        try:
-            period = Period[period.upper()]
-        except KeyError as e:
-            raise CreateError('Period not found') from e
+        if period:
+            period = enum_converter(period, Period, CreateError, 'Period')
 
         start_date = task.start_date
         end_type = get_end_type(start_date, period, period_amount,
@@ -788,10 +799,8 @@ class AppService:
         args[Plan.end_date] = plan.end_date
 
         if period:
-            try:
-                args[Plan.period] = Period[period.upper()]
-            except KeyError as e:
-                raise UpdateError('Period not found') from e
+            period = enum_converter(period, Period, UpdateError, 'Period')
+            args[Plan.period] = period
 
         if period_amount:
             args[Plan.period_amount] = period_amount
@@ -800,7 +809,8 @@ class AppService:
         if end_date:
             validate_plan_end_date(end_date)
             args[Plan.end_date] = end_date
-        args[Plan.end_type] = get_end_type(plan.start_date,
+
+        args[Plan.end_type] = get_end_type(plan.last_activated,
                                            args[Plan.period],
                                            args[Plan.period_amount],
                                            args[Plan.end_date],

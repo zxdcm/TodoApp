@@ -12,3 +12,11 @@ def validate_plan_end_date(end_date):
     if end_date < dt.now():
         raise TimeError(
             f'Plan end date has to be greater than {dt.now():%Y-%m-%d %H:%M}')
+
+
+def enum_converter(value, type, ex, mes):
+    try:
+        value = type[value.upper()]
+    except KeyError as e:
+        raise ex(mes) from e
+    return value
