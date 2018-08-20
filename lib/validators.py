@@ -10,4 +10,5 @@ def validate_task_dates(start_date, end_date):
 
 def validate_plan_end_date(end_date):
     if end_date < dt.now():
-        raise TimeError(f'Plan end date has to be greater than {dt.now}')
+        raise TimeError(
+            f'Plan end date has to be greater than {dt.now():%Y-%m-%d %H:%M}')

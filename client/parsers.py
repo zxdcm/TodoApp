@@ -17,7 +17,7 @@ def valid_date(text):
         return parse(text)
     except ValueError:
         raise argparse.ArgumentTypeError(
-            'Invalid date format. Supported format:  ')
+            f'Invalid date format. Example: {datetime.now():%Y-%m-%d %H:%M} ')
 
 
 def task_show_parser(show_subparser: argparse):
