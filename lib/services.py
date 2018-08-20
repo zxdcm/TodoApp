@@ -294,6 +294,10 @@ class AppService:
         task = self.get_task_by_id(user=user, task_id=task_id)
         if task.plan:
             self.session.delete(task.plan)
+        for rel in task.editors:
+            self.session.delete(rel)
+        for folder in self.get_task_folders(user=user, task_id=task.id):
+            folder.tasks.remove(task)
         self.session.delete(task)
         self.session.commit()
         logger.info(f'User({user}) deleted task ID({task_id})')
@@ -438,7 +442,7 @@ class AppService:
         dupl = self.session.query(Folder).filter_by(
             user=user, name=name).all()
 
-        if len(dupl) > 1:
+        if len(dupl) > 0 and dupl[0] != folder_id:
             raise UpdateError(
                 f'User({user}) already has folder {name}')
         folder.name = name
@@ -460,8 +464,8 @@ class AppService:
 
     @log_decorator
     def get_task_folders(self, user: str, task_id: int):
-        return self.session.query(Folder).filter_by(user=user,
-                                                    task_id=task_id).all()
+        return self.session.query(Folder).join(
+            task_folder_association_table).all()
 
     @log_decorator
     def populate_folder(self, user: str, folder_id: int, task_id: int):
@@ -644,12 +648,12 @@ class AppService:
                 plan.last_activated = near_activation
                 near_activation = plan.last_activated + interval
                 plan.repetitions_counter += 1
-
-                editors = [x.user for x in plan.task.editors
-                           if x.user is not user]
-                for x in editors:
+                print(plan.task.editors)
+                for x in plan.task.editors:
+                    if x.user == user:
+                        continue
                     task.editors.append(
-                        TaskUserEditors(user=x,
+                        TaskUserEditors(user=x.user,
                                         task_id=task.id))
 
                 self.session.add(task)

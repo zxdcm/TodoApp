@@ -177,8 +177,7 @@ class Plan(Base):
                  end_type,
                  repetitions_amount,
                  end_date,
-                 start_date,
-                 interval):
+                 start_date):
         self.user = user
         self.task_id = task_id
         self.period = period
@@ -198,7 +197,6 @@ class Plan(Base):
             f'period amount: {self.period_amount}\n',
             f'end type: {self.end_type.value}\n',
             f'repetitions_amount: {self.repetitions_amount}\n',
-            f'repetitions counter: {self.repetitions_counter}\n',
             f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
             f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
         ]))
