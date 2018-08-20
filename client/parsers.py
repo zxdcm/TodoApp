@@ -12,6 +12,13 @@ class DefaultHelpParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
+def valid_date(text):
+    try:
+        return parse(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError('Invalid date format')
+
+
 def task_show_parser(show_subparser: argparse):
     task_show = show_subparser.add_subparsers(dest='show_type',
                                               title='Show tasks info',
@@ -66,12 +73,12 @@ def task_parser(sup_parser: argparse):
                         '--description',
                         help='Task description')
     create.add_argument('-s', '--start_date',
-                        type=parse,
+                        type=valid_date,
                         help='Start date',
                         default=datetime.now())
     create.add_argument('-e',
                         '--end_date',
-                        type=parse,
+                        type=valid_date,
                         help='End date')
     create.add_argument('-p',
                         '--parent_task_id',
@@ -100,10 +107,10 @@ def task_parser(sup_parser: argparse):
                       '--description',
                       help='Task description')
     edit.add_argument('-s', '--start_date',
-                      type=parse,
+                      type=valid_date,
                       help='Start date')
     edit.add_argument('-e', '--end_date',
-                      type=parse,
+                      type=valid_date,
                       help='End date')
     edit.add_argument('--priority',
                       type=str,
@@ -313,7 +320,7 @@ def plan_parser(sup_parser: argparse):
                         type=int,
                         help='How much times plan should be executed')
     create.add_argument('-e', '--end_date',
-                        type=parse,
+                        type=valid_date,
                         help='Plan end date.')
 
     show = plan_subparser.add_parser('show', help='Show plans info')
@@ -334,7 +341,7 @@ def plan_parser(sup_parser: argparse):
                       type=int,
                       help='How much plan should be executed')
     edit.add_argument('-e', '--end_date',
-                      type=parse,
+                      type=valid_date,
                       help='Plan end date.')
 
     delete = plan_subparser.add_parser('delete',
@@ -348,17 +355,14 @@ def user_parser(sup_parser: argparse):
     user_subparser = user_parser.add_subparsers(dest='action',
                                                 metavar='',
                                                 description='Commands to work with user')
-    show = user_subparser.add_parser('show',
-                                     help='Show user and its info')
 
-    user_show = show.add_subparsers(dest='show_type',
-                                         title='Show user and its info',
-                                         metavar='')
-    user = user_show.add_parser('username',
-                                help='Find user by user name')
-    user.add_argument('username', type=str)
-
-    user_show.add_parser('all', help='List all users')
+    create = user_subparser.add_parser('create', help='Register new user')
+    create.add_argument('username')
+    login = user_subparser.add_parser('login', help='Auth by username')
+    login.add_argument('username')
+    user_subparser.add_parser('logout', help='Logout user')
+    user_subparser.add_parser('current', help='Show current user')
+    user_subparser.add_parser('all', help='Show all users in app')
 
 
 def get_args():
@@ -369,6 +373,7 @@ def get_args():
         dest='entity',
         title='Entities',
         description='Select entity you want to work with', metavar='')
+
     task_parser(entity_parser)
     folder_parser(entity_parser)
     plan_parser(entity_parser)

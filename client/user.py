@@ -1,7 +1,6 @@
 from sqlalchemy import (
     Column,
     String,
-    Integer,
 )
 
 from lib.models import Base
