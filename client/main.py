@@ -6,7 +6,7 @@ from lib.models import set_up_connection
 from client.user_service import UserService
 import client.config as config
 import os
-
+import warnings
 
 def main():
 
@@ -22,7 +22,7 @@ def main():
     service = AppService(session)
     user_serv = UserService(session, config.CONFIG_FILE)
     args = get_args()
-
+    warnings.filterwarnings('error')
     user = user_serv.get_current_user()
     if user:
         service.execute_plans(user.username)

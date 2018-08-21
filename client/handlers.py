@@ -2,7 +2,7 @@ from lib.services import (AppService,
                           TaskStatus,
                           TaskPriority)
 
-from lib.exceptions import BaseLibError
+from lib.exceptions import LibError, LibWarning
 from client.user_service import UserService
 from os import sys
 
@@ -11,7 +11,10 @@ def error_catcher(func):
     def wrapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except BaseLibError as e:
+        except LibError as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
+        except LibWarning as e:
             print(e, file=sys.stderr)
             sys.exit(1)
         except Exception:
@@ -32,8 +35,8 @@ def print_collection(collection, mes1=None, mes2=None):
 
 def task_show_handler(service: AppService, namespace):
     if namespace.show_type == 'id':
-        task = service.get_task_by_id(user=namespace.user,
-                                      task_id=namespace.task_id)
+        task = service.get_task(user=namespace.user,
+                                task_id=namespace.task_id)
         print(task)
 
     elif namespace.show_type == 'own':
@@ -152,8 +155,8 @@ def task_handler(service: AppService, namespace):
             f'Subtask(ID={namespace.task_id}) is detached from parent task now')
 
     elif namespace.action == 'done':
-        task = service.get_task_by_id(user=namespace.user,
-                                      task_id=namespace.task_id)
+        task = service.get_task(user=namespace.user,
+                                task_id=namespace.task_id)
         service.change_task_status(user=namespace.user,
                                    task_id=namespace.task_id,
                                    status='done')
@@ -175,8 +178,8 @@ def task_handler(service: AppService, namespace):
 def folder_show_handler(service: AppService, namespace):
 
     if namespace.show_type == 'id':
-        folder = service.get_folder_by_id(user=namespace.user,
-                                          folder_id=namespace.folder_id)
+        folder = service.get_folder(user=namespace.user,
+                                    folder_id=namespace.folder_id)
         print(folder)
         if folder and namespace.tasks:
             print(f'our folder:{folder}')
@@ -246,8 +249,8 @@ def print_plan(plan, gen_tasks):
 
 def plan_show_handlers(service: AppService, namespace):
     if namespace.show_type == 'id':
-        plan = service.get_plan_by_id(user=namespace.user,
-                                      plan_id=namespace.plan_id)
+        plan = service.get_plan(user=namespace.user,
+                                plan_id=namespace.plan_id)
         tasks = None
         if namespace.tasks:
             tasks = service.get_generated_tasks_by_plan(user=namespace.user,
@@ -302,8 +305,8 @@ def plan_handler(service: AppService, namespace):
 
 def reminder_show_handler(service, namespace):
     if namespace.show_type == 'id':
-        reminder = service.get_reminder_by_id(user=namespace.user,
-                                              reminder_id=namespace.reminder_id)
+        reminder = service.get_reminder(user=namespace.user,
+                                        reminder_id=namespace.reminder_id)
         print(reminder)
         if namespace.task:
             print()
