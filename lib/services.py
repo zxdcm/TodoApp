@@ -17,10 +17,11 @@ from sqlalchemy import (orm,
 
 from typing import List
 
-from lib.exceptions import (AccessError,
-                            UpdateError,
-                            CreateError,
-                            DuplicateRelation)
+from lib.exceptions import (ObjectNotFound,
+                            ActionWarning,
+                            RedundancyAction)
+
+from warnings import warn
 
 from lib.utils import (get_end_type,
                        get_interval,
@@ -61,24 +62,6 @@ class AppService:
             user=user, task_id=task_id).one_or_none()
 
     @log_decorator
-    def user_can_access_task(self,
-                             user: str,
-                             task_id: int):
-        """Method allow to check, does the user has access rights to particular task.
-        Parameters
-        ----------
-        user : str
-        task_id : int
-        Returns
-        -------
-        Bool or Exception
-        """
-        if self.get_task_user_relation(user=user, task_id=task_id):
-            return True
-        raise AccessError(
-            f'User({user}) doesnt have permissions to task(ID={task_id})')
-
-    @log_decorator
     def create_task(self,
                     user,
                     name,
@@ -114,8 +97,8 @@ class AppService:
             status = enum_converter(status, TaskStatus, 'Status')
 
         if parent_task_id:
-            self.user_can_access_task(user=user,
-                                      task_id=parent_task_id)
+            rel = self.get_task_user_relation(user, parent_task_id)
+            check_object_exist(rel, f'ID: {parent_task_id}', 'Parent task')
 
         validate_task_dates(start_date, end_date)
 
@@ -142,9 +125,9 @@ class AppService:
         return task
 
     @log_decorator
-    def get_task_by_id(self,
-                       user: str,
-                       task_id: int) -> Task:
+    def get_task(self,
+                 user: str,
+                 task_id: int) -> Task:
         """Allows to get task object .
         Parameters
         ----------
@@ -154,8 +137,9 @@ class AppService:
         -------
         Task
         """
-        self.user_can_access_task(user, task_id)
-        task = self.session.query(Task).get(task_id)
+        task = self.session.query(Task).join(TaskUserEditors).filter(
+            TaskUserEditors.user == user, Task.id == task_id).one_or_none()
+        check_object_exist(task, f'ID {task_id}', 'Task')
         return task
 
     @log_decorator
@@ -169,7 +153,7 @@ class AppService:
                     end_date=None,
                     start_date=None) -> Task:
 
-        task = self.get_task_by_id(user, task_id)
+        task = self.get_task(user, task_id)
 
         args = {}
 
@@ -218,11 +202,14 @@ class AppService:
         -------
         None or Exception
         """
-        task = self.get_task_by_id(user=user, task_id=task_id)
+        task = self.get_task(user=user, task_id=task_id)
 
         if task.assigned == user_receiver:
-            raise UpdateError(
-                f'User({user}) already assigned as Task(ID={task_id}) executor')
+            warn(
+                'User already assigned as task executor',
+                RedundancyAction)
+            return
+
         editor = self.get_task_user_relation(user=user_receiver,
                                              task_id=task_id)
 
@@ -252,12 +239,13 @@ class AppService:
         None or Exception
         """
 
-        self.user_can_access_task(user=user, task_id=task_id)
+        self.get_task(user=user, task_id=task_id)
+
         relation = self.get_task_user_relation(user=user_receiver,
                                                task_id=task_id)
         if relation:
-            raise DuplicateRelation(
-                f'Task(ID={task_id}) already shared with user({user_receiver})')
+            warn(f'Task already shared with user',
+                 RedundancyAction)
 
         self.session.add(TaskUserEditors(user=user_receiver,
                                          task_id=task_id))
@@ -282,23 +270,21 @@ class AppService:
         None or Exception
         """
 
-        task = self.get_task_by_id(user=user,
-                                   task_id=task_id)
+        task = self.get_task(user=user,
+                             task_id=task_id)
 
         if user_receiver == task.owner:
-            raise UpdateError(
-                'User({user}) cant unshare task with its owner')
+            raise ValueError(f'User cant unshare task with its owner')
 
         relation = self.get_task_user_relation(user=user_receiver,
                                                task_id=task_id)
         if relation is None:
-            raise UpdateError(
-                f'Task(ID{task_id}) wasnt shared with the user({user_receiver})')
+            raise ValueError(f'Task wasnt shared with this user')
 
         self.session.delete(relation)
         self.session.commit()
 
-        logger.info(f'Task ID({task_id}) unshared with User({user})')
+        logger.info(f'Task ID({task_id}) unshared with User({user_receiver})')
 
     @log_decorator
     def get_own_tasks(self, user: str) -> List[Task]:
@@ -342,7 +328,8 @@ class AppService:
         -------
         None or Exception
         """
-        task = self.get_task_by_id(user=user, task_id=task_id)
+        task = self.get_task(user=user, task_id=task_id)
+
         if task.plan:
             self.session.delete(task.plan)
         for rel in task.editors:
@@ -372,20 +359,20 @@ class AppService:
         -------
         None or Exception
         """
-        parent_task = self.get_task_by_id(user=user, task_id=parent_task_id)
-        subtask = self.get_task_by_id(user=user, task_id=task_id)
+        parent_task = self.get_task(user=user, task_id=parent_task_id)
+        subtask = self.get_task(user=user, task_id=task_id)
 
         if parent_task.plan:
-            raise UpdateError('You cant add subtasks to task with plan directly')
+            raise ValueError('Task with plan cant have directly added subtasks')
 
         if parent_task.parent_task_id == task_id:
-            raise UpdateError('Loop dependecy error.')
+            raise ValueError('Loop dependecy error.')
 
         if subtask.parent_task_id:
-            raise UpdateError(
-                f'Task(ID={task_id}) already have parent task')
+            raise ValueError('Task already have parent task')
+
         if task_id == parent_task_id:
-            raise UpdateError('You cant attach task to itself')
+            raise ValueError('You cant attach task to itself')
 
         subtask.parent_task_id = parent_task_id
 
@@ -405,11 +392,10 @@ class AppService:
         -------
         None or Exception
         """
-        subtask = self.get_task_by_id(user=user, task_id=task_id)
+        subtask = self.get_task(user=user, task_id=task_id)
 
         if subtask.parent_task_id is None:
-            raise UpdateError(
-                f'Task(ID={task_id}) dont have parent task')
+            raise ValueError('Task dont have parent task')
         else:
             subtask.parent_task_id = None
 
@@ -429,7 +415,8 @@ class AppService:
         -------
         Task[List] or Exception
         """
-        self.user_can_access_task(user, task_id)
+
+        task = self.get_task(user=user, task_id=task_id)
 
         return self.session.query(Task).filter_by(
             parent_task_id=task_id).join(
@@ -454,7 +441,7 @@ class AppService:
         Task
         """
 
-        task = self.get_task_by_id(user=user, task_id=task_id)
+        task = self.get_task(user=user, task_id=task_id)
 
         status = enum_converter(status, TaskStatus, 'Status')
         task.status = status
@@ -470,8 +457,6 @@ class AppService:
         logger.info(
             f'User({user}) has changed Task(ID{task_id}) status to {task.status.value})')
 
-        return self.session.query(Task).get(task_id)
-
     @log_decorator
     def create_folder(self, user: str, name: str) -> Folder:
         """Allow create folder with provided name for user
@@ -485,8 +470,6 @@ class AppService:
         """
         folder = self.session.query(Folder).filter_by(user=user,
                                                       name=name).one_or_none()
-        if folder:
-            raise CreateError(f'User({user}) already has folder {folder.name}')
         folder = Folder(user=user, name=name)
 
         self.session.add(folder)
@@ -497,7 +480,7 @@ class AppService:
         return folder
 
     @log_decorator
-    def get_folder_by_id(self, user: str, folder_id: int) -> Folder:
+    def get_folder(self, user: str, folder_id: int) -> Folder:
         folder = self.session.query(Folder).filter_by(
             id=folder_id, user=user).one_or_none()
         check_object_exist(folder,
@@ -520,14 +503,8 @@ class AppService:
 
     @log_decorator
     def update_folder(self, user: str, folder_id: int, name):
-        folder = self.get_folder_by_id(user=user, folder_id=folder_id)
+        folder = self.get_folder(user=user, folder_id=folder_id)
 
-        dupl = self.session.query(Folder).filter_by(
-            user=user, name=name).all()
-
-        if len(dupl) > 0 and dupl[0] != folder:
-            raise UpdateError(
-                f'User({user}) already has folder {name}')
         folder.name = name
 
         self.session.commit()
@@ -537,7 +514,7 @@ class AppService:
 
     @log_decorator
     def delete_folder(self, user: str, folder_id: int):
-        folder = self.get_folder_by_id(user, folder_id)
+        folder = self.get_folder(user, folder_id)
 
         self.session.delete(folder)
         self.session.commit()
@@ -561,11 +538,13 @@ class AppService:
         Returns
         -------
         """
-        folder = self.get_folder_by_id(user, folder_id)
-        task = self.get_task_by_id(user, task_id)
+        folder = self.get_folder(user, folder_id)
+        task = self.get_task(user, task_id)
         if task in folder.tasks:
-            raise DuplicateRelation(
-                f'Folder with ID={folder_id} already have task with ID={task_id}')
+            warn(f'Folder already have this task',
+                 RedundancyAction)
+            return
+
         folder.tasks.append(task)
 
         self.session.commit()
@@ -587,11 +566,11 @@ class AppService:
         Returns
         -------
         """
-        folder = self.get_folder_by_id(user, folder_id)
-        task = self.get_task_by_id(user, task_id)
+        folder = self.get_folder(user, folder_id)
+        task = self.get_task(user, task_id)
         if task not in folder.tasks:
-            raise UpdateError(
-                f'Folder with ID={folder_id} dont have task with ID={task_id}')
+            raise ValueError(f'Folder dont have this task')
+
         folder.tasks.remove(task)
 
         self.session.commit()
@@ -618,13 +597,14 @@ class AppService:
         -------
         Plan
         """
-        task = self.get_task_by_id(user=user, task_id=task_id)
+        task = self.get_task(user=user, task_id=task_id)
+
         if task.subtasks:
-            raise CreateError('Task should be without subtasks')
+            raise ValueError('Task should be without subtasks')
         if task.plan:
-            raise CreateError('Task already has a plan')
+            raise ValueError('Task already has a plan')
         if task.start_date is None:
-            raise CreateError('Task should have start date')
+            raise ValueError('Task should have start date')
 
         if end_date:
             validate_plan_end_date(end_date)
@@ -653,15 +633,15 @@ class AppService:
         return plan
 
     @log_decorator
-    def get_plan_by_id(self, user: str, plan_id: int) -> Plan:
+    def get_plan(self, user: str, plan_id: int) -> Plan:
+
         plan = self.session.query(Plan).get(plan_id)
         check_object_exist(plan, plan_id, 'Plan')
-
         try:
-            self.user_can_access_task(user, plan.task_id)
-        except AccessError as e:
-            raise AccessError(
-                f'User({user}) doesnt have permissions to Plan(ID={plan_id})') from e
+            self.get_task(user, plan.task_id)
+        except ObjectNotFound as e:
+            raise ObjectNotFound(
+                f'Plan with id : {plan_id} not found') from e
         return plan
 
     @log_decorator
@@ -685,7 +665,7 @@ class AppService:
         -------
         List[Task]
         """
-        plan = self.get_plan_by_id(user=user, plan_id=plan_id)
+        plan = self.get_plan(user=user, plan_id=plan_id)
         return self.session.query(Task).filter(
             Task.parent_task_id == plan.task_id).join(TaskUserEditors).all()
 
@@ -790,7 +770,7 @@ class AppService:
 
     @log_decorator
     def delete_plan(self, user: str, plan_id: int):
-        plan = self.get_plan_by_id(user, plan_id)
+        plan = self.get_plan(user, plan_id)
         self.session.delete(plan)
         self.session.commit()
 
@@ -802,7 +782,7 @@ class AppService:
                     repetitions_amount=None,
                     end_date=None) -> Plan:
 
-        plan = self.get_plan_by_id(user=user, plan_id=plan_id)
+        plan = self.get_plan(user=user, plan_id=plan_id)
         args = {}
 
         args[Plan.period] = plan.period
@@ -827,20 +807,17 @@ class AppService:
                                            args[Plan.period_amount],
                                            args[Plan.end_date],
                                            args[Plan.repetitions_amount])
-        try:
-            self.session.query(Plan).filter_by(id=plan_id).update(args)
-        except exc.SQLAlchemyError as e:
-            raise UpdateError('Arguments Error. Check your arguments') from e
+
+        self.session.query(Plan).filter_by(id=plan_id).update(args)
         self.session.commit()
-        return self.session.query(Plan).get(plan_id)
 
         logger.info(f'Plan({plan.id}) updated by User({user})')
 
-        return plan
+        return self.session.query(Plan).get(plan_id)
 
     def create_reminder(self, user, task_id, date):
 
-        self.user_can_access_task(user, task_id)
+        task = self.get_task(user=user, task_id=task_id)
 
         validate_reminder_date(date)
 
@@ -853,7 +830,7 @@ class AppService:
 
         return reminder
 
-    def get_reminder_by_id(self, user: str, reminder_id: int):
+    def get_reminder(self, user: str, reminder_id: int):
         reminder = self.session.query(Reminder).filter_by(user=user,
                                                           id=reminder_id).one_or_none()
         check_object_exist(reminder,
@@ -872,7 +849,7 @@ class AppService:
                         reminder_id: int,
                         task_id=None,
                         date=None):
-        reminder = self.get_reminder_by_id(user, reminder_id)
+        reminder = self.get_reminder(user, reminder_id)
 
         if date:
             validate_reminder_date(date)
@@ -886,7 +863,8 @@ class AppService:
 
     def delete_reminder(self, user: str,
                         reminder_id: int):
-        reminder = self.get_reminder_by_id(user, reminder_id)
+
+        reminder = self.get_reminder(user, reminder_id)
 
         self.session.delete(reminder)
         self.session.commit()
@@ -894,7 +872,7 @@ class AppService:
         logger.info(f'Reminder({reminder.id}) deleted by User({user})')
 
     @log_decorator
-    def get_obj_by_id(self, cls, id: int):
+    def get_obj(self, cls, id: int):
         """This method allows to get any object from the db without validation
            Use this only if you are confident what are you doing
            After work with object - commit changes via save_updates method
