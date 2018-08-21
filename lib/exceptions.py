@@ -1,21 +1,21 @@
 
-class BaseLibError(Exception):
+class LibError(Exception):
     pass
 
 
-class AccessError(BaseLibError):
+class AccessError(LibError):
     pass
 
 
-class UpdateError(BaseLibError):
+class UpdateError(LibError):
     pass
 
 
-class CreateError(BaseLibError):
+class CreateError(LibError):
     pass
 
 
-class ObjectNotFound(BaseLibError):
+class ObjectNotFound(LibError):
     pass
 
 
@@ -23,5 +23,5 @@ class DuplicateRelation(UpdateError):
     pass
 
 
-class TimeError(BaseLibError):
+class TimeError(LibError):
     pass

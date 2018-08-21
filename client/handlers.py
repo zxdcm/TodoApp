@@ -12,7 +12,8 @@ def error_catcher(func):
         try:
             func(*args, **kwargs)
         except BaseLibError as e:
-            print(str(e), file=sys.stderr)
+            print(e, file=sys.stderr)
+            sys.exit(1)
         except Exception:
             print('Unhandled inner exception. Watch out log file',
                   file=sys.stderr)
@@ -393,7 +394,7 @@ def ensure_user_exist(user_serv, username):
     user = user_serv.get_user(username)
     if user is None:
         print(f'User {username} not found.', file=sys.stderr)
-        quit()
+        sys.exit(1)
 
 
 def check_auth(user_serv):
@@ -402,9 +403,10 @@ def check_auth(user_serv):
         return user.username
     print('You have to login to perform this action',
           file=sys.stderr)
-    quit()
+    sys.exit(1)
 
 
+@error_catcher
 def commands_handler(service: AppService, namespace,
                      user_serv: UserService):
 

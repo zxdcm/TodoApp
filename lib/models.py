@@ -210,7 +210,6 @@ class Reminder(Base):
     task_id = Column(Integer, ForeignKey('tasks.id'))
     task = relationship('Task')
     user = Column(String)
-    #active = Column(Integer)
 
     def __init__(self, user, task_id, date):
         self.user = user

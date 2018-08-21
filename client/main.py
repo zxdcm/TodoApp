@@ -21,7 +21,6 @@ def main():
 
     service = AppService(session)
     user_serv = UserService(session, config.CONFIG_FILE)
-
     args = get_args()
 
     user = user_serv.get_current_user()

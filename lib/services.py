@@ -19,7 +19,6 @@ from typing import List
 
 from lib.exceptions import (AccessError,
                             UpdateError,
-                            ObjectNotFound,
                             CreateError,
                             DuplicateRelation)
 
@@ -109,12 +108,10 @@ class AppService:
         """
 
         if priority:
-            priority = enum_converter(priority, TaskPriority,
-                                      CreateError, 'Priority')
+            priority = enum_converter(priority, TaskPriority, 'Priority')
 
         if status:
-            status = enum_converter(status, TaskStatus,
-                                    CreateError, 'Status')
+            status = enum_converter(status, TaskStatus, 'Status')
 
         if parent_task_id:
             self.user_can_access_task(user=user,
@@ -183,13 +180,11 @@ class AppService:
             args[Task.description] = description
 
         if status:
-            status = enum_converter(status, TaskStatus,
-                                    UpdateError, 'Status')
+            status = enum_converter(status, TaskStatus, 'Status')
             args[Task.status] = status
 
         if priority:
-            priority = enum_converter(priority, TaskPriority,
-                                      UpdateError, 'Priority')
+            priority = enum_converter(priority, TaskPriority, 'Priority')
             args[Task.priority] = priority
 
         if start_date or end_date:
@@ -203,10 +198,7 @@ class AppService:
 
         args[Task.updated] = datetime.now()
 
-        try:
-            self.session.query(Task).filter_by(id=task_id).update(args)
-        except exc.SQLAlchemyError as e:
-            raise UpdateError('Internal Error') from e
+        self.session.query(Task).filter_by(id=task_id).update(args)
         self.session.commit()
 
         logger.info(f'Task ID({task.id}) updated by User({user})')
@@ -249,17 +241,12 @@ class AppService:
                    user: str,
                    task_id: int,
                    user_receiver: str):
-        """Short summary.
-
+        """Share access rights to task with particular user.
         Parameters
         ----------
         user : str
-            Description of parameter `user`.
         task_id : int
-            Description of parameter `task_id`.
         user_receiver : str
-            Description of parameter `user_receiver`.
-
         Returns
         -------
         None or Exception
@@ -277,7 +264,7 @@ class AppService:
 
         self.session.commit()
 
-        logger.info(f'Task ID({task_id}) shared with User({user})')
+        logger.info(f'Task ID({task_id}) shared with User({user_receiver})')
 
     @log_decorator
     def unshare_task(self,
@@ -469,7 +456,7 @@ class AppService:
 
         task = self.get_task_by_id(user=user, task_id=task_id)
 
-        status = enum_converter(status, TaskStatus, UpdateError, 'Status')
+        status = enum_converter(status, TaskStatus, 'Status')
         task.status = status
         task.updated = datetime.now()
 
@@ -528,17 +515,6 @@ class AppService:
         return folder
 
     @log_decorator
-    def get_or_create_folder(self, user: str, name: str) -> Folder:
-        try:
-            folder = self.get_folder_by_name(user, name)
-        except ObjectNotFound as e:
-            folder = Folder(user=user, name=name)
-            self.session.add(folder)
-            self.session.commit()
-        finally:
-            return folder
-
-    @log_decorator
     def get_all_folders(self, user: str) -> List[Folder]:
         return self.session.query(Folder).filter_by(user=user).all()
 
@@ -549,7 +525,7 @@ class AppService:
         dupl = self.session.query(Folder).filter_by(
             user=user, name=name).all()
 
-        if len(dupl) > 0 and dupl[0] != folder_id:
+        if len(dupl) > 0 and dupl[0] != folder:
             raise UpdateError(
                 f'User({user}) already has folder {name}')
         folder.name = name
@@ -576,6 +552,15 @@ class AppService:
 
     @log_decorator
     def populate_folder(self, user: str, folder_id: int, task_id: int):
+        """Method allows to add task in folder.
+        Parameters
+        ----------
+        user : str
+        folder_id : int
+        task_id : int
+        Returns
+        -------
+        """
         folder = self.get_folder_by_id(user, folder_id)
         task = self.get_task_by_id(user, task_id)
         if task in folder.tasks:
@@ -593,6 +578,15 @@ class AppService:
                           user: str,
                           folder_id: int,
                           task_id: int):
+        """Method removes task from folder.
+        Parameters
+        ----------
+        user : str
+        folder_id : int
+        task_id : int
+        Returns
+        -------
+        """
         folder = self.get_folder_by_id(user, folder_id)
         task = self.get_task_by_id(user, task_id)
         if task not in folder.tasks:
@@ -606,12 +600,24 @@ class AppService:
             f'Task({task_id}) removed from Folder ID({task.id}) by User({user})')
 
     @log_decorator
-    def create_plan(self, user, task_id,
-                    period_amount,
-                    period,
+    def create_plan(self, user: str, task_id: int,
+                    period_amount: int,
+                    period: str,
                     repetitions_amount=None,
                     end_date=None) -> Plan:
-
+        """Method allows to create plan for specific task
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        period_amount :
+        period :
+        repetitions_amount : int
+        end_date : datetime
+        Returns
+        -------
+        Plan
+        """
         task = self.get_task_by_id(user=user, task_id=task_id)
         if task.subtasks:
             raise CreateError('Task should be without subtasks')
@@ -624,7 +630,7 @@ class AppService:
             validate_plan_end_date(end_date)
 
         if period:
-            period = enum_converter(period, Period, CreateError, 'Period')
+            period = enum_converter(period, Period, 'Period')
 
         start_date = task.start_date
         end_type = get_end_type(start_date, period, period_amount,
@@ -805,7 +811,7 @@ class AppService:
         args[Plan.end_date] = plan.end_date
 
         if period:
-            period = enum_converter(period, Period, UpdateError, 'Period')
+            period = enum_converter(period, Period, 'Period')
             args[Plan.period] = period
 
         if period_amount:
@@ -906,18 +912,9 @@ class AppService:
 
     @log_decorator
     def delete_obj(self, obj):
-        """Short summary.
-
-        Parameters
-        ----------
-        obj : object from models module
-        Returns
-        -------
-        None
-        """
         self.session.delete(obj)
+        self.session.commit()
 
-    # Allows to commit updates made out of the lib
     @log_decorator
     def save_updates(self):
         """Allow to commit updates made out of the lib.

@@ -54,10 +54,10 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(task.end_date, TEST_DATE_SECOND)
         self.assertEqual(task.parent_task_id, parent_task.id)
 
-        with self.assertRaises(ex.CreateError):
+        with self.assertRaises(KeyError):
             self.serv.create_task(user=TEST_USER, name=TEST_NAME,
                                   status=TEST_RANDOM_STR)
-        with self.assertRaises(ex.CreateError):
+        with self.assertRaises(KeyError):
             self.serv.create_task(user=TEST_USER,
                                   name=TEST_NAME,
                                   priority=TEST_RANDOM_STR)
@@ -105,19 +105,19 @@ class TaskTest(unittest.TestCase):
                                   name=TEST_NAME,
                                   start_date=TEST_DATE_SECOND)
 
-        with self.assertRaises(ex.UpdateError):
+        with self.assertRaises(KeyError):
             self.serv.update_task(user=TEST_USER,
                                   task_id=task.id,
                                   name=TEST_NAME,
                                   priority=TEST_RANDOM_STR)
 
-        with self.assertRaises(ex.UpdateError):
+        with self.assertRaises(KeyError):
             self.serv.update_task(user=TEST_USER,
                                   task_id=task.id,
                                   name=TEST_NAME,
                                   status=TEST_RANDOM_STR)
 
-        with self.assertRaises(ex.UpdateError):
+        with self.assertRaises(KeyError):
             self.serv.update_task(user=TEST_USER,
                                   task_id=task.id,
                                   name=TEST_NAME,
@@ -299,7 +299,7 @@ class TaskTest(unittest.TestCase):
 
         self.assertEqual(subtask.status, mo.TaskStatus.DONE)
 
-        with self.assertRaises(ex.UpdateError):
+        with self.assertRaises(KeyError):
             self.serv.change_task_status(user=TEST_USER,
                                          task_id=task.id,
                                          status=TEST_RANDOM_STR)
@@ -421,7 +421,7 @@ class PlanTest(unittest.TestCase):
                                          period=TEST_PERIOD_VALUE,
                                          period_amount=TEST_RANDOM_INT)
 
-        with self.assertRaises(ex.CreateError):
+        with self.assertRaises(KeyError):
             task.plan = None
             plan = self.serv.create_plan(user=TEST_USER,
                                          task_id=task.id,
@@ -454,7 +454,7 @@ class PlanTest(unittest.TestCase):
                                      period=mo.Period.MONTH.value,
                                      end_date=TEST_PLAN_END_DATE,
                                      repetitions_amount=100)
-        with self.assertRaises(ex.UpdateError):
+        with self.assertRaises(KeyError):
             self.serv.update_plan(user=TEST_USER, plan_id=plan.id,
                                   period=TEST_RANDOM_STR)
         with self.assertRaises(ex.TimeError):
