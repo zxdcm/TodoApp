@@ -62,6 +62,16 @@ class TaskTest(unittest.TestCase):
                                   name=TEST_NAME,
                                   priority=TEST_RANDOM_STR)
 
+        plan = self.serv.create_plan(user=TEST_USER,
+                                     task_id=task.id,
+                                     period=TEST_PERIOD_VALUE,
+                                     period_amount=TEST_RANDOM_INT)
+
+        with self.assertRaises(ValueError):
+            subtask = self.serv.create_task(user=TEST_USER,
+                                            name=TEST_NAME,
+                                            parent_task_id=task.id)
+
     def test_update_task(self):
         task = self.serv.create_task(
             user=TEST_USER,
@@ -262,6 +272,21 @@ class TaskTest(unittest.TestCase):
                                   task_id=task.id,
                                   parent_task_id=subtask.id)
 
+    def test_detach_task(self):
+        task = self.serv.create_task(
+            user=TEST_USER,
+            name=TEST_NAME)
+        subtask = self.serv.create_task(
+            user=TEST_USER,
+            name=TEST_NAME,
+            parent_task_id=task.id)
+
+        self.serv.detach_task(TEST_USER, subtask.id)
+        self.assertIsNone(subtask.parent_task_id)
+
+        with self.assertRaises(ValueError):
+            self.serv.detach_task(TEST_USER, subtask.id)
+
     def test_change_task_status(self):
         task = self.serv.create_task(
             user=TEST_USER,
@@ -288,6 +313,24 @@ class TaskTest(unittest.TestCase):
             self.serv.change_task_status(user=TEST_USER,
                                          task_id=task.id,
                                          status=TEST_RANDOM_STR)
+
+    def test_get_filtered_tasks(self):
+        task = self.serv.create_task(
+            user=TEST_USER,
+            name=TEST_NAME,
+            description=TEST_DESCRIPTION,
+            status=TEST_STATUS_VALUE,
+            priority=TEST_PRIORITY_VALUE,
+            start_date=TEST_DATE_FIRST,
+            end_date=TEST_DATE_THIRD)
+        tasks = self.serv.get_filtered_tasks(user=TEST_USER,
+                                             name=TEST_NAME,
+                                             description=TEST_DESCRIPTION,
+                                             start_date=TEST_DATE_FIRST,
+                                             end_date=TEST_DATE_THIRD,
+                                             priority=TEST_PRIORITY_VALUE,
+                                             status=TEST_STATUS_VALUE)
+        self.assertEqual(len(tasks), 0)
 
 
 class FolderTest(unittest.TestCase):
@@ -378,11 +421,13 @@ class PlanTest(unittest.TestCase):
                                          period_amount=TEST_RANDOM_INT,
                                          period=TEST_PERIOD_VALUE)
 
+        DATE = datetime.now()
         plan = self.serv.create_plan(user=TEST_USER, task_id=task.id,
                                      period_amount=TEST_RANDOM_INT,
                                      period=TEST_PERIOD_VALUE,
                                      end_date=TEST_PLAN_END_DATE,
-                                     repetitions_amount=TEST_RANDOM_INT)
+                                     repetitions_amount=TEST_RANDOM_INT,
+                                     start_date=DATE)
 
         self.assertEqual(plan.user, TEST_USER)
         self.assertEqual(plan.task.id, task.id)
@@ -390,6 +435,7 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(plan.period, TEST_PERIOD)
         self.assertEqual(plan.end_date, TEST_PLAN_END_DATE)
         self.assertEqual(plan.repetitions_amount, TEST_RANDOM_INT)
+        self.assertEqual(plan.start_date, DATE)
 
         with self.assertRaises(ValueError):
             plan = self.serv.create_plan(user=TEST_USER,
@@ -397,26 +443,18 @@ class PlanTest(unittest.TestCase):
                                          period=TEST_PERIOD_VALUE,
                                          period_amount=TEST_RANDOM_INT)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             task.plan = None
+            self.serv.save_updates()
             plan = self.serv.create_plan(user=TEST_USER,
                                          task_id=task.id,
                                          period=TEST_RANDOM_STR,
                                          period_amount=TEST_RANDOM_INT)
+
+        task.plan = None
+        subtask = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
+        self.serv.add_subtask(user=TEST_USER, task_id=subtask.id, parent_task_id=task.id)
         with self.assertRaises(ValueError):
-            task.start_date = None
-            plan = self.serv.create_plan(user=TEST_USER,
-                                         task_id=task.id,
-                                         period=TEST_PERIOD_VALUE,
-                                         period_amount=TEST_RANDOM_INT)
-        with self.assertRaises(ValueError):
-            plan = self.serv.create_plan(user=TEST_USER,
-                                         task_id=task.id,
-                                         period=TEST_PERIOD_VALUE,
-                                         period_amount=TEST_RANDOM_INT)
-        with self.assertRaises(ValueError):
-            subtask = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
-                                            parent_task_id=task.id)
             plan = self.serv.create_plan(user=TEST_USER,
                                          task_id=task.id,
                                          period=TEST_PERIOD_VALUE,
@@ -460,7 +498,8 @@ class PlanTest(unittest.TestCase):
         plan1 = self.serv.create_plan(user=TEST_USER, task_id=task1.id,
                                       period_amount=1,
                                       period=TEST_PERIOD_VALUE,
-                                      end_date=TEST_PLAN_END_DATE)
+                                      end_date=TEST_PLAN_END_DATE,
+                                      start_date=TEST_DATE_FIRST)
 
         self.assertEqual(plan1.task.id, task1.id)
 
@@ -469,13 +508,15 @@ class PlanTest(unittest.TestCase):
         plan2 = self.serv.create_plan(user=TEST_USER, task_id=task2.id,
                                       period_amount=1,
                                       period=TEST_PERIOD_VALUE,
-                                      repetitions_amount=100)
+                                      repetitions_amount=100,
+                                      start_date=TEST_DATE_FIRST)
 
         task3 = self.serv.create_task(user=TEST_USER, name=TEST_NAME,
                                       start_date=TEST_DATE_FIRST)
         plan3 = self.serv.create_plan(user=TEST_USER, task_id=task3.id,
                                       period_amount=1,
-                                      period=TEST_PERIOD_VALUE)
+                                      period=TEST_PERIOD_VALUE,
+                                      start_date=TEST_DATE_FIRST)
 
         plans = self.serv.get_active_plans(TEST_USER)
         self.assertEqual(len(plans), 3)
