@@ -116,7 +116,7 @@ def task_parser(sup_parser: argparse):
     create.add_argument('--status',
                         type=str,
                         choices=[x.name.lower() for x in TaskStatus])
-    create.add_argument('--event', help='Mark as event',
+    create.add_argument('--event', help='Mark as event. No by default settings',
                         choices=['yes', 'no'])
 
     show = task_subparser.add_parser('show',
@@ -147,7 +147,7 @@ def task_parser(sup_parser: argparse):
                       type=str,
                       choices=['todo', 'inwork'])
     edit.add_argument('--event', choices=['yes', 'no'],
-                      help='Mark as event')
+                      help='Mark as event. No by default settings')
 
     share = task_subparser.add_parser('share',
                                       help='Share task with user')
@@ -248,6 +248,7 @@ def task_parser(sup_parser: argparse):
     filter.add_argument('--status',
                         choices=[x.name.lower() for x in TaskStatus],
                         help='Task status')
+    filter.add_argument('--event', choices=['yes', 'no'], help='Is Event')
 
     delete = task_subparser.add_parser('delete',
                                        help='Delete task with provided id')
