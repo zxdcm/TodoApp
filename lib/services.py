@@ -17,7 +17,6 @@ from sqlalchemy import (orm,
 from typing import List
 
 from lib.exceptions import (ObjectNotFound,
-                            ActionWarning,
                             RedundancyAction)
 
 from warnings import warn
@@ -38,6 +37,63 @@ logger = get_logger()
 
 
 class AppService:
+    """
+    Class that includes CRUD (create, read, update, delete)
+    and common used methods on lib objects
+    Methods contains type and logic validators
+    ----------
+    session : session object that provides interface to database
+    Attributes
+    ----------
+    session
+
+    Methods:
+        Tasks actions
+        -------------
+        add_subtask - attach task with task_id as subtask of task with parent_task_id
+        assign_user - assign user as task executor
+        change_task_status - simplly change task status
+         __change_subtasks_status__ - change subtasks status recursively calls by change_task_status method
+        create_folder - create new folder and add to storage
+        create_plan - create new plan and add to storage
+        create_reminder - create new plan and add to storage
+        create_task - create new task and add to storage
+        delete task - remove task and its related objects from storage
+        delete_folder - delete folder from storage
+        delete_obj - delete object
+        delete_plan - delete plan from storage
+        delete_reminder - delete reminder from storage
+        detach_task - detach task with task_id from its parent_task
+        get_active_plans - passes through plans and retrive active plans
+        get_all_plans - retrive plans user can access
+        get_all_reminders - retrive all user reminders from storage
+        get_available_tasks - retrieve tasks user can access
+        get_filtered_tasks - retrieve filtered tasks
+        get_folder - retrieve folder
+        get_folder_by_name - retrieve folder from storage
+        get_folders - retrieve all user folders
+        get_generated_tasks_by_plan - retrive tasks created by plan
+        get_obj - get any object from storage by cls and id
+        get_own_plans - retrive plans created by user
+        get_own_tasks - retrieve tasks created by user
+        get_plan - retrive plan
+        get_reminder -  retrive plan from storage
+        get_subtasks - retrieve task subtasks
+        get_task - retrieve task from storage
+        get_task_by_name - retrieve case insensitive task by name matching
+        get_task_reminders - retrive task reminders
+        get_task_user_relation - get relation between user and task
+        get_user_assigned_tasks - return tasks user assignd as executor on
+        populate_folder - add task in folder
+        save_updates - save updates made out of the lib
+        share_task - share task with user
+        unpopulate_folder - remove task from folder
+        unshare_task - unshare task with user
+        update_folder - update folder info
+        update_reminder - update reminder info
+        update_task - update task
+
+    """
 
     @log_decorator
     def __init__(self, session):
@@ -310,7 +366,7 @@ class AppService:
 
     @log_decorator
     def get_available_tasks(self, user: str) -> List[Task]:
-        """Method allows to get all available tasks.
+        """Method allows to get all tasks user can access.
         Returns
         -------
         List[Task]
@@ -339,9 +395,9 @@ class AppService:
         name : str
         description : str
         parent_task_id : int
-        status : str ot TaskStatus object
-        start_date : datetime
-        end_date : datetime
+        status : str or TaskStatus object
+        start_date : datetime : start from date
+        end_date : datetime : end date till
         priority : str or TaskPriority object
         event : Bool
         Returns
@@ -351,9 +407,9 @@ class AppService:
         query = self.session.query(Task)
 
         if name:
-            query = query.filter(Task.name.ilike(f'%{name}%'))
+            query = query.filter(Task.name.ilike(f'{name}'))
         if description:
-            query = query.filter(Task.description.ilike(f'%{description}%'))
+            query = query.filter(Task.description.ilike(f'{description}'))
 
         if priority:
             if isinstance(priority, str):
@@ -368,13 +424,15 @@ class AppService:
             query = query.filter(Task.start_date > start_date)
         if end_date:
             query = query.filter(Task.end_date < end_date)
+        if event is not None:
+            query = query.filter(Task.event == event)
 
         return (query.join(TaskUserEditors)
                 .filter(TaskUserEditors.user == user)
                 .all())
 
     def get_tasks_by_name(self, user: str, name) -> List[Task]:
-        """Case insensitive search by name
+        """Case insensitive search by name matching.
         Parameters
         ----------
         user : str
@@ -494,6 +552,26 @@ class AppService:
             parent_task_id=task_id).join(
                 TaskUserEditors).filter_by(user=user).all()
 
+    def __change_subtasks_status__(self,
+                                   user: str,
+                                   task_id: int,
+                                   status: TaskStatus):
+        """Inner method that allow to change tasks status.
+           Dont call this explicit or call save_updates to commit changes
+        Parameters
+        ----------
+        user : str
+        task_id : int
+        status : TaskStatus
+        Returns
+        -------
+        """
+        task = self.get_task(user, task_id)
+        for subtask in task.subtasks:
+            subtask.status = status
+            subtask.updated = datetime.now()
+            self.__change_subtasks_status__(user=user, task_id=subtask.id, status=status)
+
     @log_decorator
     def change_task_status(self,
                            user: str,
@@ -520,9 +598,9 @@ class AppService:
         task.updated = datetime.now()
 
         if (task.status is TaskStatus.DONE or apply_on_subtasks):
-            self.session.query(Task).filter_by(
-                parent_task_id=task_id).update({Task.status: status,
-                                                Task.updated: datetime.now()})
+            self.__change_subtasks_status__(user=user,
+                                            task_id=task_id,
+                                            status=status)
 
         self.session.commit()
 
@@ -825,7 +903,8 @@ class AppService:
                                         start_date=near_activation,
                                         event=plan.task.event,
                                         assigned=plan.task.assigned)
-                task.parent_task_id = plan.task.parent_task_id
+
+                task.parent_task_id = plan.task.id
 
                 plan.last_activated = near_activation
                 near_activation = plan.last_activated + interval
