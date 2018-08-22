@@ -87,7 +87,7 @@ class Task(Base):
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO,
                     nullable=False)
 
-    event = Column(Boolean)
+    event = Column(Boolean, nullable=False, default=True)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     created = Column(DateTime, nullable=False, default=datetime.now())
