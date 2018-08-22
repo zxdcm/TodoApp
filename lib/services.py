@@ -12,8 +12,7 @@ from lib.models import (
     Reminder)
 
 from sqlalchemy import (orm,
-                        exc,
-                        or_)
+                        exc)
 
 from typing import List
 
@@ -66,12 +65,13 @@ class AppService:
                     user,
                     name,
                     status='todo',
-                    priority='medium',
+                    priority='low',
                     start_date=datetime.now(),
+                    event=False,
                     description=None,
                     end_date=None,
                     parent_task_id=None,
-                    assigned=None
+                    assigned=None,
                     ) -> Task:
         """Method allows to create task instance with provided arguments.
         Parameters
@@ -97,8 +97,9 @@ class AppService:
             status = enum_converter(status, TaskStatus, 'Status')
 
         if parent_task_id:
-            rel = self.get_task_user_relation(user, parent_task_id)
-            check_object_exist(rel, f'ID: {parent_task_id}', 'Parent task')
+            parent_task = self.get_task(user=user, task_id=parent_task_id)
+            if parent_task.plan:
+                raise ValueError('Task with plan cant have directly added subtasks')
 
         validate_task_dates(start_date, end_date)
 
@@ -110,6 +111,7 @@ class AppService:
                     end_date=end_date,
                     parent_task_id=parent_task_id,
                     assigned=assigned,
+                    event=event,
                     status=status)
 
         task.editors.append(TaskUserEditors(user=user,
@@ -151,7 +153,8 @@ class AppService:
                     status=None,
                     priority=None,
                     end_date=None,
-                    start_date=None) -> Task:
+                    start_date=None,
+                    event=None) -> Task:
 
         task = self.get_task(user, task_id)
 
@@ -170,6 +173,9 @@ class AppService:
         if priority:
             priority = enum_converter(priority, TaskPriority, 'Priority')
             args[Task.priority] = priority
+
+        if event is not None:
+            args[Task.event] = event
 
         if start_date or end_date:
             if start_date is None:
@@ -296,13 +302,11 @@ class AppService:
         -------
         List[Task] List of Tasks
         """
-        return self.session.query(
-            Task).filter_by(owner=user).all()
+        return self.session.query(Task).filter_by(owner=user).all()
 
     @log_decorator
     def get_user_assigned_tasks(self, user: str) -> List[Task]:
-        return self.session.query(
-            Task).filter_by(assigned=user).all()
+        return self.session.query(Task).filter_by(assigned=user).all()
 
     @log_decorator
     def get_available_tasks(self, user: str) -> List[Task]:
@@ -311,9 +315,77 @@ class AppService:
         -------
         List[Task]
         """
-        return self.session.query(Task).join(
-            TaskUserEditors).filter_by(
-                user=user).all()
+        return (self.session.query(Task)
+                .join(TaskUserEditors)
+                .filter_by(user=user)
+                .all())
+
+    def get_filtered_tasks(self,
+                           user: str,
+                           name=None,
+                           description=None,
+                           parent_task_id=None,
+                           status=None,
+                           start_date=None,
+                           end_date=None,
+                           priority=None,
+                           event=None) -> List[Task]:
+        """Method allow to tasks filtered by params
+           start_date - from
+           end_date -  till to
+        Parameters
+        ----------
+        user : str
+        name : str
+        description : str
+        parent_task_id : int
+        status : str ot TaskStatus object
+        start_date : datetime
+        end_date : datetime
+        priority : str or TaskPriority object
+        event : Bool
+        Returns
+        -------
+        List[Task]
+        """
+        query = self.session.query(Task)
+
+        if name:
+            query = query.filter(Task.name.ilike(f'%{name}%'))
+        if description:
+            query = query.filter(Task.description.ilike(f'%{description}'))
+
+        if priority:
+            if isinstance(priority, str):
+                priority = enum_converter(priority, TaskPriority, 'Priority')
+            query = query.filter(Task.priority == priority)
+        if status:
+            if isinstance(status, str):
+                status = enum_converter(status, TaskStatus, 'Status')
+            query = query.filter(Task.status == status)
+
+        if start_date:
+            query = query.filter(Task.start_date > start_date)
+        if end_date:
+            query = query.filter(Task.end_date < end_date)
+
+        return (query.join(TaskUserEditors)
+                .filter(TaskUserEditors.user == user)
+                .all())
+
+    def get_tasks_by_name(self, user: str, name) -> List[Task]:
+        """Case insensitive search by name
+        Parameters
+        ----------
+        user : str
+        name : str
+        Returns
+        -------
+        List[Task]
+        """
+        return (self.session.query(Task)
+                .join(TaskUserEditors).filter(TaskUserEditors.user == user)
+                .filter(Task.name.ilike(f'%{name}%')).all())
 
     @log_decorator
     def delete_task(self,
@@ -334,7 +406,7 @@ class AppService:
             self.session.delete(task.plan)
         for rel in task.editors:
             self.session.delete(rel)
-        for folder in self.get_task_folders(user=user, task_id=task.id):
+        for folder in self.get_task_folders(task_id=task.id):
             folder.tasks.remove(task)
         for reminder in self.get_task_reminders(user=user, task_id=task.id):
             self.session.delete(reminder)
@@ -366,7 +438,7 @@ class AppService:
             raise ValueError('Task with plan cant have directly added subtasks')
 
         if parent_task.parent_task_id == task_id:
-            raise ValueError('Loop dependecy error.')
+            raise ValueError('Loop dependecy error. You cant add parent task as subtask')
 
         if subtask.parent_task_id:
             raise ValueError('Task already have parent task')
@@ -516,6 +588,9 @@ class AppService:
     def delete_folder(self, user: str, folder_id: int):
         folder = self.get_folder(user, folder_id)
 
+        for task in folder.tasks:
+            folder.tasks.remove(task)
+
         self.session.delete(folder)
         self.session.commit()
 
@@ -523,7 +598,7 @@ class AppService:
             f'Folder ID({folder_id}) deleted by User({user})')
 
     @log_decorator
-    def get_task_folders(self, user: str, task_id: int):
+    def get_task_folders(self, task_id: int):
         return self.session.query(Folder).join(
             task_folder_association_table).filter_by(task_id=task_id).all()
 
@@ -582,6 +657,7 @@ class AppService:
     def create_plan(self, user: str, task_id: int,
                     period_amount: int,
                     period: str,
+                    start_date=datetime.now(),
                     repetitions_amount=None,
                     end_date=None) -> Plan:
         """Method allows to create plan for specific task
@@ -592,6 +668,7 @@ class AppService:
         period_amount :
         period :
         repetitions_amount : int
+        start_date : datetime
         end_date : datetime
         Returns
         -------
@@ -603,8 +680,6 @@ class AppService:
             raise ValueError('Task should be without subtasks')
         if task.plan:
             raise ValueError('Task already has a plan')
-        if task.start_date is None:
-            raise ValueError('Task should have start date')
 
         if end_date:
             validate_plan_end_date(end_date)
@@ -612,7 +687,8 @@ class AppService:
         if period:
             period = enum_converter(period, Period, 'Period')
 
-        start_date = task.start_date
+        if start_date is None:
+            start_date = datetime.now()
         end_type = get_end_type(start_date, period, period_amount,
                                 end_date, repetitions_amount)
 
@@ -748,18 +824,17 @@ class AppService:
                                         description=plan.task.description,
                                         start_date=near_activation,
                                         parent_task_id=plan.task.id,
+                                        event=plan.task.event,
                                         assigned=plan.task.assigned)
 
                 plan.last_activated = near_activation
                 near_activation = plan.last_activated + interval
                 plan.repetitions_counter += 1
-                print(plan.task.editors)
                 for x in plan.task.editors:
-                    if x.user == user:
-                        continue
-                    task.editors.append(
-                        TaskUserEditors(user=x.user,
-                                        task_id=task.id))
+                    if x.user != user and x.user != plan.task.assigned:
+                        task.editors.append(
+                            TaskUserEditors(user=x.user,
+                                            task_id=task.id))
 
                 self.session.add(task)
 
@@ -789,6 +864,7 @@ class AppService:
         args[Plan.period_amount] = plan.period_amount
         args[Plan.repetitions_amount] = plan.repetitions_amount
         args[Plan.end_date] = plan.end_date
+        args[Plan.start_date] = plan.start_date
 
         if period:
             period = enum_converter(period, Period, 'Period')

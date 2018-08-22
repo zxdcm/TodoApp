@@ -5,6 +5,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     Table,
+    Boolean,
     Enum)
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -86,6 +87,7 @@ class Task(Base):
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO,
                     nullable=False)
 
+    event = Column(Boolean)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     created = Column(DateTime, nullable=False, default=datetime.now())
@@ -107,6 +109,7 @@ class Task(Base):
                  priority=None,
                  status=None,
                  parent_task_id=None,
+                 event=None,
                  assigned=None):
         self.name = name
         self.owner = owner
@@ -117,6 +120,7 @@ class Task(Base):
         self.assigned = assigned
         self.priority = priority
         self.status = status
+        self.event = event
 
     def __str__(self):
         return(
@@ -126,11 +130,11 @@ class Task(Base):
                 f'name: {self.name}\n',
                 f'owner: {self.owner}\n',
                 f'parent task: {self.parent_task_id}\n' if self.parent_task_id else '',
-                f'subtasks ids: {([x.id for x in self.subtasks])}\n' if self.subtasks else '',
                 f'assigned user: {self.assigned}\n' if self.assigned else '',
                 f'description: {self.description}\n' if self.description else '',
                 f'status: {self.status.value}\n',
                 f'priority: {self.priority.value}\n',
+                f'event: {self.event}\n',
                 f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
                 f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
                 f'created: {self.updated.strftime(FORMAT)}\n',
@@ -197,7 +201,7 @@ class Plan(Base):
             f'period: {self.period.value}\n',
             f'period amount: {self.period_amount}\n',
             f'end type: {self.end_type.value}\n',
-            f'repetitions_amount: {self.repetitions_amount}\n',
+            f'repetitions amount: {self.repetitions_amount}\n',
             f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
             f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
         ]))
