@@ -11,9 +11,5 @@ class LibWarning(Warning):
     pass
 
 
-class ActionWarning(LibWarning):
-    pass
-
-
-class RedundancyAction(ActionWarning):
+class RedundancyAction(LibWarning):
     pass
