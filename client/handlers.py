@@ -182,9 +182,9 @@ def task_handler(service: AppService, namespace):
         print(
             f'Subtask(ID={namespace.task_id}) set as parent task of task(ID={namespace.parent_task_id})')
 
-    elif namespace.action == 'rm_subtask':
-        service.rm_subtask(user=namespace.user,
-                           task_id=namespace.task_id)
+    elif namespace.action == 'detach':
+        service.detach_task(user=namespace.user,
+                            task_id=namespace.task_id)
         print(
             f'Subtask(ID={namespace.task_id}) is detached from parent task now')
 
@@ -472,7 +472,7 @@ def check_auth(user_serv):
     sys.exit(1)
 
 
-# @error_catcher
+@error_catcher
 def commands_handler(service: AppService, namespace,
                      user_serv: UserService):
 

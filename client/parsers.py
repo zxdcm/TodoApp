@@ -201,12 +201,12 @@ def task_parser(sup_parser: argparse):
                          required=True,
                          type=valid_int)
 
-    subtask = task_subparser.add_parser('rm_subtask',
+    subtask = task_subparser.add_parser('detach',
                                         help='Remove relation between task and parent task')
     subtask.add_argument('-tid',
                          '--task_id',
                          required=True,
-                         help='Task id',
+                         help='Task id to detach from parent task',
                          type=valid_int)
 
     archive = task_subparser.add_parser('archive',

@@ -353,7 +353,7 @@ class AppService:
         if name:
             query = query.filter(Task.name.ilike(f'%{name}%'))
         if description:
-            query = query.filter(Task.description.ilike(f'%{description}'))
+            query = query.filter(Task.description.ilike(f'%{description}%'))
 
         if priority:
             if isinstance(priority, str):
@@ -421,7 +421,7 @@ class AppService:
                     user: str,
                     task_id: int,
                     parent_task_id: int):
-        """Add task as the subtaks of task with parent_task_id.
+        """Add task as the subtask of task with parent_task_id.
         Parameters
         ----------
         user : str
@@ -454,7 +454,7 @@ class AppService:
             f'User({user}) added Task(ID{task_id}) as the subtask of Task ID({parent_task_id})')
 
     @log_decorator
-    def rm_subtask(self, user: str, task_id: int):
+    def detach_task(self, user: str, task_id: int):
         """Remove relation between task with task_id and its parent task.
         Parameters
         ----------
@@ -684,11 +684,11 @@ class AppService:
         if end_date:
             validate_plan_end_date(end_date)
 
+        if start_date is None:
+            start_date = datetime.now()
         if period:
             period = enum_converter(period, Period, 'Period')
 
-        if start_date is None:
-            start_date = datetime.now()
         end_type = get_end_type(start_date, period, period_amount,
                                 end_date, repetitions_amount)
 
@@ -823,9 +823,9 @@ class AppService:
                                         name=plan.task.name,
                                         description=plan.task.description,
                                         start_date=near_activation,
-                                        parent_task_id=plan.task.id,
                                         event=plan.task.event,
                                         assigned=plan.task.assigned)
+                task.parent_task_id = plan.task.parent_task_id
 
                 plan.last_activated = near_activation
                 near_activation = plan.last_activated + interval
