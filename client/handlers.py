@@ -121,7 +121,9 @@ def task_show_handler(service: AppService, namespace):
 def event_converter(arg):
     if arg == 'yes':
         return True
-    return False
+    elif arg == 'no':
+        return False
+    return None
 
 
 def task_handler(service: AppService, namespace):
@@ -219,16 +221,19 @@ def task_handler(service: AppService, namespace):
 
     elif namespace.action == 'filter':
         if not any([namespace.name, namespace.start_date, namespace.end_date,
-                    namespace.parent_task_id, namespace.priority, namespace.status]):
+                    namespace.parent_task_id, namespace.priority, namespace.status,
+                    namespace.event]):
             print('You didnt specified filter arguments', file=sys.stderr)
             sys.exit(1)
+        event = event_converter(namespace.event)
         tasks = service.get_filtered_tasks(user=namespace.user,
                                            name=namespace.name,
                                            start_date=namespace.start_date,
                                            end_date=namespace.end_date,
                                            parent_task_id=namespace.parent_task_id,
                                            priority=namespace.priority,
-                                           status=namespace.status)
+                                           status=namespace.status,
+                                           event=event)
         if tasks:
             for task in tasks:
                 print(task)
