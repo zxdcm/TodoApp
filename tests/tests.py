@@ -5,7 +5,7 @@ from lib import models as mo
 from lib import exceptions as ex
 from datetime import datetime, timedelta
 
-
+DRIVER_NAME = 'sqlite'
 CONNECTIONSTRING = ':memory:'
 TEST_USER = 'user'
 TEST_NAME = 'name'
@@ -28,7 +28,7 @@ TEST_PLAN_END_DATE = datetime.now() + timedelta(days=TEST_RANDOM_INT)
 class TaskTest(unittest.TestCase):
 
     def setUp(self):
-        session = mo.set_up_connection(CONNECTIONSTRING)
+        session = mo.set_up_connection(DRIVER_NAME, CONNECTIONSTRING)
         self.serv = AppService(session)
 
     def test_create_task(self):
@@ -336,7 +336,7 @@ class TaskTest(unittest.TestCase):
 class FolderTest(unittest.TestCase):
 
     def setUp(self):
-        session = mo.set_up_connection(CONNECTIONSTRING)
+        session = mo.set_up_connection(DRIVER_NAME, CONNECTIONSTRING)
         self.serv = AppService(session)
 
     def test_create_folder(self):
@@ -354,13 +354,6 @@ class FolderTest(unittest.TestCase):
                                 name='newfoldername')
 
         self.assertEqual(folder1.name, 'newfoldername')
-
-    def test_get_folder_by_name(self):
-        folder = self.serv.create_folder(user=TEST_USER,
-                                         name=TEST_RANDOM_STR)
-        got_folder = self.serv.get_folder_by_name(user=TEST_USER,
-                                                  name=TEST_RANDOM_STR)
-        self.assertEqual(folder, got_folder)
 
     def test_get_folder(self):
         folder = self.serv.create_folder(user=TEST_USER,
@@ -408,7 +401,7 @@ class FolderTest(unittest.TestCase):
 class PlanTest(unittest.TestCase):
 
     def setUp(self):
-        session = mo.set_up_connection(CONNECTIONSTRING)
+        session = mo.set_up_connection(DRIVER_NAME, CONNECTIONSTRING)
         self.serv = AppService(session)
 
     def test_create_plan(self):
@@ -534,7 +527,7 @@ class PlanTest(unittest.TestCase):
 class ReminderTest(unittest.TestCase):
 
     def setUp(self):
-        session = mo.set_up_connection(CONNECTIONSTRING)
+        session = mo.set_up_connection(DRIVER_NAME, CONNECTIONSTRING)
         self.serv = AppService(session)
         self.task = self.serv.create_task(user=TEST_USER, name=TEST_NAME)
         self.reminder = self.serv.create_reminder(task_id=self.task.id,

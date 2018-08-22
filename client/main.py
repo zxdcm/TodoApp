@@ -11,6 +11,8 @@ import warnings
 
 def main():
 
+    if not os.path.exists(config.APP_DATA_DIRECTORY):
+        os.makedirs(config.APP_DATA_DIRECTORY)
     log_file_path = os.path.join(config.LOGS_DIRECTORY, config.LOG_FILE)
 
     setup_lib_logging(log_file_path=log_file_path,
@@ -18,10 +20,10 @@ def main():
                       log_enabled=config.LOG_ENABLED,
                       log_level=config.LOG_LEVEL)
 
-    session = set_up_connection(config.CONNECTION_STRING)
-
+    session = set_up_connection(config.DRIVER_NAME, config.CONNECTION_STRING)
     service = AppService(session)
     user_serv = UserService(session, config.CONFIG_FILE)
+
     args = get_args()
 
     user = user_serv.get_current_user()
@@ -32,4 +34,5 @@ def main():
     commands_handler(service, args, user_serv)
 
 
-main()
+if __name__ == '__main__':
+    main()

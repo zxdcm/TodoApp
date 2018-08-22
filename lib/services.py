@@ -53,7 +53,7 @@ class AppService:
         add_subtask - attach task with task_id as subtask of task with parent_task_id
         assign_user - assign user as task executor
         change_task_status - simplly change task status
-         __change_subtasks_status__ - change subtasks status recursively calls by change_task_status method
+        _change_subtasks_status - change subtasks status recursively calls by change_task_status method
         create_folder - create new folder and add to storage
         create_plan - create new plan and add to storage
         create_reminder - create new plan and add to storage
@@ -70,7 +70,6 @@ class AppService:
         get_available_tasks - retrieve tasks user can access
         get_filtered_tasks - retrieve filtered tasks
         get_folder - retrieve folder
-        get_folder_by_name - retrieve folder from storage
         get_folders - retrieve all user folders
         get_generated_tasks_by_plan - retrive tasks created by plan
         get_obj - get any object from storage by cls and id
@@ -552,10 +551,10 @@ class AppService:
             parent_task_id=task_id).join(
                 TaskUserEditors).filter_by(user=user).all()
 
-    def __change_subtasks_status__(self,
-                                   user: str,
-                                   task_id: int,
-                                   status: TaskStatus):
+    def _change_subtasks_status(self,
+                                user: str,
+                                task_id: int,
+                                status: TaskStatus):
         """Inner method that allow to change tasks status.
            Dont call this explicit or call save_updates to commit changes
         Parameters
@@ -570,7 +569,9 @@ class AppService:
         for subtask in task.subtasks:
             subtask.status = status
             subtask.updated = datetime.now()
-            self.__change_subtasks_status__(user=user, task_id=subtask.id, status=status)
+            self._change_subtasks_status(user=user,
+                                         task_id=subtask.id,
+                                         status=status)
 
     @log_decorator
     def change_task_status(self,
@@ -598,9 +599,9 @@ class AppService:
         task.updated = datetime.now()
 
         if (task.status is TaskStatus.DONE or apply_on_subtasks):
-            self.__change_subtasks_status__(user=user,
-                                            task_id=task_id,
-                                            status=status)
+            self._change_subtasks_status(user=user,
+                                         task_id=task_id,
+                                         status=status)
 
         self.session.commit()
 
@@ -636,14 +637,6 @@ class AppService:
         check_object_exist(folder,
                            f'id : {folder_id}',
                            'Folder')
-
-        return folder
-
-    @log_decorator
-    def get_folder_by_name(self, user: str, name: int) -> Folder:
-        folder = self.session.query(Folder).filter_by(
-            name=name, user=user).one_or_none()
-        check_object_exist(folder, f'name: {name}', 'Folder')
 
         return folder
 
@@ -837,7 +830,6 @@ class AppService:
         if plans is None:
             plans = self.get_all_plans(user)
 
-        plans = self.get_all_plans(user)
         active_list = []
 
         for plan in plans:
@@ -884,6 +876,8 @@ class AppService:
             '''
         if active_plans is None:
             active_plans = self.get_active_plans(user)
+        if not active_plans:
+            return
         for plan in active_plans:
             interval = get_interval(plan.period, plan.period_amount)
             near_activation = plan.last_activated + interval

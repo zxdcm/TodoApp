@@ -3,8 +3,12 @@ import os
 
 APP_DATA_DIRECTORY = os.path.join(os.environ['HOME'], 'todoapp')
 DATABASE_PATH = APP_DATA_DIRECTORY
+
+DRIVER_NAME = 'sqlite'
 CONNECTION_STRING = os.path.join(DATABASE_PATH, 'todoapp.db')
+
 CONFIG_FILE = os.path.join(APP_DATA_DIRECTORY, 'config.ini')
+
 LOG_ENABLED = True
 LOGS_DIRECTORY = APP_DATA_DIRECTORY
 LOG_FILE = 'todoapp.log'

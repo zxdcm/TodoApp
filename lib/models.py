@@ -19,8 +19,8 @@ Base = declarative_base()
 FORMAT = '%Y-%m-%d %H:%M'
 
 
-def set_up_connection(connection_string=None):
-    engine = create_engine('sqlite:///{}'.format(connection_string))
+def set_up_connection(driver_name, connection_string):
+    engine = create_engine(f'{driver_name}:///{connection_string}')
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     return session()
@@ -201,7 +201,7 @@ class Plan(Base):
             f'period: {self.period.value}\n',
             f'period amount: {self.period_amount}\n',
             f'end type: {self.end_type.value}\n',
-            f'repetitions amount: {self.repetitions_amount}\n',
+            f'repetitions amount: {self.repetitions_amount}\n' if self.end_type == EndType.AMOUNT else '',
             f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
             f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
         ]))
