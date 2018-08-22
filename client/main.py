@@ -8,6 +8,7 @@ import client.config as config
 import os
 import warnings
 
+
 def main():
 
     log_file_path = os.path.join(config.LOGS_DIRECTORY, config.LOG_FILE)
@@ -22,11 +23,12 @@ def main():
     service = AppService(session)
     user_serv = UserService(session, config.CONFIG_FILE)
     args = get_args()
-    warnings.filterwarnings('error')
+
     user = user_serv.get_current_user()
     if user:
         service.execute_plans(user.username)
 
+    warnings.filterwarnings('error')
     commands_handler(service, args, user_serv)
 
 

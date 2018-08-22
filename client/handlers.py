@@ -5,6 +5,7 @@ from lib.services import (AppService,
 from lib.exceptions import LibError, LibWarning
 from client.user_service import UserService
 from os import sys
+import textwrap
 
 
 def error_catcher(func):
@@ -17,9 +18,16 @@ def error_catcher(func):
         except LibWarning as e:
             print(e, file=sys.stderr)
             sys.exit(1)
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
+        except KeyError as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
         except Exception:
             print('Unhandled inner exception. Watch out log file',
                   file=sys.stderr)
+            sys.exit(1)
     return wrapper
 
 
@@ -30,7 +38,18 @@ def print_collection(collection, mes1=None, mes2=None):
         for item in collection:
             print(item)
     else:
-        print(mes2)
+        print(mes2, file=sys.stderr)
+        sys.exit(1)
+
+
+def print_task_with_subtask(service: AppService,
+                            user,
+                            task,
+                            indent=4,
+                            level=0):
+    print(textwrap.indent(str(task), ' ' * indent * level))
+    for task in service.get_subtasks(user=user, task_id=task.id):
+        print_task_with_subtask(service, user, task, indent, level+1)
 
 
 def task_show_handler(service: AppService, namespace):
@@ -46,11 +65,13 @@ def task_show_handler(service: AppService, namespace):
                          mes2='You dont have any tasks')
 
     elif namespace.show_type == 'subtasks':
+        task = service.get_task(namespace.user, task_id=namespace.task_id)
         subtasks = service.get_subtasks(user=namespace.user,
                                         task_id=namespace.task_id)
-        print_collection(subtasks,
-                         mes1='Task subtasks:',
-                         mes2='Task dont have any subtasks')
+        if subtasks:
+            print_task_with_subtask(service, namespace.user, task)
+        else:
+            print('Task dont have any subtasks')
 
     elif namespace.show_type == 'all':
         available_tasks = service.get_available_tasks(
@@ -66,23 +87,26 @@ def task_show_handler(service: AppService, namespace):
                          mes2='You dont have assigned tasks')
 
     elif namespace.show_type == 'todo':
-        todo_tasks = [task for task in service.get_available_tasks(user=namespace.user)
-                      if task.status is TaskStatus.TODO]
+        todo_tasks = service.get_filtered_tasks(user=namespace.user, status=TaskStatus.TODO)
         print_collection(todo_tasks,
                          mes1='Todo tasks:',
                          mes2='You dont have todo tasks')
 
+    elif namespace.show_type == 'inwork':
+        inwork_tasks = service.get_filtered_tasks(user=namespace.user, status=TaskStatus.INWORK)
+        print_collection(inwork_tasks,
+                         mes1='Inwork tasks:',
+                         mes2='You dont have any inwork tasks')
+
     elif namespace.show_type == 'done':
-        done_tasks = [task for task in service.get_available_tasks(user=namespace.user)
-                      if task.status is TaskStatus.DONE]
+        done_tasks = service.get_filtered_tasks(user=namespace.user, status=TaskStatus.DONE)
         print_collection(done_tasks,
                          mes1='Done tasks:',
                          mes2='You dont have any done tasks')
 
     elif namespace.show_type == 'archived':
-        done_tasks = [task for task in service.get_available_tasks(user=namespace.user)
-                      if task.status is TaskStatus.ARCHIVED]
-        print_collection(done_tasks,
+        archived_tasks = service.get_filtered_tasks(user=namespace.user, status=TaskStatus.ARCHIVED)
+        print_collection(archived_tasks,
                          mes1='Archived tasks:',
                          mes2='You dont have any archived tasks')
 
@@ -94,8 +118,15 @@ def task_show_handler(service: AppService, namespace):
                          mes2='You dont have any tasks without a plan')
 
 
+def event_converter(arg):
+    if arg == 'yes':
+        return True
+    return False
+
+
 def task_handler(service: AppService, namespace):
     if namespace.action == 'create':
+        event = event_converter(namespace.event)
         task = service.create_task(user=namespace.user,
                                    name=namespace.name,
                                    description=namespace.description,
@@ -103,6 +134,7 @@ def task_handler(service: AppService, namespace):
                                    end_date=namespace.end_date,
                                    parent_task_id=namespace.parent_task_id,
                                    priority=namespace.priority,
+                                   event=event,
                                    status=namespace.status)
         print('Created task:')
         print(task)
@@ -111,6 +143,7 @@ def task_handler(service: AppService, namespace):
         task_show_handler(service, namespace)
 
     elif namespace.action == 'edit':
+        event = event_converter(namespace.event)
         task = service.update_task(user=namespace.user,
                                    task_id=namespace.task_id,
                                    name=namespace.name,
@@ -118,7 +151,8 @@ def task_handler(service: AppService, namespace):
                                    status=namespace.status,
                                    priority=namespace.priority,
                                    start_date=namespace.start_date,
-                                   end_date=namespace.end_date)
+                                   end_date=namespace.end_date,
+                                   event=event)
         print('Updated task:')
         print(task)
 
@@ -174,6 +208,33 @@ def task_handler(service: AppService, namespace):
                             task_id=namespace.task_id)
         print(f'Task(ID={namespace.task_id}) has been deleted')
 
+    elif namespace.action == 'search':
+        tasks = service.get_tasks_by_name(user=namespace.user,
+                                          name=namespace.name)
+        if tasks:
+            for task in tasks:
+                print(task)
+        else:
+            print('Task(s) not found', file=sys.stderr)
+
+    elif namespace.action == 'filter':
+        if not any([namespace.name, namespace.start_date, namespace.end_date,
+                    namespace.parent_task_id, namespace.priority, namespace.status]):
+            print('You didnt specified filter arguments', file=sys.stderr)
+            sys.exit(1)
+        tasks = service.get_filtered_tasks(user=namespace.user,
+                                           name=namespace.name,
+                                           start_date=namespace.start_date,
+                                           end_date=namespace.end_date,
+                                           parent_task_id=namespace.parent_task_id,
+                                           priority=namespace.priority,
+                                           status=namespace.status)
+        if tasks:
+            for task in tasks:
+                print(task)
+        else:
+            print('Task(s) not found', file=sys.stderr)
+
 
 def folder_show_handler(service: AppService, namespace):
 
@@ -182,7 +243,6 @@ def folder_show_handler(service: AppService, namespace):
                                     folder_id=namespace.folder_id)
         print(folder)
         if folder and namespace.tasks:
-            print(f'our folder:{folder}')
             print_collection(folder.tasks, mes1='Folder tasks:',
                              mes2='Folder is empty')
 
@@ -259,7 +319,9 @@ def plan_show_handlers(service: AppService, namespace):
 
     elif namespace.show_type == 'all':
         plans = service.get_all_plans(user=namespace.user)
-        print('Your plans:')
+        if not plans:
+            print('You dont have plans')
+            sys.exit(1)
         if namespace.tasks:
             for plan in plans:
                 tasks = service.get_generated_tasks_by_plan(user=namespace.user,
@@ -278,6 +340,7 @@ def plan_handler(service: AppService, namespace):
                                    period_amount=namespace.period_amount,
                                    period=namespace.period,
                                    repetitions_amount=namespace.plan_amount,
+                                   start_date=namespace.start_date,
                                    end_date=namespace.end_date)
         print('Created plan:')
         print(plan)
@@ -300,7 +363,7 @@ def plan_handler(service: AppService, namespace):
     elif namespace.action == 'delete':
         service.delete_plan(user=namespace.user,
                             plan_id=namespace.plan_id)
-        print('Plan{ID={namespace.plan_id}) has been deleted')
+        print(f'Plan(ID={namespace.plan_id}) has been deleted')
 
 
 def reminder_show_handler(service, namespace):
@@ -316,7 +379,7 @@ def reminder_show_handler(service, namespace):
         reminders = service.get_all_reminders(user=namespace.user)
         if not reminders:
             print('You dont have any reminders')
-            return
+            sys.exit(1)
         if namespace.tasks:
             for reminder in reminders:
                 print(reminder, end='\n\n')
@@ -409,7 +472,7 @@ def check_auth(user_serv):
     sys.exit(1)
 
 
-@error_catcher
+# @error_catcher
 def commands_handler(service: AppService, namespace,
                      user_serv: UserService):
 
