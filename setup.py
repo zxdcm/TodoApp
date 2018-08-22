@@ -12,6 +12,5 @@ setup(
     install_requires=['sqlalchemy', 'python-dateutil'],
     entry_points={
         'console_scripts': ['todoapp=client.main:main']
-    },
-    test_suite='tests'
+    }
 )
