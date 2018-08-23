@@ -41,6 +41,7 @@ class AppService:
     Class that includes CRUD (create, read, update, delete)
     and common used methods on lib objects
     Methods contains type and logic validators
+    Methods might raise exceptions or warnings. 
     ----------
     session : session object that provides interface to database
     Attributes
@@ -52,11 +53,11 @@ class AppService:
         -------------
         add_subtask - attach task with task_id as subtask of task with parent_task_id
         assign_user - assign user as task executor
-        change_task_status - simplly change task status
-        _change_subtasks_status - change subtasks status recursively calls by change_task_status method
+        change_task_status - simply change task status
+        _change_subtasks_status - change subtasks status recursively. Calls by change_task_status method
         create_folder - create new folder and add to storage
         create_plan - create new plan and add to storage
-        create_reminder - create new plan and add to storage
+        create_reminder - create new reminder and add to storage
         create_task - create new task and add to storage
         delete task - remove task and its related objects from storage
         delete_folder - delete folder from storage
@@ -76,11 +77,11 @@ class AppService:
         get_own_plans - retrive plans created by user
         get_own_tasks - retrieve tasks created by user
         get_plan - retrive plan
-        get_reminder -  retrive plan from storage
+        get_reminder -  retrive reminder from storage
         get_subtasks - retrieve task subtasks
         get_task - retrieve task from storage
         get_task_by_name - retrieve case insensitive task by name matching
-        get_task_reminders - retrive task reminders
+        get_task_reminders - retrive task reminders from storage for specific user
         get_task_user_relation - get relation between user and task
         get_user_assigned_tasks - return tasks user assignd as executor on
         populate_folder - add task in folder
@@ -90,7 +91,7 @@ class AppService:
         unshare_task - unshare task with user
         update_folder - update folder info
         update_reminder - update reminder info
-        update_task - update task
+        update_task - update task info
 
     """
 
@@ -465,7 +466,7 @@ class AppService:
             self.session.delete(rel)
         for folder in self.get_task_folders(task_id=task.id):
             folder.tasks.remove(task)
-        for reminder in self.get_task_reminders(user=user, task_id=task.id):
+        for reminder in task.reminders:
             self.session.delete(reminder)
 
         self.session.delete(task)
@@ -617,10 +618,9 @@ class AppService:
         name : str
         Returns
         -------
-        Folder or Exception
+        Folder
         """
-        folder = self.session.query(Folder).filter_by(user=user,
-                                                      name=name).one_or_none()
+
         folder = Folder(user=user, name=name)
 
         self.session.add(folder)
