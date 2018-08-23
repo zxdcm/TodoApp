@@ -145,7 +145,7 @@ def task_parser(sup_parser: argparse):
                       choices=[x.name.lower() for x in TaskPriority])
     edit.add_argument('--status',
                       type=str,
-                      choices=['todo', 'inwork'])
+                      choices=[x.name.lower() for x in TaskStatus])
     edit.add_argument('--event', choices=['yes', 'no'],
                       help='Mark as event. No by default settings')
 

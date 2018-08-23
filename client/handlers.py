@@ -383,7 +383,7 @@ def reminder_show_handler(service, namespace):
     elif namespace.show_type == 'all':
         reminders = service.get_all_reminders(user=namespace.user)
         if not reminders:
-            print('You dont have any reminders')
+            print('You dont have any reminders', file=sys.stderr)
             sys.exit(1)
         if namespace.tasks:
             for reminder in reminders:
