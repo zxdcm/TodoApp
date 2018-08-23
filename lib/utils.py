@@ -19,7 +19,7 @@ def get_interval(period_type: Period, period_quantity):
         return relativedelta(weeks=period_quantity)
     elif period_type.value == 'Month':
         return relativedelta(months=period_quantity)
-    elif period_type.value == 'Years':
+    elif period_type.value == 'Year':
         return relativedelta(years=period_quantity)
 
 
