@@ -87,7 +87,7 @@ class Task(Base):
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO,
                     nullable=False)
 
-    event = Column(Boolean, nullable=False, default=True)
+    event = Column(Boolean, nullable=False, default=False)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
     created = Column(DateTime, nullable=False, default=datetime.now())
@@ -124,7 +124,6 @@ class Task(Base):
 
     def __str__(self):
         return(
-
             ''.join([
                 f'id: {self.id}\n',
                 f'name: {self.name}\n',
@@ -202,6 +201,7 @@ class Plan(Base):
             f'period amount: {self.period_amount}\n',
             f'end type: {self.end_type.value}\n',
             f'repetitions amount: {self.repetitions_amount}\n' if self.end_type == EndType.AMOUNT else '',
+            f'repetitions counter: {self.repetitions_counter}\n' if self.end_type == EndType.AMOUNT else '',
             f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
             f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
         ]))
@@ -224,4 +224,4 @@ class Reminder(Base):
         return ('\n'.join([
             f'id: {self.id}',
             f'task id: {self.task_id}',
-            f'date: {self.date}']))
+            f'date: {self.date}\n']))
