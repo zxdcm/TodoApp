@@ -1,9 +1,8 @@
-from lib.services import (AppService,
-                          TaskStatus,
-                          TaskPriority)
+from todolib.services import (AppService,
+                              TaskStatus)
 
-from lib.exceptions import LibError, LibWarning
-from client.user_service import UserService
+from todolib.exceptions import LibError, LibWarning
+from todocli.user_service import UserService
 from os import sys
 import textwrap
 

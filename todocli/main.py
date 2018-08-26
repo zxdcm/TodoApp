@@ -1,10 +1,12 @@
-from client.parsers import get_args
-from client.handlers import commands_handler
-from lib.services import AppService
-from lib.logging import setup_lib_logging
-from lib.models import set_up_connection
-from client.user_service import UserService
-import client.config as config
+from todolib.services import AppService
+from todolib.logging import setup_lib_logging
+from todolib.models import set_up_connection
+from todocli.parsers import get_args
+from todocli.handlers import commands_handler
+from todocli.user_service import UserService
+import todocli.config as config
+
+
 import os
 import warnings
 

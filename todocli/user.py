@@ -3,7 +3,7 @@ from sqlalchemy import (
     String,
 )
 
-from lib.models import Base
+from todolib.models import Base
 
 
 class User(Base):

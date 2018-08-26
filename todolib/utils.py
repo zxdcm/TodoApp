@@ -1,6 +1,6 @@
 from dateutil.relativedelta import relativedelta
-from lib.models import EndType, Period
-from lib.exceptions import ObjectNotFound
+from todolib.models import EndType, Period
+from todolib.exceptions import ObjectNotFound
 
 
 def check_object_exist(obj, params, type):

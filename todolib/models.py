@@ -7,11 +7,9 @@ from sqlalchemy import (
     Table,
     Boolean,
     Enum)
-
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from sqlalchemy import create_engine
-
 from datetime import datetime
 import enum
 

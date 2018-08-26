@@ -1,9 +1,9 @@
 import unittest
-
-from lib.services import AppService
-from lib import models as mo
-from lib import exceptions as ex
 from datetime import datetime, timedelta
+
+from todolib.services import AppService
+from todolib import models as mo
+from todolib import exceptions as ex
 
 DRIVER_NAME = 'sqlite'
 CONNECTIONSTRING = ':memory:'

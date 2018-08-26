@@ -11,6 +11,6 @@ setup(
     packages=find_packages(exclude=['tests']),
     install_requires=['sqlalchemy', 'python-dateutil'],
     entry_points={
-        'console_scripts': ['todoapp=client.main:main']
+        'console_scripts': ['todoapp=todocli.main:main']
     }
 )

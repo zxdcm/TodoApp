@@ -1,4 +1,10 @@
-from lib.models import (
+from sqlalchemy import (orm,
+                        exc)
+from typing import List
+from warnings import warn
+from datetime import datetime
+
+from todolib.models import (
     Task,
     Folder,
     Plan,
@@ -8,30 +14,18 @@ from lib.models import (
     EndType,
     task_folder_association_table,
     TaskUserEditors,
-    set_up_connection,
     Reminder)
+from todolib.exceptions import (ObjectNotFound,
+                                RedundancyAction)
+from todolib.utils import (get_end_type,
+                           get_interval,
+                           check_object_exist,
+                           enum_converter)
 
-from sqlalchemy import (orm,
-                        exc)
-
-from typing import List
-
-from lib.exceptions import (ObjectNotFound,
-                            RedundancyAction)
-
-from warnings import warn
-
-from lib.utils import (get_end_type,
-                       get_interval,
-                       check_object_exist,
-                       enum_converter)
-
-from lib.validators import (validate_task_dates,
-                            validate_plan_end_date,
-                            validate_reminder_date)
-
-from datetime import datetime
-from lib.logging import get_logger, log_decorator
+from todolib.validators import (validate_task_dates,
+                                validate_plan_end_date,
+                                validate_reminder_date)
+from todolib.logging import get_logger, log_decorator
 
 logger = get_logger()
 
@@ -41,7 +35,7 @@ class AppService:
     Class that includes CRUD (create, read, update, delete)
     and common used methods on lib objects
     Methods contains type and logic validators
-    Methods might raise exceptions or warnings. 
+    Methods might raise exceptions or warnings.
     ----------
     session : session object that provides interface to database
     Attributes

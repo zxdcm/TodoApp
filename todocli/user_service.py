@@ -1,4 +1,4 @@
-from client.user import User
+from todocli.user import User
 import configparser
 
 

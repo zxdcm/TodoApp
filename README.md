@@ -80,7 +80,7 @@ It raises exceptions and warnings when errors occurred.
 
 ### Quickstart
 
-1. Import set_up_connection and AppService objects
+1. Import set_up_connection and AppService
 
 ```
 >>> from todolib.models import set_up_connection
@@ -91,7 +91,7 @@ It raises exceptions and warnings when errors occurred.
 
 ```
 >>> driver_name = 'sqlite'
->>> connection_string = '' # database file
+>>> connection_string = '' # existing dir + any file name
 >>> session = set_up_connection(driver_name, connection_string)
 ```
 
@@ -126,5 +126,6 @@ Name: Shout at bad employees, priority: Low
 Retrive and read library docs
 
 ``
-help(AppService)
+from todolib import services
+help(services)
 ``
