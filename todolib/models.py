@@ -135,7 +135,7 @@ class Task(Base):
                 f'users: {", ".join(rel.user for rel in self.members)}\n',
                 f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
                 f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
-                f'created: {self.updated.strftime(FORMAT)}\n',
+                f'created: {self.created.strftime(FORMAT)}\n',
                 f'updated: {self.updated.strftime(FORMAT)}\n',
             ]))
 

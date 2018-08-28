@@ -97,7 +97,7 @@ class AppService:
     def get_task_user_relation(self,
                                user,
                                task_id):
-        """Method allows to get TaskUserRelation object.
+        """Method allows to get TaskUserRelation relation object.
            That indicates does the user has rights to access the task
         Parameters
         ----------
@@ -139,7 +139,7 @@ class AppService:
         -------
         Task object or Exception
         """
-
+    
         if priority:
             priority = enum_converter(priority, TaskPriority, 'Priority')
 
@@ -266,12 +266,12 @@ class AppService:
                 RedundancyAction)
             return
 
-        relation = self.get_task_user_relation(user=user_receiver,
+        rel = self.get_task_user_relation(user=user_receiver,
                                              task_id=task_id)
 
-        if relation is None:
-            relation = TaskUserRelation(user=user_receiver, task_id=task_id)
-            task.members.append(relation)
+        if rel is None:
+            rel = TaskUserRelation(user=user_receiver, task_id=task_id)
+            task.members.append(rel)
 
         task.assigned = user_receiver
 
