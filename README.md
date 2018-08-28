@@ -66,7 +66,6 @@ That command will create and print your first task
 
 You can configure application by editing config.py file. Which location is ``todocli/config.py``
 
-Make sure you created a copy before this action.
 
 
 ## Library usage
@@ -125,8 +124,6 @@ Name: Shout at bad employees, priority: Low
 
 Retrive and read library docs
 
-``
-from todolib import services
+``from todolib import services``
 
-help(services)
-``
+``help(services)``
