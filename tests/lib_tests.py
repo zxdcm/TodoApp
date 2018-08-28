@@ -171,7 +171,7 @@ class TaskTest(unittest.TestCase):
                               user_receiver=TEST_RECEIVER)
 
         self.assertTrue(task.assigned, TEST_RECEIVER)
-        self.assertIn(TEST_RECEIVER, [rel.user for rel in task.editors])
+        self.assertIn(TEST_RECEIVER, [rel.user for rel in task.members])
 
         with self.assertWarns(ex.RedundancyAction):
             self.serv.assign_user(user=TEST_USER,
@@ -219,7 +219,7 @@ class TaskTest(unittest.TestCase):
         self.serv.unshare_task(user=TEST_USER,
                                task_id=task.id,
                                user_receiver=TEST_RECEIVER)
-        self.assertNotIn(TEST_RECEIVER, [rel.user for rel in task.editors])
+        self.assertNotIn(TEST_RECEIVER, [rel.user for rel in task.members])
 
     def test_delete_task(self):
         with self.assertRaises(ex.ObjectNotFound):
