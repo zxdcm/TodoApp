@@ -1,0 +1,25 @@
+/*.container {*/
+	/*margin-top: 30px;*/
+/*}*/
+
+
+/*
+remove after
+*/
+.container {
+	margin-top: 30px;
+	border: 12px solid #B22222;
+	border-radius: 10px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.container-fluid {
+	border: 12px solid #B22222;
+	border-radius: 10px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+.centered {
+	text-align: center;
+}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %} Tasks {% endblock %}
+{% block content %}
+<div class="container-fluid col-md-10 offset-2">
+            <table class="table">
+            {% if tasks %}
+                <h2>{{header}}</h2>
+                    <thead>
+                    <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Start date</th>
+                    <th>End date</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Actions</th>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                        <tr>
+                            <th scope="row">
+                            <a href="{% url 'todoapp:show_task' task.id %} }}">ID{{ task.id }}</a>
+                            </th>
+                            <td>{{ task.name }}</td>
+                            <td>{{ task.start_date}}</td>
+                            <td>{{ task.end_date}}</td>
+                            <td>{{ task.status.value }}</td>
+                            <td>{{ task.priority.value}}</td>
+                            <td>
+                              <a href="{% url 'todoapp:show_task' task.id %}" class="btn btn-info">
+                                    <i class="far fa-eye"></i>
+                              </a>
+                                <a href="#" class="btn btn-dark">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                    <a href="#" class="btn btn-success">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                </a>
+                                    <a href="#" class="btn btn-danger">
+                                    <i class="far fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+            {% else %}
+                <div class="alert alert-info">No tasks</div>
+            {% endif %}
+            </table>
+</div>
+{% endblock %}
