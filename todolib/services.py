@@ -13,7 +13,7 @@ from todolib.models import (
     Period,
     EndType,
     task_folder_association_table,
-    TaskUserEditors,
+    TaskUserRelation,
     Reminder)
 from todolib.exceptions import (ObjectNotFound,
                                 RedundancyAction)
@@ -97,7 +97,7 @@ class AppService:
     def get_task_user_relation(self,
                                user,
                                task_id):
-        """Method allows to get TaskUserEditor relation object.
+        """Method allows to get TaskUserRelation object.
            That indicates does the user has rights to access the task
         Parameters
         ----------
@@ -105,9 +105,9 @@ class AppService:
         task_id : int
         Returns
         -------
-        TaskUserEditor object or None
+        TaskUserRelation object or None
         """
-        return self.session.query(TaskUserEditors).filter_by(
+        return self.session.query(TaskUserRelation).filter_by(
             user=user, task_id=task_id).one_or_none()
 
     @log_decorator
@@ -164,12 +164,12 @@ class AppService:
                     event=event,
                     status=status)
 
-        task.editors.append(TaskUserEditors(user=user,
-                                            task_id=task.id))
+        task.members.append(TaskUserRelation(user=user,
+                                             task_id=task.id))
 
         if assigned and assigned is not user:
-            task.editors.append(TaskUserEditors(user=assigned,
-                                                task_id=task.id))
+            task.members.append(TaskUserRelation(user=assigned,
+                                                 task_id=task.id))
 
         self.session.add(task)
         self.session.commit()
@@ -189,8 +189,8 @@ class AppService:
         -------
         Task
         """
-        task = self.session.query(Task).join(TaskUserEditors).filter(
-            TaskUserEditors.user == user, Task.id == task_id).one_or_none()
+        task = self.session.query(Task).join(TaskUserRelation).filter(
+            TaskUserRelation.user == user, Task.id == task_id).one_or_none()
         check_object_exist(task, f'ID {task_id}', 'Task')
         return task
 
@@ -266,12 +266,12 @@ class AppService:
                 RedundancyAction)
             return
 
-        editor = self.get_task_user_relation(user=user_receiver,
+        relation = self.get_task_user_relation(user=user_receiver,
                                              task_id=task_id)
 
-        if editor is None:
-            editor = TaskUserEditors(user=user_receiver, task_id=task_id)
-            task.editors.append(editor)
+        if relation is None:
+            relation = TaskUserRelation(user=user_receiver, task_id=task_id)
+            task.members.append(relation)
 
         task.assigned = user_receiver
 
@@ -303,8 +303,8 @@ class AppService:
             warn(f'Task already shared with user',
                  RedundancyAction)
 
-        self.session.add(TaskUserEditors(user=user_receiver,
-                                         task_id=task_id))
+        self.session.add(TaskUserRelation(user=user_receiver,
+                                          task_id=task_id))
 
         self.session.commit()
 
@@ -366,7 +366,7 @@ class AppService:
         List[Task]
         """
         return (self.session.query(Task)
-                .join(TaskUserEditors)
+                .join(TaskUserRelation)
                 .filter_by(user=user)
                 .all())
 
@@ -421,8 +421,8 @@ class AppService:
         if event is not None:
             query = query.filter(Task.event == event)
 
-        return (query.join(TaskUserEditors)
-                .filter(TaskUserEditors.user == user)
+        return (query.join(TaskUserRelation)
+                .filter(TaskUserRelation.user == user)
                 .all())
 
     def get_tasks_by_name(self, user: str, name) -> List[Task]:
@@ -436,7 +436,7 @@ class AppService:
         List[Task]
         """
         return (self.session.query(Task)
-                .join(TaskUserEditors).filter(TaskUserEditors.user == user)
+                .join(TaskUserRelation).filter(TaskUserRelation.user == user)
                 .filter(Task.name.ilike(f'%{name}%')).all())
 
     @log_decorator
@@ -456,7 +456,7 @@ class AppService:
 
         if task.plan:
             self.session.delete(task.plan)
-        for rel in task.editors:
+        for rel in task.members:
             self.session.delete(rel)
         for folder in self.get_task_folders(task_id=task.id):
             folder.tasks.remove(task)
@@ -544,7 +544,7 @@ class AppService:
 
         return self.session.query(Task).filter_by(
             parent_task_id=task_id).join(
-                TaskUserEditors).filter_by(user=user).all()
+                TaskUserRelation).filter_by(user=user).all()
 
     def _change_subtasks_status(self,
                                 user: str,
@@ -788,8 +788,8 @@ class AppService:
     @log_decorator
     def get_all_plans(self, user: str) -> List[Plan]:
         return self.session.query(Plan).join(Task).join(
-            TaskUserEditors).filter(
-                TaskUserEditors.user == user).all()
+            TaskUserRelation).filter(
+            TaskUserRelation.user == user).all()
 
     @log_decorator
     def get_own_plans(self, user: str) ->Plan:
@@ -808,7 +808,7 @@ class AppService:
         """
         plan = self.get_plan(user=user, plan_id=plan_id)
         return self.session.query(Task).filter(
-            Task.parent_task_id == plan.task_id).join(TaskUserEditors).all()
+            Task.parent_task_id == plan.task_id).join(TaskUserRelation).all()
 
     @log_decorator
     def get_active_plans(self, user: str, plans=None) -> List[Plan]:
@@ -897,11 +897,11 @@ class AppService:
                 plan.last_activated = near_activation
                 near_activation = plan.last_activated + interval
                 plan.repetitions_counter += 1
-                for x in plan.task.editors:
+                for x in plan.task.members:
                     if x.user != user and x.user != plan.task.assigned:
-                        task.editors.append(
-                            TaskUserEditors(user=x.user,
-                                            task_id=task.id))
+                        task.members.append(
+                            TaskUserRelation(user=x.user,
+                                             task_id=task.id))
 
                 self.session.add(task)
 
