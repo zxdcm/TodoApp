@@ -24,8 +24,8 @@ def set_up_connection(driver_name, connection_string):
     return session()
 
 
-class TaskUserEditors(Base):
-    __tablename__ = 'task_users_editors'
+class TaskUserRelation(Base):
+    __tablename__ = 'task_users_relation'
     id = Column(Integer, primary_key=True)
     user = Column(String)
     task_id = Column(Integer, ForeignKey('tasks.id'))
@@ -92,7 +92,7 @@ class Task(Base):
     updated = Column(DateTime, nullable=False, default=datetime.now())
     subtasks = relationship('Task', backref=backref('parent', remote_side='Task.id'))
 
-    editors = relationship('TaskUserEditors')
+    members = relationship('TaskUserRelation')
 
     #  uselist prop allows to set one to one relation
     plan = relationship('Plan', uselist=False, back_populates='task')
@@ -132,6 +132,7 @@ class Task(Base):
                 f'status: {self.status.value}\n',
                 f'priority: {self.priority.value}\n',
                 f'event: {self.event}\n',
+                f'users: {", ".join(rel.user for rel in self.members)}\n',
                 f'start date: {self.start_date.strftime(FORMAT)}\n' if self.start_date else '',
                 f'end date: {self.end_date.strftime(FORMAT)}\n' if self.end_date else '',
                 f'created: {self.updated.strftime(FORMAT)}\n',
