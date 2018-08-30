@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Sign up{% endblock %}
+{% block content %}
+{% load bootstrap4 %}
+    <div class="container">
+        <h2 class="text-center">TodoApp Sign Up</h2>
+        <form method="post">
+          {% csrf_token %}
+          {% bootstrap_form form %}
+          {% buttons %}
+            <button type="submit" class="btn btn-success">Sign up</button>
+          {% endbuttons %}
+        </form>
+    </div>
+
+{% endblock %}
