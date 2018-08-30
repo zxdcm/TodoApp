@@ -139,7 +139,7 @@ class AppService:
         -------
         Task object or Exception
         """
-    
+
         if priority:
             priority = enum_converter(priority, TaskPriority, 'Priority')
 
@@ -336,6 +336,9 @@ class AppService:
                                                task_id=task_id)
         if relation is None:
             raise ValueError(f'Task wasnt shared with this user')
+
+        if user_receiver == task.assigned:
+            task.assigned = None
 
         self.session.delete(relation)
         self.session.commit()
