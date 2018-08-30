@@ -8,6 +8,10 @@ from todoapp import get_service
 class TaskForm(forms.Form):
     def __init__(self, user, task_id, *args, **kwargs):
         super(TaskForm, self).__init__(*args, **kwargs)
+        # folders = get_service().get_all_folders(user=user)
+        # folders_tuples = [(folder.id, folder.name)
+        #                  for folder in folders]
+        # folders_tuples.insert(0, (None, '--------'))
 
     name = forms.CharField(max_length=200, widget=forms.TextInput(
         attrs={'placeholder': 'Task name'}))
@@ -26,7 +30,7 @@ class TaskForm(forms.Form):
     start_date = forms.DateTimeField(required=False, initial=datetime.now())
     end_date = forms.DateTimeField(required=False,
                                    initial=datetime.now() + timedelta(days=1))
-    assigned = forms.ModelChoiceField(queryset=User.objects.all(),
-                                      required=False)
-    folders = forms.ModelMultipleChoiceField(User.objects.all())
+
+    assigned = forms.ModelChoiceField(User.objects.all(), required=False)
+    # folders = forms.MultipleChoiceField()
 
