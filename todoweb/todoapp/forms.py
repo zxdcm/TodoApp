@@ -6,12 +6,15 @@ from todolib.models import TaskStatus, TaskPriority
 from todoapp import get_service
 
 class TaskForm(forms.Form):
-    def __init__(self, user, task_id, *args, **kwargs):
+    def __init__(self, user, *args, **kwargs):
         super(TaskForm, self).__init__(*args, **kwargs)
-        # folders = get_service().get_all_folders(user=user)
-        # folders_tuples = [(folder.id, folder.name)
-        #                  for folder in folders]
-        # folders_tuples.insert(0, (None, '--------'))
+        folders = get_service().get_all_folders(user=user)
+        folders_tuples = [(folder.id, folder.name)
+                         for folder in folders]
+        folders_tuples.insert(0, (0, '--------'))
+        self.fields['folders'].choices = folders_tuples
+
+
 
     name = forms.CharField(max_length=200, widget=forms.TextInput(
         attrs={'placeholder': 'Task name'}))
@@ -32,5 +35,5 @@ class TaskForm(forms.Form):
                                    initial=datetime.now() + timedelta(days=1))
 
     assigned = forms.ModelChoiceField(User.objects.all(), required=False)
-    # folders = forms.MultipleChoiceField()
+    folders = forms.MultipleChoiceField()
 

@@ -38,9 +38,13 @@ def create_task(request):
     user = request.user.username
 
     if request.method == 'POST':
-        form = TaskForm(user, None, request.POST)
+        form = TaskForm(user, request.POST)
         if form.is_valid():
             try:
+                assigned = form.cleaned_data['assigned']
+                if assigned:
+                    assigned = assigned.username
+
                 task = service.create_task(user=user,
                                        name=form.cleaned_data['name'],
                                        description=form.cleaned_data['description'],
@@ -49,16 +53,18 @@ def create_task(request):
                                        event = form.cleaned_data['event'],
                                        start_date=form.cleaned_data['start_date'],
                                        end_date=form.cleaned_data['end_date'],
-                                       assigned=form.cleaned_data['assigned'].username)
+                                       assigned=assigned)
             except ValueError as e:
                 form.add_error('start_date', e)
                 return render(request, 'tasks/add.html', {'form': form})
 
-            # if form.cleaned_data['folders']:
-            #     for folder in form.cleaned_data['folders']:
-            #         service.populate_folder(user=user,
-            #                                 folder_id=folder.id,
-            #                                 task_id=task.id)
+            if form.cleaned_data['folders']:
+                for folder_id in form.cleaned_data['folders']:
+                    if folder_id == 0:
+                        continue
+                    service.populate_folder(user=user,
+                                            folder_id=folder_id,
+                                            task_id=task.id)
             return redirect('todoapp:show_task', task.id)
 
     else:
@@ -76,7 +82,7 @@ def edit_task(request, id):
         return redirect('todoapp:index')
 
     if request.method == 'POST':
-        form = TaskForm(user, task.id, request.POST)
+        form = TaskForm(user, request.POST)
         if form.is_valid():
             try:
                 task = service.update_task(user=user,
@@ -100,16 +106,32 @@ def edit_task(request, id):
                                     user_receiver=assigned.username)
             else:
                 task.assigned = None
-                service.save_updates()
+
+            folders = service.get_task_folders(task.id)
+            for folder in folders:
+                folder.tasks.remove(task)
+
+            folders_ids = form.cleaned_data['folders']
+            if 0 in folders_ids:
+                folders_ids.remove(0)
+            for folder_id in folders_ids:
+                folder = service.get_folder(user=user,
+                                            folder_id=folder_id)
+                folder.tasks.append(task)
+
+            service.save_updates()
             return redirect('todoapp:tasks')
 
     else:
         assigned = None
         if task.assigned:
             assigned = User.objects.filter(username=task.assigned).get()
+
+        initial_folders = [folder.id for folder in service.get_task_folders(task.id)
+                           if task.id in map(lambda x: x.id, folder.tasks)]
+
         form = TaskForm(
             user,
-            task.id,
             initial={
                 'name': task.name,
                 'description': task.description,
@@ -118,7 +140,8 @@ def edit_task(request, id):
                 'event': task.event,
                 'start_date': task.start_date,
                 'end_date': task.end_date,
-                'assigned': assigned
+                'assigned': assigned,
+                'folders': initial_folders
             })
 
     return render(request, 'tasks/edit.html', {'form': form})
