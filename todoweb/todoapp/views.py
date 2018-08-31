@@ -58,13 +58,13 @@ def create_task(request):
                 form.add_error('start_date', e)
                 return render(request, 'tasks/add.html', {'form': form})
 
-            if form.cleaned_data['folders']:
-                for folder_id in form.cleaned_data['folders']:
-                    if folder_id == 0:
-                        continue
-                    service.populate_folder(user=user,
-                                            folder_id=folder_id,
-                                            task_id=task.id)
+            folders_ids = form.cleaned_data['folders']
+            if '0' in folders_ids:
+                folders_ids.remove('0')
+            for folder_id in form.cleaned_data['folders']:
+                service.populate_folder(user=user,
+                                        folder_id=folder_id,
+                                        task_id=task.id)
             return redirect('todoapp:show_task', task.id)
 
     else:
@@ -112,8 +112,8 @@ def edit_task(request, id):
                 folder.tasks.remove(task)
 
             folders_ids = form.cleaned_data['folders']
-            if 0 in folders_ids:
-                folders_ids.remove(0)
+            if '0' in folders_ids:
+                folders_ids.remove('0')
             for folder_id in folders_ids:
                 folder = service.get_folder(user=user,
                                             folder_id=folder_id)
