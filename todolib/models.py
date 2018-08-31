@@ -8,7 +8,10 @@ from sqlalchemy import (
     Boolean,
     Enum)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker, backref
+from sqlalchemy.orm import (relationship,
+                            sessionmaker,
+                            backref,
+                            scoped_session)
 from sqlalchemy import create_engine
 from datetime import datetime
 import enum
@@ -18,10 +21,11 @@ FORMAT = '%Y-%m-%d %H:%M'
 
 
 def set_up_connection(driver_name, connection_string):
-    engine = create_engine(f'{driver_name}:///{connection_string}')
+    engine = create_engine(f'{driver_name}:///{connection_string}',
+                           connect_args={'check_same_thread': False})
     session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
-    return session()
+    return scoped_session(session)
 
 
 class TaskUserRelation(Base):
