@@ -62,10 +62,11 @@ class AppService:
         get_active_plans - passes through plans and retrive active plans
         get_all_plans - retrive plans user can access
         get_all_reminders - retrive all user reminders from storage
+        get_all_folders - retrieve all user folders
         get_available_tasks - retrieve tasks user can access
         get_filtered_tasks - retrieve filtered tasks
         get_folder - retrieve folder
-        get_folders - retrieve all user folders
+        get_folder_by_name - retreive folder by its name
         get_generated_tasks_by_plan - retrive tasks created by plan
         get_obj - get any object from storage by cls and id
         get_own_plans - retrive plans created by user
@@ -638,6 +639,11 @@ class AppService:
         return folder
 
     @log_decorator
+    def get_folder_by_name(self, user: str, name: str) -> Folder:
+        return self.session.query(Folder).filter_by(
+            name=name, user=user).one_or_none()
+
+    @log_decorator
     def get_all_folders(self, user: str) -> List[Folder]:
         return self.session.query(Folder).filter_by(user=user).all()
 
@@ -666,9 +672,11 @@ class AppService:
             f'Folder ID({folder_id}) deleted by User({user})')
 
     @log_decorator
-    def get_task_folders(self, task_id: int):
-        return self.session.query(Folder).join(
-            task_folder_association_table).filter_by(task_id=task_id).all()
+    def get_task_folders(self, task_id, user=None):
+        query = self.session.query(Folder)
+        if user:
+            query = query.filter_by(user=user)
+        return (query.join(task_folder_association_table).filter_by(task_id=task_id)).all()
 
     @log_decorator
     def populate_folder(self, user: str, folder_id: int, task_id: int):
