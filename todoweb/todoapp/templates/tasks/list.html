@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %} Tasks {% endblock %}
+{% block content %}
+    <div class="container-fluid" style="margin-top: 30px">
+      <div class="row">
+        <nav class="col-md-2 bg-light sidebar">
+          <div class="sidebar-sticky">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link active" href="{% url 'todoapp:own_tasks' %}">
+                  <i class="fas fa-home fa-fw big-icon"></i>
+                  My <span class="sr-only">(current)</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'todoapp:available_tasks' %}">
+                  <i class="fas fa-users fa-fw big-icon"></i>
+                  Available
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'todoapp:assigned_tasks' %}">
+                  <i class="fas fa-hands-helping fa-fw big-icon"></i>
+                  Assigned
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'todoapp:archived_tasks' %}">
+                  <i class="fas fa-archive fa-fw"></i>
+                  Archived
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'todoapp:done_tasks' %}">
+                  <i class="fas fa-check fa-fw big-icon"></i>
+                  Done
+                </a>
+              </li>
+            </ul>
+            <a href="{% url 'todoapp:add_task' %}" class='btn btn-primary'>Add task</a>
+            <h5 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+              <span>Folders:</span>
+              <a class="d-flex align-items-center text-muted" href="{% url 'todoapp:add_folder' %}">
+                <i class="far fa-plus-square big-icon" ></i>
+              </a>
+            </h5>
+              <ul class="nav flex-column mb-2">
+              {% for folder in folders %}
+                  <li class="nav-item mr-auto">
+                    <a class="nav-link" href="{% url 'todoapp:folder_tasks' folder.id %}">
+                      <i class="far fa-folder big-icon"></i>
+                      {{ folder.name }}
+                    </a>
+                    <a href='#' >
+                        <span>T</span>
+                    </a>
+                    <a type='submit' href="#">
+                        <span>D</span>
+                    </a>
+                  </li>
+              {% endfor %}
+              </ul>
+          </div>
+        </nav>
+    <div class="col-md 8 offset-2">
+        <div class="table-responsive">
+            <table class="table">
+                {% if tasks %}
+                    <h2>{{header}}</h2>
+                        <thead>
+                        <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Start date</th>
+                        <th>End date</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                            <tr>
+                                <th scope="row">
+                                <a href="{% url 'todoapp:show_task' task.id %}">{{ task.id }}</a>
+                                </th>
+                                <td>{{ task.name }}</td>
+                                <td>{{ task.start_date}}</td>
+                                <td>{{ task.end_date}}</td>
+                                <td>{{ task.status.value }}</td>
+                                <td>{{ task.priority.value}}</td>
+                                <td>
+                                  <a href="{% url 'todoapp:show_task' task.id %}" class="btn btn-info">
+                                        <i class="far fa-eye"></i>
+                                  </a>
+                                    <a href="{% url 'todoapp:edit_task' task.id %}" class="btn btn-dark">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                        <a href="#" class="btn btn-success">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    </a>
+                                        <a href="#" class="btn btn-danger">
+                                        <i class="far fa-trash-alt"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                {% else %}
+                    <div class="alert alert-info">No tasks there :)</div>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}
