@@ -637,10 +637,6 @@ class AppService:
 
         return folder
 
-    def get_folder_by_name(self, user: str, name: str) -> Folder:
-        return self.session.query(Folder).filter_by(
-            name=name, user=user).one_or_none()
-
     @log_decorator
     def get_all_folders(self, user: str) -> List[Folder]:
         return self.session.query(Folder).filter_by(user=user).all()
@@ -669,20 +665,10 @@ class AppService:
         logger.info(
             f'Folder ID({folder_id}) deleted by User({user})')
 
-    # @log_decorator
-    # def get_task_folders(self, task_id: int):
-    #     return self.session.query(Folder).join(
-    #         task_folder_association_table).filter_by(task_id=task_id).all()
-
     @log_decorator
-    def get_task_folders(self, task_id: int, user=None):
-        query = self.session.query(Folder)
-        if user:
-            query = query.filter_by(user=user)
-
-        return query.join(
-            task_folder_association_table).filter_by(
-            task_id=task_id).all()
+    def get_task_folders(self, task_id: int):
+        return self.session.query(Folder).join(
+            task_folder_association_table).filter_by(task_id=task_id).all()
 
     @log_decorator
     def populate_folder(self, user: str, folder_id: int, task_id: int):
