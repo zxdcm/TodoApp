@@ -16,7 +16,7 @@ tasks_patterns =[
     url(r'^(?P<id>[0-9]+)/$', views.show_task, name='show_task'),
     url(r'^add/$', views.create_task, name='add_task'),
     url(r'^edit/(?P<id>[0-9]+)/$', views.edit_task, name='edit_task'),
-    url(r'^delete/^(?P<id>[0-9]+)/$', views.delete_task, name='delete_task'),
+    url(r'^delete/(?P<id>[0-9]+)/$', views.delete_task, name='delete_task'),
     url(r'^own/$', views.own_tasks, name='own_tasks'),
     url(r'^assigned/$', views.assigned_tasks, name='assigned_tasks'),
     url(r'^archived/$', views.archived_tasks, name='archived_tasks'),
@@ -27,7 +27,8 @@ tasks_patterns =[
 
 folder_patterns = [
     url(r'^add/$', views.add_folder, name='add_folder'),
-    url(r'^edit/$', views.add_folder, name='edit_folder')
+    url(r'^edit(?P<id>[0-9]+)/$', views.edit_folder, name='edit_folder'),
+    url(r'^delete(?P<id>[0-9]+)/$', views.delete_folder, name='delete_folder'),
 ]
 
 urlpatterns = [
