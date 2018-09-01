@@ -41,27 +41,30 @@
             <h5 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
               <span>Folders:</span>
               <a class="d-flex align-items-center text-muted" href="{% url 'todoapp:add_folder' %}">
-                <i class="far fa-plus-square big-icon" ></i>
+                <i class="far fa-plus-square big-icon"></i>
               </a>
             </h5>
-              <ul class="nav flex-column mb-2">
+            <ul class="nav flex-column">
               {% for folder in folders %}
-                  <li class="nav-item mr-auto">
-                    <a class="nav-link" href="{% url 'todoapp:folder_tasks' folder.id %}">
+                  <li class="nav-item">
+                    <a class="nav-link" style="display: inline-list-item" href="{% url 'todoapp:folder_tasks' folder.id %}">
                       <i class="far fa-folder big-icon"></i>
-                      {{ folder.name }}
+                      {{ folder.name|truncatechars:18}}
                     </a>
-                    <a href='#' >
-                        <span>T</span>
+                    <a href="{% url 'todoapp:edit_folder' folder.id %}" class="pull-right" >
+                        <span class="far fa-edit fa-fw big-icon"></span>
                     </a>
-                    <a type='submit' href="#">
-                        <span>D</span>
+                    <a href= "{% url 'todoapp:delete_folder' folder.id %}">
+                        <span class="fas fa-trash-alt fa-fw big-icon"></span>
                     </a>
                   </li>
               {% endfor %}
-              </ul>
+            </ul>
           </div>
         </nav>
+
+
+
     <div class="col-md 8 offset-2">
         <div class="table-responsive">
             <table class="table">
