@@ -14,7 +14,7 @@ users_patterns = [
 tasks_patterns =[
     url(r'^$', views.tasks, name='tasks'),
     url(r'^(?P<task_id>[0-9]+)/$', views.show_task, name='show_task'),
-    url(r'^add/$', views.create_task, name='add_task'),
+    url(r'^add/$', views.add_task, name='add_task'),
     url(r'^edit/(?P<task_id>[0-9]+)/$', views.edit_task, name='edit_task'),
     url(r'^delete/(?P<task_id>[0-9]+)/$', views.delete_task, name='delete_task'),
     url(r'^archive/(?P<task_id>[0-9]+)/$', views.archive_task, name='archive_task'),
@@ -28,7 +28,7 @@ tasks_patterns =[
     url(r'^archived_tasks/$', views.archived_tasks, name='archived_tasks'),
     url(r'^done_tasks/$', views.done_tasks, name='done_tasks'),
     url(r'^available_tasks/$', views.available_tasks, name='available_tasks'),
-    url(r'^folder_tasks/(?P<id>[0-9]+)$', views.folder_tasks, name='folder_tasks'),
+    url(r'^folder_tasks/(?P<folder_id>[0-9]+)$', views.folder_tasks, name='folder_tasks'),
 ]
 
 folder_patterns = [
@@ -37,9 +37,18 @@ folder_patterns = [
     url(r'^delete/(?P<folder_id>[0-9]+)/$', views.delete_folder, name='delete_folder'),
 ]
 
+plan_patterns =[
+    url(r'^$', views.plans, name='plans'),
+    url(r'^(?P<plan_id>[0-9]+)/$', views.show_plan, name='show_plan'),
+    url(r'^add/$', views.add_plan, name='add_plan'),
+    url(r'^edit/(?P<plan_id>[0-9]+)/$', views.edit_plan, name='edit_plan'),
+    url(r'^delete/(?P<plan_id>[0-9]+)/$', views.delete_plan, name='delete_plan'),
+]
+
 urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'tasks/', include(tasks_patterns), name='tasks'),
     url(r'users/', include(users_patterns), name='users'),
-    url(r'folder/', include(folder_patterns), name='folders')
+    url(r'folders/', include(folder_patterns), name='folders'),
+    url(r'plans/', include(plan_patterns), name='plans')
 ]
