@@ -49,27 +49,29 @@
                   <li class="nav-item">
                     <a class="nav-link" style="display: inline-list-item" href="{% url 'todoapp:folder_tasks' folder.id %}">
                       <i class="far fa-folder big-icon"></i>
-                      {{ folder.name|truncatechars:18}}
+                      {{ folder.name|truncatechars:18|title}}
                     </a>
-                    <a href="{% url 'todoapp:edit_folder' folder.id %}" class="pull-right" >
+                    <a href="{% url 'todoapp:edit_folder' folder.id %}">
                         <span class="far fa-edit fa-fw big-icon"></span>
                     </a>
-                    <a href= "{% url 'todoapp:delete_folder' folder.id %}">
+                    <form style='display: inline-block;' action="{% url 'todoapp:delete_folder' folder.id %}" method='post'>
+                    {% csrf_token %}
+                    <button type="submit" href= "{% url 'todoapp:delete_folder' folder.id %}">
                         <span class="fas fa-trash-alt fa-fw big-icon"></span>
-                    </a>
+                    </button>
+                    </form>
+
                   </li>
               {% endfor %}
             </ul>
           </div>
         </nav>
 
-
-
     <div class="col-md 8 offset-2">
         <div class="table-responsive">
             <table class="table">
                 {% if tasks %}
-                    <h2>{{header}}</h2>
+                    <h2>{{header|capfirst}}</h2>
                         <thead>
                         <tr>
                         <th>ID</th>
@@ -92,19 +94,7 @@
                                 <td>{{ task.status.value }}</td>
                                 <td>{{ task.priority.value}}</td>
                                 <td>
-                                  <a href="{% url 'todoapp:show_task' task.id %}" class="btn btn-info">
-                                        <i class="far fa-eye"></i>
-                                  </a>
-                                    <a href="{% url 'todoapp:edit_task' task.id %}" class="btn btn-dark">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                        <a href="#" class="btn btn-success">
-                                        <i class="fas fa-check"></i>
-                                    </a>
-                                    </a>
-                                        <a href="#" class="btn btn-danger">
-                                        <i class="far fa-trash-alt"></i>
-                                    </a>
+                                    {% include "tasks/tasks_buttons_template.html" %}
                                 </td>
                             </tr>
                             {% endfor %}

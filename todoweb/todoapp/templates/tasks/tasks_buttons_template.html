@@ -1,0 +1,26 @@
+<a href="{% url 'todoapp:show_task' task.id %}" class="btn btn-info">
+    <i class="far fa-eye"></i>
+</a>
+{% if task.status.value != 'Archived' %}
+    <a href="{% url 'todoapp:edit_task' task.id %}" class="btn btn-dark">
+        <i class="fas fa-edit"></i>
+    </a>
+    {% if task.status.value != 'Done' %}
+        <a href="{% url 'todoapp:done_task' task.id %}" class="btn btn-success">
+            <i class="fas fa-check"></i>
+        </a>
+    {% endif %}
+    <form class="inline-block" action="{% url 'todoapp:archive_task' task.id %}" method="post">
+        {% csrf_token %}
+        <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to archive task?')">
+            <i class="fas fa-archive"></i>
+        </button>
+    </form>
+{% else %}
+  <form class="inline-block" action="{% url 'todoapp:delete_task' task.id %}" method="post">
+    {% csrf_token %}
+    <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to delete task?')">
+        <i class="fas fa-trash"></i>
+    </button>
+  </form>
+{% endif %}
