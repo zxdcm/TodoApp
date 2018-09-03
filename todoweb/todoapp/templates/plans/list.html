@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %} Plans {% endblock %}
+{% block content %}
+    <div class="container" style="margin-top: 30px">
+        <a class="col-md-auto btn btn-success" href="{% url 'todoapp:add_plan' %}">Add plan</a>
+        <div class="table-responsive">
+            <table class="table">
+                {% if plans %}
+                    <h2>{{header|capfirst}}</h2>
+                        <thead>
+                        <tr>
+                        <th>ID</th>
+                        <th>Task</th>
+                        <th>Period amount</th>
+                        <th>Period</th>
+                        <th>Start date</th>
+                        <th>Repetitions counter</th>
+                        <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {% for plan in plans %}
+                            <tr>
+                                <th scope="row">
+                                <a href="{% url 'todoapp:show_plan' plan.id %}">{{ plan.id }}</a>
+                                </th>
+                                <td>
+                                <a href="{% url 'todoapp:show_task' plan.task_id %}">{{ plan.task_id }}</a>
+                                </td>
+                                <td>{{ plan.period_amount }}</td>                                <td>{{ plan.period.value }}</td>
+                                <td>{{ plan.period.value }}</td>
+                                <td>{{ plan.start_date }}</td>
+                                <td>{{ plan.repetitions_counter }}</td>
+                                </td>
+                                <td>
+                                    <a href="{% url 'todoapp:show_plan' plan.id %}" class="btn btn-info">
+                                        <i class="far fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'todoapp:edit_plan' plan.id %}" class="btn btn-dark">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form class="inline-block" action="{% url 'todoapp:delete_plan' plan.id %}" method="post">
+                                    {% csrf_token %}
+                                        <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to delete plan?')">
+                                        <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                {% else %}
+                    <div class="alert alert-info">You dont have any plans</div>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %} Plan details {% endblock %}
+{% block content %}
+<div class="container" style="padding-bottom: 40px">
+    <h3>Plan details</h3>
+    <div class="col-md-8">
+        <div class="table-responsive">
+            <table class="table">
+                <tbody>
+                    <tr>
+                      <th>ID:</th>
+                      <td>{{plan.id}}</td>
+                    </tr>
+                    <tr>
+                      <th>Task:</th>
+                      <td>{{plan.task_id}}
+                        <a href="#"></a>
+                      </td>
+                    </tr>
+                   <tr>
+                        <th>Period amount:</th>
+                        <td>{{plan.period_amount}}</td>
+                    </tr>
+                    <tr>
+                        <th>Period:</th>
+                        <td>{{plan.period.value}}</td>
+                    </tr>
+                    <tr>
+                      <th>Start date:</th>
+                      <td>{{plan.start_date}}</td>
+                    </tr>
+              </tbody>
+            </table>
+        </div>
+        <div class="container">
+        <a href="{% url 'todoapp:edit_plan' plan.id %}" class="btn btn-dark">
+            Edit
+        </a>
+        <form class="inline-block" action="{% url 'todoapp:delete_plan' plan.id %}" method="post">
+            {% csrf_token %}
+            <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to delete plan?')">
+                Delete
+            </button>
+        </form>
+        <input class='btn btn-primary' type=button value="Back" onClick="javascript:history.go(-1);">
+</div>
+    </div>
+</div>
+{% endblock %}
