@@ -13,7 +13,8 @@ from todoapp import get_service
 from .forms import (TaskForm,
                     FolderForm,
                     SubTaskForm,
-                    MemberForm)
+                    MemberForm,
+                    PlanForm)
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,6 @@ def signup(request):
 
 def index(request):
     return render(request, 'base.html')
-
 
 
 @login_required
@@ -92,7 +92,7 @@ def delete_folder(request, folder_id):
 
 
 @login_required
-def create_task(request):
+def add_task(request):
 
     user = request.user.username
 
@@ -403,12 +403,12 @@ def done_tasks(request):
     return render(request, 'tasks/list.html', args)
 
 @login_required
-def folder_tasks(request, id):
+def folder_tasks(request, folder_id):
     service = get_service()
     user = request.user.username
     try:
         folder = service.get_folder(user=user,
-                                   folder_id=id)
+                                   folder_id=folder_id)
     except:
         return redirect('todoapp:tasks')
     folders = service.get_all_folders(user=user)
@@ -416,6 +416,115 @@ def folder_tasks(request, id):
             'folders':folders}
     return render(request, 'tasks/list.html', args)
 
+@login_required
+def plans(request):
+    service = get_service()
+    user = request.user.username
+    plans = service.get_all_plans(user=user)
+    args = {'plans': plans, 'header': 'Available plans'}
+    return render(request, 'plans/list.html', args)
 
-def dashboard_test(request):
-    return render(request, 'Dashboard Template for Bootstrap.html')
+@login_required
+def add_plan(request):
+
+    user = request.user.username
+
+    if request.method == 'POST':
+        form = PlanForm(user, None, request.POST)
+        if form.is_valid():
+            try:
+                service = get_service()
+                task = service.create_plan(
+                    user=user,
+                    task_id=int(form.cleaned_data['task_id']),
+                    period_amount=form.cleaned_data['period_amount'],
+                    period=form.cleaned_data['period'],
+                    start_date=form.cleaned_data['start_date'],
+                    repetitions_amount=form.cleaned_data['repetitions_amount'],
+                    end_date=form.cleaned_data['end_date'])
+
+            except ValueError as e:
+                form.add_error('end_date', e)
+                return render(request, 'plans/add.html', {'form': form})
+
+            return redirect('todoapp:show_plan', task.id)
+
+    else:
+        form = PlanForm(user, None, None)
+
+    return render(request, 'plans/add.html', {'form': form})
+
+
+@login_required
+def edit_plan(request, plan_id):
+
+    service = get_service()
+    user = request.user.username
+    plan_id = int(plan_id)
+    try:
+        plan = service.get_plan(user=user, plan_id=plan_id)
+    except ObjectNotFound:
+        return redirect('todoapp:index')
+
+    if request.method == 'POST':
+        form = PlanForm(user, plan_id, request.POST)
+        if form.is_valid():
+            # try:
+            plan = service.update_plan(
+                user=user,
+                plan_id=plan_id,
+                period=form.cleaned_data['period'],
+                period_amount=form.cleaned_data['period_amount'],
+                repetitions_amount=form.cleaned_data['repetitions_amount'],
+                end_date=form.cleaned_data['end_date'],
+            )
+            # except ValueError as e:
+            #     form.add_error('end_date', e)
+            #     return render(request, 'plans/edit.html', {'form': form})
+
+            return redirect('todoapp:show_plan', plan.id)
+
+    else:
+        form = PlanForm(
+            user,
+            plan_id,
+            None,
+            initial={
+                'task_id': plan.task_id,
+                'period': plan.period,
+                'period_amount': plan.period_amount,
+                'repetitions_amount': plan.repetitions_amount,
+                'start_date': plan.start_date,
+                'end_date': plan.end_date,
+            })
+
+    return render(request,
+                  'plans/edit.html',
+                  {'form': form})
+
+
+@login_required()
+def show_plan(request, plan_id):
+    try:
+        user = request.user.username
+        service = get_service()
+        plan_id = int(plan_id)
+        plan = service.get_plan(user=user,
+                                plan_id=plan_id)
+
+    except ObjectNotFound:
+        return redirect('todoapp:plans')
+
+    return render(request, 'plans/show.html',
+                  {'plan': plan})
+
+
+@login_required
+def delete_plan(request, plan_id):
+    if request.method == 'POST':
+        user = request.user.username
+        service = get_service()
+        plan_id = int(plan_id)
+        service.delete_plan(user=user,
+                            plan_id=plan_id)
+    return redirect('todoapp:plans')
