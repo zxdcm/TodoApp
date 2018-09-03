@@ -22,7 +22,7 @@ class TaskForm(forms.Form):
         choices=[(priority.value, priority.value) for priority in TaskPriority]
     )
     status = forms.ChoiceField(
-        choices=[(status.value, status.value) for status in TaskStatus][:-2])
+        choices=[(status.value, status.value) for status in TaskStatus][:-1])
     event = forms.BooleanField(initial=False, required=False)
     start_date = forms.DateTimeField(required=False, initial=datetime.now())
     end_date = forms.DateTimeField(required=False,
@@ -42,3 +42,29 @@ class FolderForm(forms.Form):
     name = forms.CharField(max_length=20,
                            widget=forms.TextInput(
                             attrs={'placeholder': 'folder name'}))
+
+    
+class SubTaskForm(forms.Form):
+
+    task_id = forms.ChoiceField()
+
+    def __init__(self, user, *args, **kwargs):
+        super(SubTaskForm, self).__init__(*args, **kwargs)
+        tasks = get_service().get_filtered_tasks(
+            user=user,
+            parentless=True,
+            planless=True,
+        )
+
+        choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks
+                   if task.status != TaskStatus.ARCHIVED)
+        self.fields['task_id'] = forms.ChoiceField(choices=choices)
+
+
+    def clean_task_id(self):
+        return int(self.cleaned_data['task_id'])
+    
+    
+class MemberForm(forms.Form):
+    member = forms.ModelChoiceField(User.objects.all(), required=True)
+    
