@@ -10,7 +10,10 @@ from todolib.models import (TaskPriority,
                             TaskStatus)
 from todolib.exceptions import ObjectNotFound
 from todoapp import get_service
-from .forms import TaskForm, FolderForm
+from .forms import (TaskForm,
+                    FolderForm,
+                    SubTaskForm,
+                    MemberForm)
 
 
 logger = logging.getLogger(__name__)
@@ -57,22 +60,20 @@ def add_folder(request):
     return render(request, 'folders/add.html', {'form': form})
 
 @login_required
-def edit_folder(request, id):
-
+def edit_folder(request, folder_id):
     if request.method == 'POST':
         form = FolderForm(request.POST)
         if form.is_valid():
             service = get_service()
             user = request.user.username
             name = form.cleaned_data['name']
+            folder_id = int(folder_id)
             folder = service.get_folder_by_name(user=user, name=name)
-            logger.info('id type',type(id))
-            if folder and folder.id is not id:
+            if folder and folder.id != folder_id:
                 form.add_error('name', f'You already have folder {name}')
                 return render(request, 'tasks/edit.html', {'form':form})
-
-            service.update_folder(user=user, folder_id=id, name=name)
-            return redirect('todoapp:folder_tasks', id)
+            service.update_folder(user=user, folder_id=folder_id, name=name)
+            return redirect('todoapp:folder_tasks', folder_id)
 
     else:
         form = FolderForm()
@@ -80,12 +81,13 @@ def edit_folder(request, id):
     return render(request, 'folders/edit.html', {'form': form})
 
 @login_required
-def delete_folder(request, id):
+def delete_folder(request, folder_id):
     if request.method == 'POST':
         service = get_service()
         user = request.user.username
+        folder_id = int(folder_id)
         service.delete_folder(user=user,
-                              folder_id=id)
+                              folder_id=folder_id)
     return redirect('todoapp:tasks')
 
 
@@ -129,14 +131,19 @@ def create_task(request):
     return render(request, 'tasks/add.html', {'form': form})
 
 @login_required
-def edit_task(request, id):
+def edit_task(request, task_id):
 
     service = get_service()
     user = request.user.username
-
+    task_id = int(task_id)
     try:
-        task = service.get_task(user=user, task_id=id)
+        task = service.get_task(user=user, task_id=task_id)
     except ObjectNotFound:
+        return redirect('todoapp:index')
+
+    # button to edit task would be disabled. but link to edit task
+    # still will be available. due to forms requests of get type on init form
+    if task.status == TaskStatus.ARCHIVED:
         return redirect('todoapp:index')
 
     if request.method == 'POST':
@@ -144,7 +151,7 @@ def edit_task(request, id):
         if form.is_valid():
             try:
                 task = service.update_task(user=user,
-                                           task_id=id,
+                                           task_id=task_id,
                                            name=form.cleaned_data['name'],
                                            description=form.cleaned_data['description'],
                                            priority=form.cleaned_data['priority'],
@@ -168,7 +175,7 @@ def edit_task(request, id):
             current_folders = service.get_task_folders(task_id=task.id,
                                                        user=user)
 
-            old_folders = set(map(lambda x: x.id, current_folders))
+            old_folders = set(map(lambda folder: folder.id, current_folders))
             new_folders = set(form.cleaned_data['folders'])
 
             add = new_folders.difference(old_folders)
@@ -209,32 +216,141 @@ def edit_task(request, id):
                 'folders': initial_folders
             })
 
-    return render(request, 'tasks/edit.html', {'form': form})
+    return render(request,
+                  'tasks/edit.html',
+                  {'form': form})
 
 @login_required()
-def show_task(request, id):
+def show_task(request, task_id):
     try:
         user = request.user.username
-        task = get_service().get_task(user=user,
-                                      task_id=id)
+        service = get_service()
+        task_id = int(task_id)
+        task = service.get_task(user=user,
+                                      task_id=task_id)
+        subtasks = service.get_subtasks(user=user,
+                                        task_id=task_id)
     except ObjectNotFound:
         return redirect('todoapp:tasks')
-    return render(request, 'tasks/show.html', {'task': task})
+    return render(request, 'tasks/show.html',
+                  {'task': task, 'subtasks': subtasks})
 
 @login_required
 def tasks(request):
     return available_tasks(request)
 
 @login_required
-def delete_task(request):
-    return render(request, 'base.html')
+def add_subtask(request, parent_task_id):
+    user = request.user.username
 
+    if request.method == 'POST':
+        form = SubTaskForm(user, request.POST)
+        if form.is_valid():
+            service = get_service()
+            task_id = form.cleaned_data['task_id']
+            parent_task_id = int(parent_task_id)
+            try:
+                service.add_subtask(user=user,
+                                    task_id=task_id,
+                                    parent_task_id=parent_task_id)
+            except ValueError as e:
+                form.add_error('task_id', e)
+                return render(request,
+                              'tasks/add_subtask.html',
+                              {'form': form})
+
+            return redirect('todoapp:show_task', parent_task_id)
+
+    else:
+        form = SubTaskForm(user)
+
+    return render(request,
+                  'tasks/add_subtask.html',
+                  {'form': form})
+
+@login_required
+def detach_task(request, task_id):
+    if request.method == 'POST':
+        user = request.user.username
+        service = get_service()
+        task_id = int(task_id)
+        service.detach_task(user=user,
+                            task_id=task_id)
+        return redirect('todoapp:show_task', id)
+
+    return redirect('todoapp:index')
+
+
+def share_task(request, task_id):
+    if request.method == 'POST':
+        form = MemberForm(request.POST)
+        if form.is_valid():
+            service = get_service()
+            user= request.user.username
+            task_id = int(task_id)
+            member = form.cleaned_data['member'].username
+            service.share_task(user=user,
+                               task_id=task_id,
+                               user_receiver=member)
+            return redirect('todoapp:show_task', task_id)
+
+    else:
+        form = MemberForm()
+
+    return render(request,
+                  'tasks/add_member.html',
+                  {'form': form})
+
+def unshare_task(request, task_id, member):
+    user = request.user.username
+    service = get_service()
+    task_id = int(task_id)
+    service.unshare_task(user=user,
+                         task_id=task_id,
+                         user_receiver=member)
+
+    return redirect('todoapp:show_task', task_id)
+
+
+def done_task(request, task_id):
+    user = request.user.username
+    service = get_service()
+    task_id = int(task_id)
+    service.change_task_status(user=user,
+                               task_id=task_id,
+                               status=TaskStatus.DONE.value)
+    return redirect('todoapp:show_task', id)
+
+def archive_task(request, task_id):
+    if request.method == 'POST':
+        user = request.user.username
+        service = get_service()
+        task_id = int(task_id)
+        service.change_task_status(user=user,
+                                   task_id=task_id,
+                                   status=TaskStatus.ARCHIVED.value,
+                                   apply_on_subtasks=True)
+        return redirect('todoapp:show_task', id)
+
+    return redirect('todoapp:index')
+
+
+@login_required
+def delete_task(request, task_id):
+    if request.method == 'POST':
+        user = request.user.username
+        service = get_service()
+        task_id = int(task_id)
+        service.delete_task(user=user,
+                            task_id=task_id)
+    return redirect('todoapp:tasks')
 
 @login_required
 def own_tasks(request):
     service = get_service()
     user = request.user.username
-    tasks = service.get_own_tasks(user)
+    tasks = [task for task in service.get_filtered_tasks(user=user, owner=user)
+             if task.status != TaskStatus.ARCHIVED]
     folders = service.get_all_folders(user)
     args = {'tasks':tasks, 'header': 'My tasks',
             'folders': folders}
@@ -244,7 +360,8 @@ def own_tasks(request):
 def available_tasks(request):
     service = get_service()
     user = request.user.username
-    tasks = service.get_available_tasks(user)
+    tasks = [task for task in service.get_available_tasks(user=user)
+             if task.status != TaskStatus.ARCHIVED]
     folders = service.get_all_folders(user)
     args = {'tasks':tasks, 'header': 'Available tasks',
             'folders': folders}
@@ -255,7 +372,8 @@ def available_tasks(request):
 def assigned_tasks(request):
     service = get_service()
     user = request.user.username
-    tasks = service.get_user_assigned_tasks(user)
+    tasks = [task for task in service.get_user_assigned_tasks(user)
+            if task.status != TaskStatus.ARCHIVED]
     folders = service.get_all_folders(user)
     args = {'tasks':tasks, 'header': 'Assigned tasks',
             'folders': folders}
@@ -289,7 +407,7 @@ def folder_tasks(request, id):
     service = get_service()
     user = request.user.username
     try:
-        folder =service.get_folder(user=user,
+        folder = service.get_folder(user=user,
                                    folder_id=id)
     except:
         return redirect('todoapp:tasks')
