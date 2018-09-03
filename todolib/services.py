@@ -168,7 +168,7 @@ class AppService:
         task.members.append(TaskUserRelation(user=user,
                                              task_id=task.id))
 
-        if assigned and assigned is not user:
+        if assigned and assigned != user:
             task.members.append(TaskUserRelation(user=assigned,
                                                  task_id=task.id))
 
@@ -303,6 +303,7 @@ class AppService:
         if relation:
             warn(f'Task already shared with user',
                  RedundancyAction)
+            return
 
         self.session.add(TaskUserRelation(user=user_receiver,
                                           task_id=task_id))
@@ -379,11 +380,15 @@ class AppService:
                            name=None,
                            description=None,
                            parent_task_id=None,
+                           owner=None,
+                           assigned=None,
                            status=None,
                            start_date=None,
                            end_date=None,
                            priority=None,
-                           event=None) -> List[Task]:
+                           event=None,
+                           parentless=None,
+                           planless=None) -> List[Task]:
         """Method allow to tasks filtered by params
            start_date - from
            end_date -  till to
@@ -393,11 +398,15 @@ class AppService:
         name : str
         description : str
         parent_task_id : int
+        owner: str
+        assigned: str
         status : str or TaskStatus object
         start_date : datetime : start from date
         end_date : datetime : end date till
         priority : str or TaskPriority object
         event : Bool
+        parentless : Bool
+        planless : Bool
         Returns
         -------
         List[Task]
@@ -408,6 +417,20 @@ class AppService:
             query = query.filter(Task.name.ilike(f'{name}'))
         if description:
             query = query.filter(Task.description.ilike(f'{description}'))
+
+        if owner:
+            query = query.filter(Task.owner == owner)
+        if assigned:
+            query = query.filter(Task.assigned == assigned)
+
+        if parent_task_id:
+            query = query.filter(Task.parent_task_id == parent_task_id)
+
+        if parentless:
+            query = query.filter(Task.parent_task_id == None)
+
+        if planless:
+            query = query.filter(Task.plan == None)
 
         if priority:
             if isinstance(priority, str):
