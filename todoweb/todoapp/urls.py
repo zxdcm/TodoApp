@@ -13,22 +13,28 @@ users_patterns = [
 
 tasks_patterns =[
     url(r'^$', views.tasks, name='tasks'),
-    url(r'^(?P<id>[0-9]+)/$', views.show_task, name='show_task'),
+    url(r'^(?P<task_id>[0-9]+)/$', views.show_task, name='show_task'),
     url(r'^add/$', views.create_task, name='add_task'),
-    url(r'^edit/(?P<id>[0-9]+)/$', views.edit_task, name='edit_task'),
-    url(r'^delete/(?P<id>[0-9]+)/$', views.delete_task, name='delete_task'),
-    url(r'^own/$', views.own_tasks, name='own_tasks'),
-    url(r'^assigned/$', views.assigned_tasks, name='assigned_tasks'),
-    url(r'^archived/$', views.archived_tasks, name='archived_tasks'),
-    url(r'^done/$', views.done_tasks, name='done_tasks'),
-    url(r'^available/$', views.available_tasks, name='available_tasks'),
+    url(r'^edit/(?P<task_id>[0-9]+)/$', views.edit_task, name='edit_task'),
+    url(r'^delete/(?P<task_id>[0-9]+)/$', views.delete_task, name='delete_task'),
+    url(r'^archive/(?P<task_id>[0-9]+)/$', views.archive_task, name='archive_task'),
+    url(r'^done/(?P<task_id>[0-9]+)/$', views.done_task, name='done_task'),
+    url(r'^add_subtask/(?P<parent_task_id>[0-9]+)/$', views.add_subtask, name='add_subtask'),
+    url(r'^detach/(?P<task_id>[0-9]+)/$', views.detach_task, name='detach_task'),
+    url(r'^share_task/(?P<task_id>[0-9]+)/', views.share_task, name='share_task'),
+    url(r'^unshare_task/(?P<task_id>[0-9]+)/(?P<member>[\w\-]+)/$', views.unshare_task, name='unshare_task'),
+    url(r'^own_tasks/$', views.own_tasks, name='own_tasks'),
+    url(r'^assigned_tasks/$', views.assigned_tasks, name='assigned_tasks'),
+    url(r'^archived_tasks/$', views.archived_tasks, name='archived_tasks'),
+    url(r'^done_tasks/$', views.done_tasks, name='done_tasks'),
+    url(r'^available_tasks/$', views.available_tasks, name='available_tasks'),
     url(r'^folder_tasks/(?P<id>[0-9]+)$', views.folder_tasks, name='folder_tasks'),
 ]
 
 folder_patterns = [
     url(r'^add/$', views.add_folder, name='add_folder'),
-    url(r'^edit(?P<id>[0-9]+)/$', views.edit_folder, name='edit_folder'),
-    url(r'^delete(?P<id>[0-9]+)/$', views.delete_folder, name='delete_folder'),
+    url(r'^edit/(?P<folder_id>[0-9]+)/$', views.edit_folder, name='edit_folder'),
+    url(r'^delete/(?P<folder_id>[0-9]+)/$', views.delete_folder, name='delete_folder'),
 ]
 
 urlpatterns = [
