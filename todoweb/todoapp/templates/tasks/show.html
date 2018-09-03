@@ -1,70 +1,168 @@
 {% extends 'base.html' %}
 {% block title %} Details {% endblock %}
 {% block content %}
-<div class="container" id="paddings">
-<h2>Task details</h2>
-<table class="table">
-  <tbody>
-    <tr>
-      <td class="title">ID:</td>
-      <td>{{task.id}}</td>
-    </tr>
-    <tr>
-      <td class="title">Name:</td>
-      <td>{{task.name}}</td>
-    </tr>
-    <tr>
-        <td class="title">Owner:</td>
-        <td>{{task.owner}}</td>
-    </tr>
-    <tr>
-        <td class="title">Assigned:</td>
-        <td>{{task.assigned}}</td>
-    </tr>
-    <tr>
-      <td class="title">Description:</td>
-      <td>{{task.description}}</td>
-    </tr>
-    <tr>
-      <td class="title">Priority:</td>
-      <td>{{ task.priority.value }}</td>
-    </tr>
-    <tr>
-      <td class="title">Status:</td>
-      <td>{{ task.status.value }}</td>
-    </tr>
-        <tr>
-      <td class="title">Start date:</td>
-      <td>{{task.start_date}}</td>
-    </tr>
-    <tr>
-      <td class="title">End date:</td>
-      <td>{{task.end_date}}</td>
-    </tr>
-    <tr>
-    <tr>
-      <td class="title">Event:</td>
-      <td>{{task.event}}</td>
-    </tr>
-      <td class="title">Parent task:</td>
-      <td>
-        pass
-      </td>
-    </tr>
-    <tr>
-        <td class="title">Created:</td>
-        <td>{{task.created}}</td>
-    </tr>
-    <tr>
-      <td class="title">Updated:</td>
-      <td>{{task.updated}}</td>
-    </tr>
-    <tr>
-      <td class="title">Subtasks:</td>
-      <td>
-       pass
-    </tr>
-  </tbody>
-</table>
+
+<div class="container" style="padding-bottom: 40px">
+    <h3>Task details</h3>
+    <div class="col-md-8">
+        <div class="table-responsive">
+            <table class="table">
+                <tbody>
+                    <tr>
+                      <th>ID:</th>
+                      <td>{{task.id}}</td>
+                    </tr>
+                    <tr>
+                      <th>Name:</th>
+                      <td>{{task.name}}</td>
+                    </tr>
+                    <tr>
+                        <th>Owner:</th>
+                        <td>{{task.owner}}</td>
+                    </tr>
+                    <tr>
+                        <th>Assigned:</th>
+                        <td>{{task.assigned|default:'None'}}</td>
+                    </tr>
+                    <tr>
+                      <th>Description:</th>
+                      <td>{{task.description|default:'No description'}}</td>
+                    </tr>
+                    <tr>
+                      <th>Priority:</th>
+                      <td>{{ task.priority.value }}</td>
+                    </tr>
+                    <tr>
+                      <th>Status:</th>
+                      <td>{{ task.status.value }}</td>
+                    </tr>
+                        <tr>
+                      <th>Start date:</td>
+                      <td>{{task.start_date}}</td>
+                    </tr>
+                    <tr>
+                      <th>End date:</td>
+                      <td>{{task.end_date}}</td>
+                    </tr>
+                    <tr>
+                    <tr>
+                      <th>Event:</td>
+                      <td>{{task.event}}</td>
+                    </tr>
+                      <th>Parent task:</td>
+                      <td> {% if task.parent_task_id|default:'None' %}
+                            <a href="{% url 'todoapp:show_task' task.id %}">
+                            {{ task.parent_task_id }}
+                            </a>
+                           {% endif %}
+                      </td>
+                    </tr>
+                    <tr>
+                    <tr>
+                        <th>Members:
+                            <div class="inline-block mr-auto">
+                                <a class="btn button" href="{% url 'todoapp:share_task' task.id %}">
+                                    <i class="fas fa-plus"></i>
+                                </a>
+                            </div>
+                        </th>
+                        <td>
+                            {% if task.members %}
+                                {% for member in task.members|slice:"1:" %}
+                                    <a class="btn btn-dark" href="{% url 'todoapp:unshare_task' task.id member.user %}">
+                                        <i class="fas fa-times-circle">{{ member.user }}</i>
+                                    </a>
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                        <th>Created:</td>
+                        <td>{{task.created}}</td>
+                    </tr>
+                    <tr>
+                      <th>Updated:</td>
+                      <td>{{task.updated}}</td>
+                    </tr>
+              </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="container">
+        {% if task.status.value != 'Archived' %}
+            <a href="{% url 'todoapp:edit_task' task.id %}" class="btn btn-dark">
+                Edit
+            </a>
+            {% if task.status.value != 'Done' %}
+                <form class="inline-block" action="{% url 'todoapp:done_task' task.id %}" method="post">
+                {% csrf_token %}
+                    <button type='submit' class="btn btn-success" onclick="return confirm('Are you sure you want to done task?')">
+                        Done
+                    </button>
+                </form>
+                <a href="{% url 'todoapp:add_subtask' task.id %}" class="btn btn-info">
+                    Add subtask
+                </a>
+           {% endif %}
+            <form class="inline-block" action="{% url 'todoapp:archive_task' task.id %}" method="post">
+                {% csrf_token %}
+                <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to archive task?')">
+                    Archive
+                </button>
+            </form>
+        {% else %}
+        <form class="inline-block" action="{% url 'todoapp:delete_task' task.id %}" method="post">
+            {% csrf_token %}
+            <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to delete task?')">
+                Delete
+            </button>
+        </form>
+            {% endif %}
+            <input class='btn btn-primary' type=button value="Back" onClick="javascript:history.go(-1);">
+    </div>
+
+    <div class="container-fluid">
+    {% if subtasks %}
+            <div class="col-md 8">
+                <div class="table-responsive">
+                    <table class="table">
+                            <h2>{{Subtasks}}</h2>
+                                <thead>
+                                <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Start date</th>
+                                <th>End date</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                                </thead>
+                                <tbody>
+                                    {% for task in subtasks %}
+                                    <tr>
+                                        <th scope="row">
+                                        <a href="{% url 'todoapp:show_task' task.id %}">{{ task.id }}</a>
+                                        </th>
+                                        <td>{{ task.name }}</td>
+                                        <td>{{ task.start_date}}</td>
+                                        <td>{{ task.end_date}}</td>
+                                        <td>{{ task.status.value }}</td>
+                                        <td>{{ task.priority.value}}</td>
+                                        <td>
+                                            {% include "tasks/tasks_buttons_template.html" %}
+                                            <form class="inline-block" action="{% url 'todoapp:detach_task' task.id %}" method="post">
+                                                {% csrf_token %}
+                                                <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to detach task?')">
+                                                    <i class="fas fa-minus"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                    </table>
+                </div>
+            </div>
+    {% endif %}
+
 </div>
 {% endblock %}
