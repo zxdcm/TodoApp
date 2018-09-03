@@ -1,10 +1,14 @@
 from datetime import datetime, timedelta
 from django import forms
 from django.contrib.auth.models import User
-from todolib.models import TaskStatus, TaskPriority
+from django.core.validators import MinValueValidator
+from todolib.models import TaskStatus, TaskPriority, Period
 from todoapp import get_service
 
+
+
 class TaskForm(forms.Form):
+
     def __init__(self, user, *args, **kwargs):
         super(TaskForm, self).__init__(*args, **kwargs)
         folders = get_service().get_all_folders(user=user)
@@ -38,6 +42,16 @@ class TaskForm(forms.Form):
         return data
 
 
+    def clean_start_date(self):
+        if self.cleaned_data['start_date']:
+            self.cleaned_data['start_date'].replace(tzinfo=None)
+
+    def clean_end_date(self):
+        if self.cleaned_data['end_date']:
+            self.cleaned_data['end_date'].replace(tzinfo=None)
+
+
+
 class FolderForm(forms.Form):
     name = forms.CharField(max_length=20,
                            widget=forms.TextInput(
@@ -46,15 +60,13 @@ class FolderForm(forms.Form):
     
 class SubTaskForm(forms.Form):
 
-    task_id = forms.ChoiceField()
+    task_id = forms.ChoiceField(required=True)
 
     def __init__(self, user, *args, **kwargs):
         super(SubTaskForm, self).__init__(*args, **kwargs)
         tasks = get_service().get_filtered_tasks(
             user=user,
-            parentless=True,
-            planless=True,
-        )
+            parentless=True)
 
         choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks
                    if task.status != TaskStatus.ARCHIVED)
@@ -66,5 +78,69 @@ class SubTaskForm(forms.Form):
     
     
 class MemberForm(forms.Form):
+
     member = forms.ModelChoiceField(User.objects.all(), required=True)
-    
+
+
+class PlanForm(forms.Form):
+
+    def __init__(self, user, plan_id, *args, **kwargs):
+        super(PlanForm, self).__init__(*args, **kwargs)
+        service = get_service()
+        if plan_id is None:
+            tasks = service.get_filtered_tasks(
+                user=user,
+                planless=True)
+            choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks
+                       if task.status != TaskStatus.ARCHIVED and not task.subtasks)
+            self.fields['task_id'] = forms.ChoiceField(choices=choices, required=True)
+            self.fields['task_id'].label = 'Task'
+        else:
+            pass
+            # self.fields['task_id'].widget = forms.HiddenInput()
+            # self.fields['start_date'].widget.attrs['readonly'] = True
+
+
+
+    task_id = forms.ChoiceField()
+
+    period_amount = forms.IntegerField(
+        validators=[MinValueValidator(1)],
+        required=True)
+    period = forms.ChoiceField(
+        choices=[(period.value, period.value) for period in Period],
+        required=True)
+
+    repetitions_amount = forms.IntegerField(
+        validators=[MinValueValidator(1)],
+        required=False,
+        help_text='You may leave this field empty.')
+
+    start_date = forms.DateTimeField(required=False, initial=datetime.now())
+    end_date = forms.DateTimeField(required=False,
+                                   help_text='You may leave this field empty')
+
+
+    def clean_task_id(self):
+        return int(self.cleaned_data['task_id'])
+
+    def clean(self):
+        start_date = self.cleaned_data['start_date']
+        end_date = self.cleaned_data['end_date']
+        if start_date and start_date:
+            if end_date < start_date:
+                msg = 'End date should be greater than start date.'
+                self._errors['end_date'] = [msg]
+
+    def clean_end_date(self):
+        if self.cleaned_data['end_date']:
+            return self.cleaned_data['end_date'].replace(tzinfo=None)
+
+    def clean_start_date(self):
+        if self.cleaned_data['start_date'] :
+            date = self.cleaned_data['start_date'].replace(tzinfo=None)
+            if date < datetime.now():
+                msg = 'Start date should be in future.'
+                self._errors['start_date'] = [msg]
+
+            return date
