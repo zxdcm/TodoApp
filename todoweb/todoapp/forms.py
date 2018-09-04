@@ -28,8 +28,8 @@ class TaskForm(forms.Form):
     status = forms.ChoiceField(
         choices=[(status.value, status.value) for status in TaskStatus][:-1])
     event = forms.BooleanField(initial=False, required=False)
-    start_date = forms.DateTimeField(required=False, initial=datetime.now())
-    end_date = forms.DateTimeField(required=False,
+    start_date = forms.DateTimeField(required=True, initial=datetime.now())
+    end_date = forms.DateTimeField(required=True,
                                    initial=datetime.now() + timedelta(days=1))
 
     assigned = forms.ModelChoiceField(User.objects.all(), required=False)
@@ -86,8 +86,8 @@ class PlanForm(forms.Form):
 
     def __init__(self, user, plan_id, *args, **kwargs):
         super(PlanForm, self).__init__(*args, **kwargs)
-        service = get_service()
         if plan_id is None:
+            service = get_service()
             tasks = service.get_filtered_tasks(
                 user=user,
                 planless=True)
@@ -96,10 +96,10 @@ class PlanForm(forms.Form):
             self.fields['task_id'] = forms.ChoiceField(choices=choices, required=True)
             self.fields['task_id'].label = 'Task'
         else:
-            pass
-            # self.fields['task_id'].widget = forms.HiddenInput()
-            # self.fields['start_date'].widget.attrs['readonly'] = True
-
+            self.fields['task_id'].widget = forms.HiddenInput()
+            self.fields['task_id'].required = False
+            self.fields['start_date'].widget.attrs['readonly'] = True
+            self.fields['start_date'].required = False
 
 
     task_id = forms.ChoiceField()
@@ -116,31 +116,36 @@ class PlanForm(forms.Form):
         required=False,
         help_text='You may leave this field empty.')
 
-    start_date = forms.DateTimeField(required=False, initial=datetime.now())
+    start_date = forms.DateTimeField(required=True, initial=datetime.now())
     end_date = forms.DateTimeField(required=False,
                                    help_text='You may leave this field empty')
 
 
     def clean_task_id(self):
-        return int(self.cleaned_data['task_id'])
-
-    def clean(self):
-        start_date = self.cleaned_data['start_date']
-        end_date = self.cleaned_data['end_date']
-        if start_date and start_date:
-            if end_date < start_date:
-                msg = 'End date should be greater than start date.'
-                self._errors['end_date'] = [msg]
+        if self.cleaned_data['task_id']:
+            return int(self.cleaned_data['task_id'])
 
     def clean_end_date(self):
         if self.cleaned_data['end_date']:
-            return self.cleaned_data['end_date'].replace(tzinfo=None)
+            date = self.cleaned_data['end_date'].replace(tzinfo=None)
+            if date < datetime.now():
+                msg = 'End date should be in future.'
+                self._errors['end_date'] = [msg]
+            return date
 
     def clean_start_date(self):
-        if self.cleaned_data['start_date'] :
+        if self.cleaned_data['start_date']:
             date = self.cleaned_data['start_date'].replace(tzinfo=None)
             if date < datetime.now():
                 msg = 'Start date should be in future.'
                 self._errors['start_date'] = [msg]
-
             return date
+
+    def clean(self):
+        # start_date = self.cleaned_data.get('start_date', None)
+        start_date = self.cleaned_data['start_date']
+        end_date = self.cleaned_data['end_date']
+        if start_date and end_date:
+            if end_date < start_date:
+                msg = 'End date should be greater than start date.'
+                self._errors['end_date'] = [msg]
