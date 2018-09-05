@@ -5,6 +5,11 @@
     padding: 15px;
     margin: 0 auto;
 }
+
+.inline-block{
+    display: inline-block
+}
+
 body {
   /*min-height: 75rem;*/
   padding-top: 4.5rem;
@@ -17,4 +22,10 @@ body {
 
 .big-icon{
     font-size:1.2em;
+}
+
+div.anchorContainer
+{
+    float:left;
+    clear:left;
 }
