@@ -45,10 +45,19 @@ plan_patterns =[
     url(r'^delete/(?P<plan_id>[0-9]+)/$', views.delete_plan, name='delete_plan'),
 ]
 
+reminders_patters =[
+    url(r'^$', views.reminders, name='reminders'),
+    url(r'^add/$', views.add_reminder, name='add_reminder'),
+    url(r'^edit/(?P<reminder_id>[0-9]+)/$', views.edit_reminder, name='edit_reminder'),
+    url(r'^delete/(?P<reminder_id>[0-9]+)/$', views.delete_reminder, name='delete_reminder'),
+]
+
 urlpatterns = [
     url(r'^$', views.index, name='index'),
     url(r'tasks/', include(tasks_patterns), name='tasks'),
     url(r'users/', include(users_patterns), name='users'),
     url(r'folders/', include(folder_patterns), name='folders'),
-    url(r'plans/', include(plan_patterns), name='plans')
+    url(r'plans/', include(plan_patterns), name='plans'),
+    url(r'reminders/', include(reminders_patters), name='reminders')
+
 ]
