@@ -4,6 +4,7 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from functools import wraps
 import logging
 
 from todolib.models import (TaskPriority,
@@ -14,10 +15,22 @@ from .forms import (TaskForm,
                     FolderForm,
                     SubTaskForm,
                     MemberForm,
-                    PlanForm)
+                    PlanForm,
+                    ReminderForm)
 
 
 logger = logging.getLogger(__name__)
+
+
+def execute_plans(func):
+    @wraps(func)
+    def wrapper(request, *args, **kwargs):
+        logger.info('username' ,request.user.username)
+        get_service().execute_plans(request.user.username)
+        return func(request, *args, **kwargs)
+
+    return wrapper
+
 
 def signup(request):
     if request.method == 'POST':
@@ -37,6 +50,7 @@ def index(request):
 
 
 @login_required
+@execute_plans
 def add_folder(request):
 
     if request.method == 'POST':
@@ -60,6 +74,7 @@ def add_folder(request):
     return render(request, 'folders/add.html', {'form': form})
 
 @login_required
+@execute_plans
 def edit_folder(request, folder_id):
     if request.method == 'POST':
         form = FolderForm(request.POST)
@@ -81,6 +96,7 @@ def edit_folder(request, folder_id):
     return render(request, 'folders/edit.html', {'form': form})
 
 @login_required
+@execute_plans
 def delete_folder(request, folder_id):
     if request.method == 'POST':
         service = get_service()
@@ -92,6 +108,7 @@ def delete_folder(request, folder_id):
 
 
 @login_required
+@execute_plans
 def add_task(request):
 
     user = request.user.username
@@ -131,6 +148,7 @@ def add_task(request):
     return render(request, 'tasks/add.html', {'form': form})
 
 @login_required
+@execute_plans
 def edit_task(request, task_id):
 
     service = get_service()
@@ -220,7 +238,8 @@ def edit_task(request, task_id):
                   'tasks/edit.html',
                   {'form': form})
 
-@login_required()
+@login_required
+@execute_plans
 def show_task(request, task_id):
     try:
         user = request.user.username
@@ -240,6 +259,7 @@ def tasks(request):
     return available_tasks(request)
 
 @login_required
+@execute_plans
 def add_subtask(request, parent_task_id):
     user = request.user.username
 
@@ -269,6 +289,7 @@ def add_subtask(request, parent_task_id):
                   {'form': form})
 
 @login_required
+@execute_plans
 def detach_task(request, task_id):
     if request.method == 'POST':
         user = request.user.username
@@ -276,11 +297,12 @@ def detach_task(request, task_id):
         task_id = int(task_id)
         service.detach_task(user=user,
                             task_id=task_id)
-        return redirect('todoapp:show_task', id)
+        return redirect('todoapp:show_task', task_id)
 
     return redirect('todoapp:index')
 
-
+@login_required
+@execute_plans
 def share_task(request, task_id):
     if request.method == 'POST':
         form = MemberForm(request.POST)
@@ -301,6 +323,8 @@ def share_task(request, task_id):
                   'tasks/add_member.html',
                   {'form': form})
 
+@login_required
+@execute_plans
 def unshare_task(request, task_id, member):
     user = request.user.username
     service = get_service()
@@ -319,8 +343,10 @@ def done_task(request, task_id):
     service.change_task_status(user=user,
                                task_id=task_id,
                                status=TaskStatus.DONE.value)
-    return redirect('todoapp:show_task', id)
+    return redirect('todoapp:show_task', task_id)
 
+@login_required
+@execute_plans
 def archive_task(request, task_id):
     if request.method == 'POST':
         user = request.user.username
@@ -330,12 +356,13 @@ def archive_task(request, task_id):
                                    task_id=task_id,
                                    status=TaskStatus.ARCHIVED.value,
                                    apply_on_subtasks=True)
-        return redirect('todoapp:show_task', id)
+        return redirect('todoapp:show_task', task_id)
 
     return redirect('todoapp:index')
 
 
 @login_required
+@execute_plans
 def delete_task(request, task_id):
     if request.method == 'POST':
         user = request.user.username
@@ -346,63 +373,75 @@ def delete_task(request, task_id):
     return redirect('todoapp:tasks')
 
 @login_required
+@execute_plans
 def own_tasks(request):
     service = get_service()
     user = request.user.username
     tasks = [task for task in service.get_filtered_tasks(user=user, owner=user)
              if task.status != TaskStatus.ARCHIVED]
     folders = service.get_all_folders(user)
-    args = {'tasks':tasks, 'header': 'My tasks',
-            'folders': folders}
-    return render(request, 'tasks/list.html', args)
+
+    return render(request, 'tasks/list.html',
+                  {'tasks': tasks, 'header': 'My tasks',
+                   'folders': folders})
 
 @login_required
+@execute_plans
 def available_tasks(request):
     service = get_service()
     user = request.user.username
     tasks = [task for task in service.get_available_tasks(user=user)
              if task.status != TaskStatus.ARCHIVED]
     folders = service.get_all_folders(user)
-    args = {'tasks':tasks, 'header': 'Available tasks',
-            'folders': folders}
-    return render(request, 'tasks/list.html', args)
+
+    return render(request, 'tasks/list.html',
+                  {'tasks': tasks, 'header': 'Available tasks',
+                   'folders': folders})
 
 
 @login_required
+@execute_plans
 def assigned_tasks(request):
     service = get_service()
     user = request.user.username
     tasks = [task for task in service.get_user_assigned_tasks(user)
             if task.status != TaskStatus.ARCHIVED]
     folders = service.get_all_folders(user)
-    args = {'tasks':tasks, 'header': 'Assigned tasks',
-            'folders': folders}
-    return render(request, 'tasks/list.html', args)
+
+    return render(request, 'tasks/list.html',
+                  {'tasks': tasks, 'header': 'Assigned tasks',
+                   'folders': folders})
 
 @login_required
+@execute_plans
 def archived_tasks(request):
     service = get_service()
     user = request.user.username
     tasks = service.get_filtered_tasks(user=user,
                                        status=TaskStatus.ARCHIVED)
     folders = service.get_all_folders(user)
-    args = {'tasks':tasks, 'header': 'Archived tasks',
-            'folders': folders}
-    return render(request, 'tasks/list.html', args)
+
+    return render(request, 'tasks/list.html',
+                  {'tasks': tasks, 'header': 'Archived tasks',
+                   'folders': folders})
 
 
 @login_required
+@execute_plans
 def done_tasks(request):
     service = get_service()
     user = request.user.username
     tasks = service.get_filtered_tasks(user=user,
                                        status=TaskStatus.DONE)
     folders = service.get_all_folders(user)
-    args = {'tasks':tasks, 'header': 'Done tasks',
-            'folders': folders}
-    return render(request, 'tasks/list.html', args)
+
+    return render(request, 'tasks/list.html',
+                  {'tasks': tasks,
+                   'header': 'Done tasks',
+                   'folders': folders})
 
 @login_required
+@execute_plans
 def folder_tasks(request, folder_id):
     service = get_service()
     user = request.user.username
@@ -412,19 +451,27 @@ def folder_tasks(request, folder_id):
     except:
         return redirect('todoapp:tasks')
     folders = service.get_all_folders(user=user)
-    args = {'tasks':folder.tasks, 'header': f'{folder.name} tasks',
-            'folders':folders}
-    return render(request, 'tasks/list.html', args)
+    tasks = [task for task in folder.tasks
+             if task.status != TaskStatus.ARCHIVED]
+
+    return render(request, 'tasks/list.html',
+                  {'tasks': tasks,
+                   'header': f'{folder.name} tasks',
+                   'folders': folders})
 
 @login_required
+@execute_plans
 def plans(request):
     service = get_service()
     user = request.user.username
     plans = service.get_all_plans(user=user)
-    args = {'plans': plans, 'header': 'Available plans'}
-    return render(request, 'plans/list.html', args)
+
+    return render(request, 'plans/list.html',
+                  {'plans': plans,
+                   'header': 'Available plans'})
 
 @login_required
+@execute_plans
 def add_plan(request):
 
     user = request.user.username
@@ -456,6 +503,7 @@ def add_plan(request):
 
 
 @login_required
+@execute_plans
 def edit_plan(request, plan_id):
 
     service = get_service()
@@ -469,7 +517,6 @@ def edit_plan(request, plan_id):
     if request.method == 'POST':
         form = PlanForm(user, plan_id, request.POST)
         if form.is_valid():
-            # try:
             plan = service.update_plan(
                 user=user,
                 plan_id=plan_id,
@@ -478,19 +525,13 @@ def edit_plan(request, plan_id):
                 repetitions_amount=form.cleaned_data['repetitions_amount'],
                 end_date=form.cleaned_data['end_date'],
             )
-            # except ValueError as e:
-            #     form.add_error('end_date', e)
-            #     return render(request, 'plans/edit.html', {'form': form})
-
             return redirect('todoapp:show_plan', plan.id)
 
     else:
         form = PlanForm(
             user,
             plan_id,
-            None,
             initial={
-                'task_id': plan.task_id,
                 'period': plan.period,
                 'period_amount': plan.period_amount,
                 'repetitions_amount': plan.repetitions_amount,
@@ -503,7 +544,8 @@ def edit_plan(request, plan_id):
                   {'form': form})
 
 
-@login_required()
+@login_required
+@execute_plans
 def show_plan(request, plan_id):
     try:
         user = request.user.username
@@ -520,6 +562,7 @@ def show_plan(request, plan_id):
 
 
 @login_required
+@execute_plans
 def delete_plan(request, plan_id):
     if request.method == 'POST':
         user = request.user.username
@@ -528,3 +571,95 @@ def delete_plan(request, plan_id):
         service.delete_plan(user=user,
                             plan_id=plan_id)
     return redirect('todoapp:plans')
+
+@login_required
+@execute_plans
+def add_reminder(request):
+
+    user = request.user.username
+
+    if request.method == 'POST':
+        form = ReminderForm(user, request.POST)
+        if form.is_valid():
+            try:
+                service = get_service()
+                service.create_reminder(
+                    user=user,
+                    task_id=int(form.cleaned_data['task_id']),
+                    date=form.cleaned_data['date'])
+
+            except ValueError as e:
+                form.add_error('date', e)
+                return render(request, 'reminders/add.html', {'form': form})
+
+            return redirect('todoapp:reminders')
+
+    else:
+        form = ReminderForm(user, None)
+
+    return render(request, 'reminders/add.html', {'form': form})
+
+@login_required
+@execute_plans
+def edit_reminder(request, reminder_id):
+
+    service = get_service()
+    user = request.user.username
+    reminder_id = int(reminder_id)
+
+    try:
+        reminder = service.get_reminder(user=user, reminder_id=reminder_id)
+    except ObjectNotFound:
+        return redirect('todoapp:index')
+
+    if request.method == 'POST':
+        form = ReminderForm(user, request.POST)
+        if form.is_valid():
+            try:
+                service.update_reminder(user=user,
+                                        reminder_id=reminder_id,
+                                        date=form.cleaned_data['date'])
+            except ValueError as e:
+                form.add_error('start_date', e)
+                return render(request, 'reminders/edit.html', {'form': form})
+
+            return redirect('todoapp:reminders')
+
+    else:
+
+        form = ReminderForm(
+            user,
+            initial={
+                'date': reminder.date
+            })
+
+    return render(request,
+                  'reminders/edit.html',
+                  {'form': form})
+
+
+@login_required
+@execute_plans
+def delete_reminder(request, reminder_id):
+    if request.method == 'POST':
+        user = request.user.username
+        service = get_service()
+        reminder_id = int(reminder_id)
+        service.delete_reminder(user=user,
+                                reminder_id=reminder_id)
+
+    return redirect('todoapp:reminders')
+
+
+
+@login_required
+@execute_plans
+def reminders(request):
+    service = get_service()
+    user = request.user.username
+    reminders = service.get_all_reminders(user=user)
+
+    return render(request, 'reminders/list.html',
+                  {'reminders': reminders,
+                   'header': 'Available reminders'})
+
