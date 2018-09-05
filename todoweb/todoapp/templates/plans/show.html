@@ -29,6 +29,25 @@
                       <th>Start date:</th>
                       <td>{{plan.start_date}}</td>
                     </tr>
+                      <th>End type:</th>
+                      <td>{{plan.end_type.value}}</td>
+                    </tr>
+                    {% if plan.end_type.value == 'Amount' %}
+                        <tr>
+                          <th>Repetitions amount:</th>
+                          <td>{{plan.repetitions_amount}}</td>
+                        </tr>
+                    {% elif plan.end_type.value == 'Date' %}
+                        <tr>
+                          <th>End date:</th>
+                          <td>{{plan.end_date}}</td>
+                        </tr>
+                    {% endif %}
+                     <tr>
+                      <th>Repetitions counter:</th>
+                      <td>{{plan.repetitions_counter}}</td>
+                    </tr>
+                    <tr>
               </tbody>
             </table>
         </div>
