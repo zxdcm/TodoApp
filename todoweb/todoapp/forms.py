@@ -113,12 +113,10 @@ class PlanForm(forms.Form):
 
     repetitions_amount = forms.IntegerField(
         validators=[MinValueValidator(1)],
-        required=False,
-        help_text='You may leave this field empty.')
+        required=False)
 
     start_date = forms.DateTimeField(required=True, initial=datetime.now())
-    end_date = forms.DateTimeField(required=False,
-                                   help_text='You may leave this field empty')
+    end_date = forms.DateTimeField(required=False)
 
 
     def clean_task_id(self):
@@ -130,7 +128,8 @@ class PlanForm(forms.Form):
             date = self.cleaned_data['end_date'].replace(tzinfo=None)
             if date < datetime.now():
                 msg = 'End date should be in future.'
-                self._errors['end_date'] = [msg]
+                # self._errors['end_date'] = [msg]
+                self.add_error('end_date', msg)
             return date
 
     def clean_start_date(self):
@@ -138,14 +137,34 @@ class PlanForm(forms.Form):
             date = self.cleaned_data['start_date'].replace(tzinfo=None)
             if date < datetime.now():
                 msg = 'Start date should be in future.'
-                self._errors['start_date'] = [msg]
+                self.add_error('start_date',msg)
             return date
 
     def clean(self):
-        # start_date = self.cleaned_data.get('start_date', None)
         start_date = self.cleaned_data['start_date']
-        end_date = self.cleaned_data['end_date']
+        end_date = self.cleaned_data.get('end_date', None)
         if start_date and end_date:
             if end_date < start_date:
                 msg = 'End date should be greater than start date.'
                 self._errors['end_date'] = [msg]
+
+
+class ReminderForm(forms.Form):
+
+    task_id = forms.ChoiceField(required=True)
+    date = forms.DateTimeField(required=True)
+
+    def __init__(self, user, *args, **kwargs):
+        super(ReminderForm, self).__init__(*args, **kwargs)
+        tasks = get_service().get_filtered_tasks(user=user)
+
+        choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks)
+        self.fields['task_id'] = forms.ChoiceField(choices=choices)
+
+
+    def clean_task_id(self):
+        return int(self.cleaned_data['task_id'])
+
+    def clean_date(self):
+        return self.cleaned_data['date'].replace(tzinfo=None)
+
