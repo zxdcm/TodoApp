@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Filtered tasks{% endblock %}
+{% block content %}
+<div class="container">
+    {% include 'tasks/tasks_template.html' with tasks=tasks header=header miss='Nothing found' %}
+</div>
+{% endblock %}
