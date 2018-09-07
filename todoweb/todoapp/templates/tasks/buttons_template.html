@@ -6,9 +6,12 @@
         <i class="fas fa-edit"></i>
     </a>
     {% if task.status.value != 'Done' %}
-        <a href="{% url 'todoapp:done_task' task.id %}" class="btn btn-success">
+    <form class="inline-block" action="{% url 'todoapp:done_task' task.id %}" method="post">
+        {% csrf_token %}
+        <button type='submit' class="btn btn-success">
             <i class="fas fa-check"></i>
-        </a>
+        </button>
+    </form>
     {% endif %}
     <form class="inline-block" action="{% url 'todoapp:archive_task' task.id %}" method="post">
         {% csrf_token %}
