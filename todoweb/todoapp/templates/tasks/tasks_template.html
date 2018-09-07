@@ -1,0 +1,36 @@
+<table id="data-table" class="table">
+        <h2>{{header|capfirst}}</h2>
+            <thead>
+            <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Start date</th>
+            <th>End date</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Actions</th>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <th>
+                    <a href="{% url 'todoapp:show_task' task.id %}">{{ task.id }}</a>
+                    </th>
+                    <td>{{ task.name }}</td>
+                    <td>{{ task.start_date}}</td>
+                    <td>{{ task.end_date}}</td>
+                    <td>{{ task.status.value }}</td>
+                    <td>{{ task.priority.value}}</td>
+                    <td>
+                        {% include "tasks/buttons_template.html" %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+</table>
+
+<script>
+    $(document).ready( function () {
+    $('#data-table').DataTable();
+} );
+</script>
