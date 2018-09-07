@@ -16,7 +16,8 @@ from .forms import (TaskForm,
                     SubTaskForm,
                     MemberForm,
                     PlanForm,
-                    ReminderForm)
+                    ReminderForm,
+                    TaskFilterForm)
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,6 @@ logger = logging.getLogger(__name__)
 def execute_plans(func):
     @wraps(func)
     def wrapper(request, *args, **kwargs):
-        logger.info('username' ,request.user.username)
         get_service().execute_plans(request.user.username)
         return func(request, *args, **kwargs)
 
@@ -59,6 +59,7 @@ def add_folder(request):
             service = get_service()
             name = form.cleaned_data['name']
             user = request.user.username
+
             folder = service.get_folder_by_name(user=user, name=name)
 
             if folder:
@@ -83,10 +84,13 @@ def edit_folder(request, folder_id):
             user = request.user.username
             name = form.cleaned_data['name']
             folder_id = int(folder_id)
+
             folder = service.get_folder_by_name(user=user, name=name)
+
             if folder and folder.id != folder_id:
                 form.add_error('name', f'You already have folder {name}')
                 return render(request, 'tasks/edit.html', {'form':form})
+
             service.update_folder(user=user, folder_id=folder_id, name=name)
             return redirect('todoapp:folder_tasks', folder_id)
 
@@ -102,8 +106,10 @@ def delete_folder(request, folder_id):
         service = get_service()
         user = request.user.username
         folder_id = int(folder_id)
+
         service.delete_folder(user=user,
                               folder_id=folder_id)
+
     return redirect('todoapp:tasks')
 
 
@@ -118,19 +124,15 @@ def add_task(request):
         if form.is_valid():
             try:
                 service = get_service()
-                assigned = form.cleaned_data['assigned']
-                if assigned:
-                    assigned = assigned.username
-
                 task = service.create_task(user=user,
-                                       name=form.cleaned_data['name'],
-                                       description=form.cleaned_data['description'],
-                                       priority=form.cleaned_data['priority'],
-                                       status=form.cleaned_data['status'],
-                                       event = form.cleaned_data['event'],
-                                       start_date=form.cleaned_data['start_date'],
-                                       end_date=form.cleaned_data['end_date'],
-                                       assigned=assigned)
+                                           name=form.cleaned_data['name'],
+                                           description=form.cleaned_data['description'],
+                                           priority=form.cleaned_data['priority'],
+                                           status=form.cleaned_data['status'],
+                                           event = form.cleaned_data['event'],
+                                           start_date=form.cleaned_data['start_date'],
+                                           end_date=form.cleaned_data['end_date'],
+                                           assigned=form.cleaned_data['assigned'])
             except ValueError as e:
                 form.add_error('start_date', e)
                 return render(request, 'tasks/add.html', {'form': form})
@@ -154,6 +156,7 @@ def edit_task(request, task_id):
     service = get_service()
     user = request.user.username
     task_id = int(task_id)
+
     try:
         task = service.get_task(user=user, task_id=task_id)
     except ObjectNotFound:
@@ -186,9 +189,7 @@ def edit_task(request, task_id):
             if assigned:
                 service.assign_user(user=user,
                                     task_id=task.id,
-                                    user_receiver=assigned.username)
-            else:
-                task.assigned = None
+                                    user_receiver=assigned)
 
             current_folders = service.get_task_folders(task_id=task.id,
                                                        user=user)
@@ -269,6 +270,7 @@ def add_subtask(request, parent_task_id):
             service = get_service()
             task_id = form.cleaned_data['task_id']
             parent_task_id = int(parent_task_id)
+
             try:
                 service.add_subtask(user=user,
                                     task_id=task_id,
@@ -371,6 +373,39 @@ def delete_task(request, task_id):
         service.delete_task(user=user,
                             task_id=task_id)
     return redirect('todoapp:tasks')
+
+def filter_tasks(request):
+    user = request.user.username
+    if request.method == 'POST':
+        form = TaskFilterForm(user, request.POST)
+        if form.is_valid():
+            service = get_service()
+
+            # if not any(form.cleaned_data.values()):
+            #     form.add_error(0, 'You didnt select any paramether')
+            #     return render(request, 'tasks/filter.html', {'form': form})
+            #
+            # for x in form.cleaned_data.values():
+            #     logger.info(f'{x} = type{x}')
+            # logger.info(f'{any(form.cleaned_data.values())}')
+
+            tasks = service.get_filtered_tasks(user=user,
+                                               name=form.cleaned_data['name'],
+                                               description=form.cleaned_data['description'],
+                                               parent_task_id=form.cleaned_data['parent_task_id'],
+                                               owner=form.cleaned_data['owner'],
+                                               assigned=form.cleaned_data['assigned'],
+                                               status=form.cleaned_data['status'],
+                                               priority=form.cleaned_data['priority'],
+                                               event=form.cleaned_data['event'])
+
+            return render(request, 'tasks/filtered_result.html',
+                          {'header': 'Search result',
+                           'tasks': tasks})
+
+    else:
+        form = TaskFilterForm(user, None)
+    return render(request, 'tasks/filter.html', {'form' : form})
 
 @login_required
 @execute_plans
@@ -514,6 +549,10 @@ def edit_plan(request, plan_id):
     except ObjectNotFound:
         return redirect('todoapp:index')
 
+    # deny requests when plan already activated
+    if plan.start_date != plan.last_activated:
+        return redirect('todoapp:index')
+
     if request.method == 'POST':
         form = PlanForm(user, plan_id, request.POST)
         if form.is_valid():
@@ -531,8 +570,9 @@ def edit_plan(request, plan_id):
         form = PlanForm(
             user,
             plan_id,
+            None,
             initial={
-                'period': plan.period,
+                'period': plan.period.value,
                 'period_amount': plan.period_amount,
                 'repetitions_amount': plan.repetitions_amount,
                 'start_date': plan.start_date,
@@ -621,7 +661,8 @@ def edit_reminder(request, reminder_id):
                                         date=form.cleaned_data['date'])
             except ValueError as e:
                 form.add_error('start_date', e)
-                return render(request, 'reminders/edit.html', {'form': form})
+                return render(request, 'reminders/edit.html',
+                              {'form': form})
 
             return redirect('todoapp:reminders')
 
@@ -630,8 +671,7 @@ def edit_reminder(request, reminder_id):
         form = ReminderForm(
             user,
             initial={
-                'date': reminder.date
-            })
+                'date': reminder.date})
 
     return render(request,
                   'reminders/edit.html',
