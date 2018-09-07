@@ -139,7 +139,7 @@
                                 <tbody>
                                     {% for task in subtasks %}
                                     <tr>
-                                        <th scope="row">
+                                        <th>
                                         <a href="{% url 'todoapp:show_task' task.id %}">{{ task.id }}</a>
                                         </th>
                                         <td>{{ task.name }}</td>
@@ -148,7 +148,7 @@
                                         <td>{{ task.status.value }}</td>
                                         <td>{{ task.priority.value}}</td>
                                         <td>
-                                            {% include "tasks/tasks_buttons_template.html" %}
+                                            {% include "tasks/buttons_template.html" %}
                                             <form class="inline-block" action="{% url 'todoapp:detach_task' task.id %}" method="post">
                                                 {% csrf_token %}
                                                 <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to detach task?')">
