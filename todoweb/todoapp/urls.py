@@ -23,12 +23,14 @@ tasks_patterns =[
     url(r'^detach/(?P<task_id>[0-9]+)/$', views.detach_task, name='detach_task'),
     url(r'^share_task/(?P<task_id>[0-9]+)/', views.share_task, name='share_task'),
     url(r'^unshare_task/(?P<task_id>[0-9]+)/(?P<member>[\w\-]+)/$', views.unshare_task, name='unshare_task'),
+    url(r'^filter_tasks/', views.filter_tasks, name='filter_tasks'),
     url(r'^own_tasks/$', views.own_tasks, name='own_tasks'),
     url(r'^assigned_tasks/$', views.assigned_tasks, name='assigned_tasks'),
     url(r'^archived_tasks/$', views.archived_tasks, name='archived_tasks'),
     url(r'^done_tasks/$', views.done_tasks, name='done_tasks'),
     url(r'^available_tasks/$', views.available_tasks, name='available_tasks'),
     url(r'^folder_tasks/(?P<folder_id>[0-9]+)$', views.folder_tasks, name='folder_tasks'),
+
 ]
 
 folder_patterns = [
