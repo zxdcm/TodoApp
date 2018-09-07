@@ -47,18 +47,18 @@
             <ul class="nav flex-column">
               {% for folder in folders %}
                   <li class="nav-item">
-                    <a class="nav-link" style="display: inline-list-item" href="{% url 'todoapp:folder_tasks' folder.id %}">
+                    <a class="nav-link inline-block" href="{% url 'todoapp:folder_tasks' folder.id %}">
                       <i class="far fa-folder big-icon"></i>
                       {{ folder.name|truncatechars:18|title}}
                     </a>
-                    <a href="{% url 'todoapp:edit_folder' folder.id %}">
+                    <a class="" href="{% url 'todoapp:edit_folder' folder.id %}">
                         <span class="far fa-edit fa-fw big-icon"></span>
                     </a>
-                    <form style='display: inline-block;' action="{% url 'todoapp:delete_folder' folder.id %}" method='post'>
+                    <form class="float-md-right" action="{% url 'todoapp:delete_folder' folder.id %}" method='post'>
                     {% csrf_token %}
-                    <button type="submit" href= "{% url 'todoapp:delete_folder' folder.id %}">
-                        <span class="fas fa-trash-alt fa-fw big-icon"></span>
-                    </button>
+                        <button type="submit" href= "{% url 'todoapp:delete_folder' folder.id %}">
+                            <span class="fas fa-trash-alt fa-fw big-icon"></span>
+                        </button>
                     </form>
 
                   </li>
@@ -66,45 +66,18 @@
             </ul>
           </div>
         </nav>
-
-    <div class="col-md 8 offset-2">
-        <div class="table-responsive">
-            <table class="table">
-                {% if tasks %}
-                    <h2>{{header|capfirst}}</h2>
-                        <thead>
-                        <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Start date</th>
-                        <th>End date</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                        <th>Actions</th>
-                        </thead>
-                        <tbody>
-                            {% for task in tasks %}
-                            <tr>
-                                <th scope="row">
-                                <a href="{% url 'todoapp:show_task' task.id %}">{{ task.id }}</a>
-                                </th>
-                                <td>{{ task.name }}</td>
-                                <td>{{ task.start_date}}</td>
-                                <td>{{ task.end_date}}</td>
-                                <td>{{ task.status.value }}</td>
-                                <td>{{ task.priority.value}}</td>
-                                <td>
-                                    {% include "tasks/tasks_buttons_template.html" %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                {% else %}
-                    <div class="alert alert-info">No tasks there :)</div>
-                {% endif %}
-            </table>
-        </div>
-    </div>
+      <div class="col-md 8 offset-2">
+        {% if tasks %}
+            {% include 'tasks/tasks_template.html' with tasks=tasks %}
+        {% else %}
+             <div class="alert-info align-content-center">
+                  <h4 class="alert-heading">Well done!</h4>
+                  <p>
+                      You dont have any tasks in this location.
+                  </p>
+             </div>
+        {% endif %}
+      </div>
     </div>
 </div>
 {% endblock %}
