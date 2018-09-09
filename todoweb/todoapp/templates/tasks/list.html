@@ -7,31 +7,41 @@
           <div class="sidebar-sticky">
             <ul class="nav flex-column">
               <li class="nav-item">
-                <a class="nav-link active" href="{% url 'todoapp:own_tasks' %}">
+                <a class="nav-link
+                  {% if nav_active == 'own' %} active {% endif %}"
+                   href="{% url 'todoapp:own_tasks' %}">
                   <i class="fas fa-home fa-fw big-icon"></i>
-                  My <span class="sr-only">(current)</span>
+                  My
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'todoapp:available_tasks' %}">
+                <a class="nav-link
+                   {% if nav_active == 'available' %} active {% endif %}"
+                   href="{% url 'todoapp:available_tasks' %}">
                   <i class="fas fa-users fa-fw big-icon"></i>
                   Available
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'todoapp:assigned_tasks' %}">
+                <a class="nav-link
+                  {% if nav_active == 'assigned' %} active {% endif %}"
+                  href="{% url 'todoapp:assigned_tasks' %}">
                   <i class="fas fa-hands-helping fa-fw big-icon"></i>
                   Assigned
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'todoapp:archived_tasks' %}">
+                <a class="nav-link
+                   {% if nav_active == 'archived' %} active {% endif %}"
+                   href="{% url 'todoapp:archived_tasks' %}">
                   <i class="fas fa-archive fa-fw"></i>
                   Archived
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'todoapp:done_tasks' %}">
+                <a class="nav-link
+                  {% if nav_active == 'done' %} active {% endif %}"
+                  href="{% url 'todoapp:done_tasks' %}">
                   <i class="fas fa-check fa-fw big-icon"></i>
                   Done
                 </a>
@@ -47,7 +57,9 @@
             <ul class="nav flex-column">
               {% for folder in folders %}
                   <li class="nav-item">
-                    <a class="nav-link inline-block" href="{% url 'todoapp:folder_tasks' folder.id %}">
+                    <a class="nav-link inline-block
+                      {% if nav_active == folder.id %} active {% endif %}"
+                       href="{% url 'todoapp:folder_tasks' folder.id %}">
                       <i class="far fa-folder big-icon"></i>
                       {{ folder.name|truncatechars:18|title}}
                     </a>
@@ -60,13 +72,12 @@
                             <span class="fas fa-trash-alt fa-fw big-icon"></span>
                         </button>
                     </form>
-
                   </li>
               {% endfor %}
             </ul>
           </div>
         </nav>
-      <div class="col-md 8 offset-2">
+      <div class="col-md 8 offset-2" style="margin-right: 20px" >
         {% if tasks %}
             {% include 'tasks/tasks_template.html' with tasks=tasks %}
         {% else %}
