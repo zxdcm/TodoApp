@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+
 from django import forms
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
+
 from todolib.models import TaskStatus, TaskPriority, Period
 from todoapp import get_service
 
@@ -18,8 +20,8 @@ class TaskForm(forms.Form):
         self.fields['folders'].choices = folders_tuples
 
 
-    name = forms.CharField(max_length=200, widget=forms.TextInput(
-        attrs={'placeholder': 'Task name'}))
+    name = forms.CharField(max_length=200)
+
     description = forms.CharField(
         required=False,
         empty_value=None)
@@ -59,9 +61,7 @@ class TaskForm(forms.Form):
 
 
 class FolderForm(forms.Form):
-    name = forms.CharField(max_length=20,
-                           widget=forms.TextInput(
-                            attrs={'placeholder': 'folder name'}))
+    name = forms.CharField(max_length=20)
 
     
 class SubTaskForm(forms.Form):
@@ -163,10 +163,10 @@ class ReminderForm(forms.Form):
             return self.cleaned_data['date'].replace(tzinfo=None)
 
 
-class TaskFilterForm(forms.Form):
+class TaskSearchForm(forms.Form):
 
     def __init__(self, user, *args, **kwargs):
-        super(TaskFilterForm, self).__init__(*args, **kwargs)
+        super(TaskSearchForm, self).__init__(*args, **kwargs)
 
         service = get_service()
 
