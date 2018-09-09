@@ -31,6 +31,14 @@
 
 <script>
     $(document).ready( function () {
-    $('#data-table').DataTable();
+    $('#data-table').DataTable({
+            "language": {
+               "lengthMenu": "Show _MENU_ tasks" ,
+               "zeroRecords": "No matching tasks found",
+               "info": "Showing _START_ to _END_ of _TOTAL_ tasks",
+               "infoEmpty": "Showing 0 to 0 of 0 tasks",
+               "infoFiltered": "(filtered from _MAX_ total tasks)"},
+             "lengthMenu": [ 5, 10, 25, 50, 75, 100 ]
+        });
 } );
 </script>

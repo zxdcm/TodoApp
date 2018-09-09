@@ -120,11 +120,11 @@
             <input class='btn btn-primary' type=button value="Back" onClick="javascript:history.go(-1);">
     </div>
 
-    <div class="container-fluid">
+    <div class="container-fluid" style="margin-top: 20px">
     {% if subtasks %}
             <div class="col-md 8">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table" id="data-table">
                             <h2>{{Subtasks}}</h2>
                                 <thead>
                                 <tr>
@@ -162,6 +162,19 @@
                     </table>
                 </div>
             </div>
+    <script>
+        $(document).ready( function () {
+        $('#data-table').DataTable({
+            "language": {
+               "lengthMenu": "Show _MENU_ subtasks" ,
+               "zeroRecords": "No matching subtasks found",
+               "info": "Showing _START_ to _END_ of _TOTAL_ subtasks",
+               "infoEmpty": "Showing 0 to 0 of 0 subtasks",
+               "infoFiltered": "(filtered from _MAX_ total subtasks)"},
+            "lengthMenu": [ 5, 10, 25, 50, 75, 100 ]
+        });
+    } );
+    </script>
     {% endif %}
     </div>
 </div>
