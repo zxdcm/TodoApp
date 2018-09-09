@@ -23,7 +23,6 @@ tasks_patterns =[
     url(r'^detach/(?P<task_id>[0-9]+)/$', views.detach_task, name='detach_task'),
     url(r'^share_task/(?P<task_id>[0-9]+)/', views.share_task, name='share_task'),
     url(r'^unshare_task/(?P<task_id>[0-9]+)/(?P<member>[\w\-]+)/$', views.unshare_task, name='unshare_task'),
-    url(r'^filter_tasks/', views.filter_tasks, name='filter_tasks'),
     url(r'^own_tasks/$', views.own_tasks, name='own_tasks'),
     url(r'^assigned_tasks/$', views.assigned_tasks, name='assigned_tasks'),
     url(r'^archived_tasks/$', views.archived_tasks, name='archived_tasks'),
@@ -54,12 +53,16 @@ reminders_patters =[
     url(r'^delete/(?P<reminder_id>[0-9]+)/$', views.delete_reminder, name='delete_reminder'),
 ]
 
+search_patters =[
+    url(r'^tasks', views.search_tasks, name='search_tasks'),
+]
+
 urlpatterns = [
     url(r'^$', views.index, name='index'),
+    url(r'search/', include(search_patters), name='search'),
     url(r'tasks/', include(tasks_patterns), name='tasks'),
     url(r'users/', include(users_patterns), name='users'),
     url(r'folders/', include(folder_patterns), name='folders'),
     url(r'plans/', include(plan_patterns), name='plans'),
-    url(r'reminders/', include(reminders_patters), name='reminders')
-
+    url(r'reminders/', include(reminders_patters), name='reminders'),
 ]
