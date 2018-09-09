@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+    <div class="container">
+        {% if user.is_authenticated %}
+            <h2>Hello,
+                {{ user.username }}</h2>
+            <h3>
+                <a href="{% url 'todoapp:tasks' %}">Tasks</a>
+                are waiting for you
+            </h3>
+        {% else %}
+            <h2>
+                <strong>Todo application</strong>
+            </h2>
+            <h3>TodoApp is a simple task tracker and plan manager.<br>
+                App allows you to create and edit tasks, track progress, share them with other users.<br>
+                Assign executors, set end dates and priorities, group tasks in personal folders.<br>
+                Set reminders for significant tasks<br>
+                <br>
+                Please <a href="{% url 'todoapp:login' %}">Login</a>
+                or <a href="{% url 'todoapp:signup' %}">Sign up</a>
+            </h3>
+        {% endif %}
+    </div>
+{% endblock %}
