@@ -1,5 +1,6 @@
-from todocli.user import User
 import configparser
+
+from todocli.user import User
 
 
 class UserService:

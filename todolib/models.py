@@ -1,3 +1,6 @@
+from datetime import datetime
+import enum
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -13,8 +16,7 @@ from sqlalchemy.orm import (relationship,
                             backref,
                             scoped_session)
 from sqlalchemy import create_engine
-from datetime import datetime
-import enum
+
 
 Base = declarative_base()
 FORMAT = '%Y-%m-%d %H:%M'

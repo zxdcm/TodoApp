@@ -1,5 +1,3 @@
-from sqlalchemy import (orm,
-                        exc)
 from typing import List
 from warnings import warn
 from datetime import datetime

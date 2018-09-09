@@ -1,10 +1,13 @@
 from datetime import datetime
+from os import sys
+import argparse
+
 from dateutil.parser import parse
+
 from todolib.models import (TaskPriority,
                             TaskStatus,
                             Period)
-from os import sys
-import argparse
+
 
 
 class DefaultHelpParser(argparse.ArgumentParser):

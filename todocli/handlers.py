@@ -1,11 +1,13 @@
+
+from os import sys
+
+import textwrap
+
 from todolib.services import (AppService,
                               TaskStatus)
 
 from todolib.exceptions import LibError, LibWarning
 from todocli.user_service import UserService
-from os import sys
-import textwrap
-
 
 def error_catcher(func):
     def wrapper(*args, **kwargs):

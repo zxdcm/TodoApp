@@ -15,5 +15,5 @@ class LibWarning(Warning):
 
 
 class RedundancyAction(LibWarning):
-    """Raises when trying to perform action that already has been done"""
+    """Raises when trying to perform action that already has been applied"""
     pass
