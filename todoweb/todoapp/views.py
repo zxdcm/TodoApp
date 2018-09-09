@@ -5,10 +5,9 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from functools import wraps
-import logging
 
-from todolib.models import (TaskPriority,
-                            TaskStatus)
+from todolib.models import TaskStatus
+
 from todolib.exceptions import ObjectNotFound
 from todoapp import get_service
 from .forms import (TaskForm,
@@ -17,10 +16,7 @@ from .forms import (TaskForm,
                     MemberForm,
                     PlanForm,
                     ReminderForm,
-                    TaskFilterForm)
-
-
-logger = logging.getLogger(__name__)
+                    TaskSearchForm)
 
 
 def execute_plans(func):
@@ -31,6 +27,10 @@ def execute_plans(func):
 
     return wrapper
 
+def index(request):
+    return render(
+        request,
+        'index.html')
 
 def signup(request):
     if request.method == 'POST':
@@ -44,10 +44,6 @@ def signup(request):
     return render(request,
                   'registration/signup.html',
                   {'form': form})
-
-def index(request):
-    return render(request, 'base.html')
-
 
 @login_required
 @execute_plans
@@ -374,20 +370,12 @@ def delete_task(request, task_id):
                             task_id=task_id)
     return redirect('todoapp:tasks')
 
-def filter_tasks(request):
+def search_tasks(request):
     user = request.user.username
     if request.method == 'POST':
-        form = TaskFilterForm(user, request.POST)
+        form = TaskSearchForm(user, request.POST)
         if form.is_valid():
             service = get_service()
-
-            # if not any(form.cleaned_data.values()):
-            #     form.add_error(0, 'You didnt select any paramether')
-            #     return render(request, 'tasks/filter.html', {'form': form})
-            #
-            # for x in form.cleaned_data.values():
-            #     logger.info(f'{x} = type{x}')
-            # logger.info(f'{any(form.cleaned_data.values())}')
 
             tasks = service.get_filtered_tasks(user=user,
                                                name=form.cleaned_data['name'],
@@ -399,13 +387,13 @@ def filter_tasks(request):
                                                priority=form.cleaned_data['priority'],
                                                event=form.cleaned_data['event'])
 
-            return render(request, 'tasks/filtered_result.html',
+            return render(request, 'tasks/search_result.html',
                           {'header': 'Search result',
                            'tasks': tasks})
 
     else:
-        form = TaskFilterForm(user, None)
-    return render(request, 'tasks/filter.html', {'form' : form})
+        form = TaskSearchForm(user, None)
+    return render(request, 'tasks/search.html', {'form' : form})
 
 @login_required
 @execute_plans
@@ -418,7 +406,8 @@ def own_tasks(request):
 
     return render(request, 'tasks/list.html',
                   {'tasks': tasks, 'header': 'My tasks',
-                   'folders': folders})
+                   'folders': folders,
+                   'nav_active': 'own'})
 
 @login_required
 @execute_plans
@@ -431,7 +420,8 @@ def available_tasks(request):
 
     return render(request, 'tasks/list.html',
                   {'tasks': tasks, 'header': 'Available tasks',
-                   'folders': folders})
+                   'folders': folders,
+                   'nav_active': 'available'})
 
 
 @login_required
@@ -445,7 +435,8 @@ def assigned_tasks(request):
 
     return render(request, 'tasks/list.html',
                   {'tasks': tasks, 'header': 'Assigned tasks',
-                   'folders': folders})
+                   'folders': folders,
+                   'nav_active': 'assigned'})
 
 @login_required
 @execute_plans
@@ -458,7 +449,8 @@ def archived_tasks(request):
 
     return render(request, 'tasks/list.html',
                   {'tasks': tasks, 'header': 'Archived tasks',
-                   'folders': folders})
+                   'folders': folders,
+                   'nav_active': 'archived'})
 
 
 @login_required
@@ -473,7 +465,8 @@ def done_tasks(request):
     return render(request, 'tasks/list.html',
                   {'tasks': tasks,
                    'header': 'Done tasks',
-                   'folders': folders})
+                   'folders': folders,
+                   'nav_active': 'done'})
 
 @login_required
 @execute_plans
@@ -492,7 +485,8 @@ def folder_tasks(request, folder_id):
     return render(request, 'tasks/list.html',
                   {'tasks': tasks,
                    'header': f'{folder.name} tasks',
-                   'folders': folders})
+                   'folders': folders,
+                   'nav_active': folder.id})
 
 @login_required
 @execute_plans
