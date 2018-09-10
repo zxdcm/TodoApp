@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 {% block title %}Tasks{% endblock %}
 {% block content %}
-<div class="container">
-    {% if tasks %}
-    {% include 'tasks/tasks_template.html' with tasks=tasks header=header %}
-    {% else %}
-     <div class="alert-info align-content-center">
-          <h4 class="alert-heading">No result found</h4>
-          <p>
-              You dont have any tasks that matches search params.
-          </p>
-     </div>
-    {% endif %}
-</div>
+    <div class="container">
+        {% if tasks %}
+            {% include 'tasks/tasks_template.html' with tasks=tasks header=header %}
+        {% else %}
+            <div class="alert-info align-content-center">
+                <h4 class="alert-heading">No result found</h4>
+                <p>
+                    You dont have any tasks that matches search params.
+                </p>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}

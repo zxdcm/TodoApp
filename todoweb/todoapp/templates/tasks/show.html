@@ -2,63 +2,63 @@
 {% block title %} Details {% endblock %}
 {% block content %}
 
-<div class="container" style="padding-bottom: 40px">
-    <h3>Task details</h3>
-    <div class="col-md-8">
-        <div class="table-responsive">
-            <table class="table">
-                <tbody>
+    <div class="container" style="padding-bottom: 40px">
+        <h3>Task details</h3>
+        <div class="col-md-8">
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
                     <tr>
-                      <th>ID:</th>
-                      <td>{{task.id}}</td>
+                        <th>ID:</th>
+                        <td>{{ task.id }}</td>
                     </tr>
                     <tr>
-                      <th>Name:</th>
-                      <td>{{task.name}}</td>
+                        <th>Name:</th>
+                        <td>{{ task.name }}</td>
                     </tr>
                     <tr>
                         <th>Owner:</th>
-                        <td>{{task.owner}}</td>
+                        <td>{{ task.owner }}</td>
                     </tr>
                     <tr>
                         <th>Assigned:</th>
-                        <td>{{task.assigned|default:'None'}}</td>
+                        <td>{{ task.assigned|default:'None' }}</td>
                     </tr>
                     <tr>
-                      <th>Description:</th>
-                      <td>{{task.description|default:'No description'}}</td>
+                        <th>Description:</th>
+                        <td>{{ task.description|default:'No description' }}</td>
                     </tr>
                     <tr>
-                      <th>Priority:</th>
-                      <td>{{ task.priority.value }}</td>
+                        <th>Priority:</th>
+                        <td>{{ task.priority.value }}</td>
                     </tr>
                     <tr>
-                      <th>Status:</th>
-                      <td>{{ task.status.value }}</td>
+                        <th>Status:</th>
+                        <td>{{ task.status.value }}</td>
                     </tr>
                     <tr>
-                      <th>Start date:</th>
-                      <td>{{task.start_date}}</td>
+                        <th>Start date:</th>
+                        <td>{{ task.start_date }}</td>
                     </tr>
                     <tr>
-                      <th>End date:</th>
-                      <td>{{task.end_date}}</td>
+                        <th>End date:</th>
+                        <td>{{ task.end_date }}</td>
                     </tr>
                     <tr>
                     <tr>
-                      <th>Event:</th>
-                      <td>{{task.event}}</td>
+                        <th>Event:</th>
+                        <td>{{ task.event }}</td>
                     </tr>
-                      <th>Parent task:</th>
-                      <td>
-                          {% if task.parent_task_id %}
-                            <a href="{% url 'todoapp:show_task' task.parent_task_id%}">
-                            #{{ task.parent_task_id }}
+                    <th>Parent task:</th>
+                    <td>
+                        {% if task.parent_task_id %}
+                            <a href="{% url 'todoapp:show_task' task.parent_task_id %}">
+                                #{{ task.parent_task_id }}
                             </a>
-                          {% else %}
-                              None
-                           {% endif %}
-                      </td>
+                        {% else %}
+                            None
+                        {% endif %}
+                    </td>
                     </tr>
                     <tr>
                     <tr>
@@ -72,13 +72,14 @@
                         <td>
                             {% if task.members %}
                                 {% for member in task.members %}
-                                    <span class="btn btn-dark" >
+                                    <span class="btn btn-dark">
                                         {{ member.user }}
-                                    {% if member.user != task.owner %}
-                                        <a style="color:white" href="{% url 'todoapp:unshare_task' task.id member.user %}">
-                                                <i class="fas fa-times-circle"></i>
-                                    {% endif %}
-                                    </a>
+                                        {% if member.user != task.owner %}
+                                            <a style="color:white"
+                                               href="{% url 'todoapp:unshare_task' task.id member.user %}">
+                                            <i class="fas fa-times-circle"></i>
+                                        {% endif %}
+                                        </a>
                                     </span>
                                 {% endfor %}
                             {% endif %}
@@ -87,70 +88,74 @@
                         <th>Plan:</th>
                         <td>
                             {% if task.plan %}
-                            <a href="{% url 'todoapp:show_plan' task.plan.id %}">
-                            #{{ task.plan.id }}
-                            </a>
-                          {% else %}
-                              None
-                           {% endif %}
+                                <a href="{% url 'todoapp:show_plan' task.plan.id %}">
+                                    #{{ task.plan.id }}
+                                </a>
+                            {% else %}
+                                None
+                            {% endif %}
                         </td>
                     </tr>
                     </tr>
-                        <th>Created:</th>
-                        <td>{{task.created}}</td>
+                    <th>Created:</th>
+                    <td>{{ task.created }}</td>
                     </tr>
                     <tr>
-                      <th>Updated:</td>
-                      <td>{{task.updated}}</td>
+                        <th>Updated:
+                        </td>
+                        <td>{{ task.updated }}</td>
                     </tr>
-              </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-    <div class="container">
-        {% if task.status.value != 'Archived' %}
-            <a href="{% url 'todoapp:edit_task' task.id %}" class="btn btn-dark">
-                Edit
-            </a>
-            {% if task.status.value != 'Done' %}
-                <form class="inline-block" action="{% url 'todoapp:done_task' task.id %}" method="post">
-                {% csrf_token %}
-                    <button type='submit' class="btn btn-success" onclick="return confirm('Are you sure you want to done task?')">
-                        Done
+        <div class="container">
+            {% if task.status.value != 'Archived' %}
+                <a href="{% url 'todoapp:edit_task' task.id %}" class="btn btn-dark">
+                    Edit
+                </a>
+                {% if task.status.value != 'Done' %}
+                    <form class="inline-block" action="{% url 'todoapp:done_task' task.id %}" method="post">
+                        {% csrf_token %}
+                        <button type='submit' class="btn btn-success"
+                                onclick="return confirm('Are you sure you want to done task?')">
+                            Done
+                        </button>
+                    </form>
+                    {% if task.plan is None %}
+                        <a href="{% url 'todoapp:add_subtask' task.id %}" class="btn btn-info">
+                            Add subtask
+                        </a>
+                    {% endif %}
+
+                {% endif %}
+                <form class="inline-block" action="{% url 'todoapp:archive_task' task.id %}" method="post">
+                    {% csrf_token %}
+                    <button type='submit' class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to archive task?')">
+                        Archive
                     </button>
                 </form>
-                {% if task.plan is None %}
-                <a href="{% url 'todoapp:add_subtask' task.id %}" class="btn btn-info">
-                    Add subtask
-                </a>
-                {% endif %}
-
-           {% endif %}
-            <form class="inline-block" action="{% url 'todoapp:archive_task' task.id %}" method="post">
-                {% csrf_token %}
-                <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to archive task?')">
-                    Archive
-                </button>
-            </form>
-        {% else %}
-        <form class="inline-block" action="{% url 'todoapp:delete_task' task.id %}" method="post">
-            {% csrf_token %}
-            <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to delete task?')">
-                Delete
-            </button>
-        </form>
+            {% else %}
+                <form class="inline-block" action="{% url 'todoapp:delete_task' task.id %}" method="post">
+                    {% csrf_token %}
+                    <button type='submit' class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to delete task?')">
+                        Delete
+                    </button>
+                </form>
             {% endif %}
             <input class='btn btn-primary' type=button value="Back" onClick="javascript:history.go(-1);">
-    </div>
+        </div>
 
-    <div class="container-fluid" style="margin-top: 20px">
-    {% if subtasks %}
-            <div class="col-md 8">
-                <div class="table-responsive">
-                    <table class="table" id="data-table">
-                            <h2>{{Subtasks}}</h2>
-                                <thead>
-                                <tr>
+        <div class="container-fluid" style="margin-top: 20px">
+            {% if subtasks %}
+                <div class="col-md 8">
+                    <div class="table-responsive">
+                        <table class="table" id="data-table">
+                            <h2>{{ Subtasks }}</h2>
+                            <thead>
+                            <tr>
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Start date</th>
@@ -158,47 +163,50 @@
                                 <th>Status</th>
                                 <th>Priority</th>
                                 <th>Actions</th>
-                                </thead>
-                                <tbody>
-                                    {% for task in subtasks %}
-                                    <tr>
-                                        <th>
+                            </thead>
+                            <tbody>
+                            {% for task in subtasks %}
+                                <tr>
+                                    <th>
                                         <a href="{% url 'todoapp:show_task' task.id %}">{{ task.id }}</a>
-                                        </th>
-                                        <td>{{ task.name }}</td>
-                                        <td>{{ task.start_date}}</td>
-                                        <td>{{ task.end_date}}</td>
-                                        <td>{{ task.status.value }}</td>
-                                        <td>{{ task.priority.value}}</td>
-                                        <td>
-                                            {% include "tasks/buttons_template.html" %}
-                                            <form class="inline-block" action="{% url 'todoapp:detach_task' task.id %}" method="post">
-                                                {% csrf_token %}
-                                                <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to detach task?')">
-                                                    <i class="fas fa-minus"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                    </table>
+                                    </th>
+                                    <td>{{ task.name }}</td>
+                                    <td>{{ task.start_date }}</td>
+                                    <td>{{ task.end_date }}</td>
+                                    <td>{{ task.status.value }}</td>
+                                    <td>{{ task.priority.value }}</td>
+                                    <td>
+                                        {% include "tasks/buttons_template.html" %}
+                                        <form class="inline-block" action="{% url 'todoapp:detach_task' task.id %}"
+                                              method="post">
+                                            {% csrf_token %}
+                                            <button type='submit' class="btn btn-danger"
+                                                    onclick="return confirm('Are you sure you want to detach task?')">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-    <script>
-        $(document).ready( function () {
-        $('#data-table').DataTable({
-            "language": {
-               "lengthMenu": "Show _MENU_ subtasks" ,
-               "zeroRecords": "No matching subtasks found",
-               "info": "Showing _START_ to _END_ of _TOTAL_ subtasks",
-               "infoEmpty": "Showing 0 to 0 of 0 subtasks",
-               "infoFiltered": "(filtered from _MAX_ total subtasks)"},
-            "lengthMenu": [ 5, 10, 25, 50, 75, 100 ]
-        });
-    } );
-    </script>
-    {% endif %}
+                <script>
+                    $(document).ready(function () {
+                        $('#data-table').DataTable({
+                            "language": {
+                                "lengthMenu": "Show _MENU_ subtasks",
+                                "zeroRecords": "No matching subtasks found",
+                                "info": "Showing _START_ to _END_ of _TOTAL_ subtasks",
+                                "infoEmpty": "Showing 0 to 0 of 0 subtasks",
+                                "infoFiltered": "(filtered from _MAX_ total subtasks)"
+                            },
+                            "lengthMenu": [5, 10, 25, 50, 75, 100]
+                        });
+                    });
+                </script>
+            {% endif %}
+        </div>
     </div>
-</div>
 {% endblock %}

@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
 {% block title %}New reminder{% endblock %}
 {% block content %}
-{% load bootstrap4 %}
-{{ form.media }}
-<div class="container" id="paddings">
-    <h2>New reminder</h2>
-    <div class='form'>
-      <form method="post">
-        {% csrf_token %}
-        {% bootstrap_form form %}
-        {% buttons %}
-          <button type="submit" class="btn btn-success">Submit</button>
-        {% endbuttons %}
-      </form>
+    {% load bootstrap4 %}
+    {{ form.media }}
+    <div class="container" id="paddings">
+        <h2>New reminder</h2>
+        <div class='form'>
+            <form method="post">
+                {% csrf_token %}
+                {% bootstrap_form form %}
+                {% buttons %}
+                    <button type="submit" class="btn btn-success">Submit</button>
+                {% endbuttons %}
+            </form>
+        </div>
+        <input class='btn btn-primary' type=button value="Back" onClick="javascript:history.go(-1);">
     </div>
-    <input class='btn btn-primary' type=button value="Back" onClick="javascript:history.go(-1);">
-</div>
 {% endblock %}

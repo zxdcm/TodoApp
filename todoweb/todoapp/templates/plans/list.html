@@ -2,69 +2,71 @@
 {% block title %} Plans {% endblock %}
 {% block content %}
     <div class="container" style="margin-top: 30px">
-    <a class="col-md-auto float-right btn btn-primary" href="{% url 'todoapp:add_plan' %}">Add plan</a>
+        <a class="col-md-auto float-right btn btn-primary" href="{% url 'todoapp:add_plan' %}">Add plan</a>
         {% if plans %}
             <table class="table" id="data-table">
-                    <h2>{{header|capfirst}}</h2>
-                        <thead>
-                        <th>ID</th>
-                        <th>Task</th>
-                        <th>Period amount</th>
-                        <th>Period</th>
-                        <th>Start date</th>
-                        <th>Repetitions counter</th>
-                        <th>Actions</th>
-                        </thead>
-                        <tbody>
-                            {% for plan in plans %}
-                            <tr>
-                                <td>
-                                <a href="{% url 'todoapp:show_plan' plan.id %}">{{ plan.id }}</a>
-                                </td>
-                                <td>
-                                <a href="{% url 'todoapp:show_task' plan.task_id %}">{{ plan.task_id }}</a>
-                                </td>
-                                <td>{{ plan.period_amount }}</td>
-                                <td>{{ plan.period.value }}</td>
-                                <td>{{ plan.start_date }}</td>
-                                <td>{{ plan.repetitions_counter }}</td>
-                                <td>
-                                    <a href="{% url 'todoapp:show_plan' plan.id %}" class="btn btn-info">
-                                        <i class="far fa-eye"></i>
-                                    </a>
-                                    {% if plan.start_date == plan.last_activated %}
-                                        <a href="{% url 'todoapp:edit_plan' plan.id %}" class="btn btn-dark">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    {% endif %}
-                                    <form class="inline-block" action="{% url 'todoapp:delete_plan' plan.id %}" method="post">
-                                    {% csrf_token %}
-                                        <button type='submit' class="btn btn-danger" onclick="return confirm('Are you sure you want to delete plan?')">
-                                        <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                 <script>
-                    $(document).ready( function () {
-                    $('#data-table').DataTable({
-                        "language": {
-                           "lengthMenu": "Show _MENU_ plans" ,
-                           "zeroRecords": "No matching plans found",
-                           "info": "Showing _START_ to _END_ of _TOTAL_ plans",
-                           "infoEmpty": "Showing 0 to 0 of 0 plans",
-                           "infoFiltered": "(filtered from _MAX_ total plans)"},
-                        "lengthMenu": [5, 10, 25, 50, 75, 100 ],
-                        "iDisplayLength": 10
+                <h2>{{ header|capfirst }}</h2>
+                <thead>
+                <th>ID</th>
+                <th>Task</th>
+                <th>Period amount</th>
+                <th>Period</th>
+                <th>Start date</th>
+                <th>Repetitions counter</th>
+                <th>Actions</th>
+                </thead>
+                <tbody>
+                {% for plan in plans %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'todoapp:show_plan' plan.id %}">{{ plan.id }}</a>
+                        </td>
+                        <td>
+                            <a href="{% url 'todoapp:show_task' plan.task_id %}">{{ plan.task_id }}</a>
+                        </td>
+                        <td>{{ plan.period_amount }}</td>
+                        <td>{{ plan.period.value }}</td>
+                        <td>{{ plan.start_date }}</td>
+                        <td>{{ plan.repetitions_counter }}</td>
+                        <td>
+                            <a href="{% url 'todoapp:show_plan' plan.id %}" class="btn btn-info">
+                                <i class="far fa-eye"></i>
+                            </a>
+                            {% if plan.start_date == plan.last_activated %}
+                                <a href="{% url 'todoapp:edit_plan' plan.id %}" class="btn btn-dark">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            {% endif %}
+                            <form class="inline-block" action="{% url 'todoapp:delete_plan' plan.id %}" method="post">
+                                {% csrf_token %}
+                                <button type='submit' class="btn btn-danger"
+                                        onclick="return confirm('Are you sure you want to delete plan?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <script>
+                    $(document).ready(function () {
+                        $('#data-table').DataTable({
+                            "language": {
+                                "lengthMenu": "Show _MENU_ plans",
+                                "zeroRecords": "No matching plans found",
+                                "info": "Showing _START_ to _END_ of _TOTAL_ plans",
+                                "infoEmpty": "Showing 0 to 0 of 0 plans",
+                                "infoFiltered": "(filtered from _MAX_ total plans)"
+                            },
+                            "lengthMenu": [5, 10, 25, 50, 75, 100],
+                            "iDisplayLength": 10
+                        });
                     });
-                } );
                 </script>
             </table>
         {% else %}
-        <br><br>
-        <div class="alert alert-info">You dont have any plans</div>
+            <br><br>
+            <div class="alert alert-info">You dont have any plans</div>
         {% endif %}
     </div>
 {% endblock %}
