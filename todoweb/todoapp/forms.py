@@ -115,7 +115,7 @@ class PlanForm(forms.Form):
         validators=[MinValueValidator(0)],
         required=False)
 
-    start_date = forms.DateTimeField(initial=datetime.now())
+    start_date = forms.DateTimeField(initial=datetime.now()+timedelta(days=1))
     end_date = forms.DateTimeField(required=False)
 
 
@@ -149,7 +149,7 @@ class PlanForm(forms.Form):
 class ReminderForm(forms.Form):
 
     task_id = forms.TypedChoiceField(coerce=int)
-    date = forms.DateTimeField()
+    date = forms.DateTimeField(initial=datetime.now() + timedelta(days=1))
 
     def __init__(self, user, *args, **kwargs):
         super(ReminderForm, self).__init__(*args, **kwargs)
