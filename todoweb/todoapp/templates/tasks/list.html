@@ -34,7 +34,7 @@
                 <a class="nav-link
                    {% if nav_active == 'archived' %} active {% endif %}"
                    href="{% url 'todoapp:archived_tasks' %}">
-                  <i class="fas fa-archive fa-fw"></i>
+                  <i class="fas fa-archive fa-fw big-icon"></i>
                   Archived
                 </a>
               </li>
@@ -47,7 +47,6 @@
                 </a>
               </li>
             </ul>
-            <a href="{% url 'todoapp:add_task' %}" class='btn btn-primary'>Add task</a>
             <h5 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
               <span>Folders:</span>
               <a class="d-flex align-items-center text-muted" href="{% url 'todoapp:add_folder' %}">
@@ -60,29 +59,31 @@
                     <a class="nav-link inline-block
                       {% if nav_active == folder.id %} active {% endif %}"
                        href="{% url 'todoapp:folder_tasks' folder.id %}">
-                      <i class="far fa-folder big-icon"></i>
+                      <i class="far fa-folder fa-fw big-icon"></i>
                       {{ folder.name|truncatechars:18|title}}
                     </a>
-                    <a class="" href="{% url 'todoapp:edit_folder' folder.id %}">
+                    <form style="border: 0; box-shadow: none" class="inline-block float-right" action="{% url 'todoapp:delete_folder' folder.id %}" method='post'>
+                    {% csrf_token %}
+                        <a class="nav-link" style="padding-left: 0" onclick="this.parentNode.submit();">
+                            <span class="fas fa-trash-alt fa-fw big-icon"></span>
+                        </a>
+                    </form>
+                    <a class="nav-link float-right" style="padding-right: 10px" href="{% url 'todoapp:edit_folder' folder.id %}">
                         <span class="far fa-edit fa-fw big-icon"></span>
                     </a>
-                    <form class="float-md-right" action="{% url 'todoapp:delete_folder' folder.id %}" method='post'>
-                    {% csrf_token %}
-                        <button type="submit" href= "{% url 'todoapp:delete_folder' folder.id %}">
-                            <span class="fas fa-trash-alt fa-fw big-icon"></span>
-                        </button>
-                    </form>
                   </li>
               {% endfor %}
             </ul>
           </div>
         </nav>
       <div class="col-md 8 offset-2" style="margin-right: 20px" >
+        <a class="col-md-auto float-right btn btn-primary" href="{% url 'todoapp:add_task' %}">Add task</a>
         {% if tasks %}
             {% include 'tasks/tasks_template.html' with tasks=tasks %}
         {% else %}
+             <br><br>
              <div class="alert-info align-content-center">
-                  <h4 class="alert-heading">Well done!</h4>
+                  <h4 class="alert-heading">Oops</h4>
                   <p>
                       You dont have any tasks in this location.
                   </p>
