@@ -3,44 +3,58 @@
 {% block content %}
     <div class="container" style="margin-top: 30px">
         <a class="col-md-auto float-right btn btn-primary" href="{% url 'todoapp:add_reminder' %}">Add reminder</a>
-        <div class="table-responsive">
-            <table class="table">
-                {% if reminders %}
-                    <h2>{{header|capfirst}}</h2>
-                        <thead>
+        {% if reminders %}
+        <table class="table" id="data-table">
+                <h2>{{header|capfirst}}</h2>
+                    <thead>
+                    <th>ID</th>
+                    <th>Task</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                    </thead>
+                    <tbody>
+                        {% for reminder in reminders %}
                         <tr>
-                        <th>ID</th>
-                        <th>Task</th>
-                        <th>Date</th>
-                        </thead>
-                        <tbody>
-                            {% for reminder in reminders %}
-                            <tr>
-                                <td>
-                                {{ reminder.id }}
-                                </td>
-                                <td>
-                                <a href="{% url 'todoapp:show_task' reminder.task_id %}">{{ reminder.task_id }}</a>
-                                </td>
-                                <td>{{ reminder.date }}</td>
-                                <td>
-                                    <a href="{% url 'todoapp:edit_reminder' reminder.id %}" class="btn btn-dark">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form class="inline-block" action="{% url 'todoapp:delete_reminder' reminder.id %}" method="post">
-                                    {% csrf_token %}
-                                        <button type='submit' class="btn btn-danger">
-                                        <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                {% else %}
-                    <div class="alert alert-info">You dont have any reminders</div>
-                {% endif %}
-            </table>
-        </div>
+                            <td>
+                            {{ reminder.id }}
+                            </td>
+                            <td>
+                            <a href="{% url 'todoapp:show_task' reminder.task_id %}">{{ reminder.task_id }}</a>
+                            </td>
+                            <td>{{ reminder.date }}
+                            </td>
+                            <td>
+                                <a href="{% url 'todoapp:edit_reminder' reminder.id %}" class="btn btn-dark">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form class="inline-block" action="{% url 'todoapp:delete_reminder' reminder.id %}" method="post">
+                                {% csrf_token %}
+                                    <button type='submit' class="btn btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                 <script>
+                $(document).ready( function () {
+                $('#data-table').DataTable({
+                    "language": {
+                       "lengthMenu": "Show _MENU_ reminders" ,
+                       "zeroRecords": "No matching reminders found",
+                       "info": "Showing _START_ to _END_ of _TOTAL_ reminders",
+                       "infoEmpty": "Showing 0 to 0 of 0 reminders",
+                       "infoFiltered": "(filtered from _MAX_ total reminders)"},
+                    "lengthMenu": [5, 10, 25, 50, 75, 100 ],
+                    "iDisplayLength": 10
+                });
+            } );
+            </script>
+        </table>
+        {% else %}
+        <br><br>
+        <div class="alert alert-info">You dont have any reminders</div>
+        {% endif %}
     </div>
 {% endblock %}
