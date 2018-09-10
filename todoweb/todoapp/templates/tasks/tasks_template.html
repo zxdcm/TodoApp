@@ -28,7 +28,6 @@
                 {% endfor %}
             </tbody>
 </table>
-
 <script>
     $(document).ready( function () {
     $('#data-table').DataTable({
@@ -38,7 +37,8 @@
                "info": "Showing _START_ to _END_ of _TOTAL_ tasks",
                "infoEmpty": "Showing 0 to 0 of 0 tasks",
                "infoFiltered": "(filtered from _MAX_ total tasks)"},
-             "lengthMenu": [ 5, 10, 25, 50, 75, 100 ]
+             "lengthMenu": [ 5, 10, 25, 50, 75, 100 ],
+             "iDisplayLength": 10
         });
 } );
 </script>

@@ -36,24 +36,27 @@
                       <th>Status:</th>
                       <td>{{ task.status.value }}</td>
                     </tr>
-                        <tr>
-                      <th>Start date:</td>
+                    <tr>
+                      <th>Start date:</th>
                       <td>{{task.start_date}}</td>
                     </tr>
                     <tr>
-                      <th>End date:</td>
+                      <th>End date:</th>
                       <td>{{task.end_date}}</td>
                     </tr>
                     <tr>
                     <tr>
-                      <th>Event:</td>
+                      <th>Event:</th>
                       <td>{{task.event}}</td>
                     </tr>
-                      <th>Parent task:</td>
-                      <td> {% if task.parent_task_id|default:'None' %}
-                            <a href="{% url 'todoapp:show_task' task.id %}">
-                            {{ task.parent_task_id }}
+                      <th>Parent task:</th>
+                      <td>
+                          {% if task.parent_task_id %}
+                            <a href="{% url 'todoapp:show_task' task.parent_task_id%}">
+                            #{{ task.parent_task_id }}
                             </a>
+                          {% else %}
+                              None
                            {% endif %}
                       </td>
                     </tr>
@@ -68,15 +71,32 @@
                         </th>
                         <td>
                             {% if task.members %}
-                                {% for member in task.members|slice:"1:" %}
-                                    <a class="btn btn-dark" href="{% url 'todoapp:unshare_task' task.id member.user %}">
-                                        <i class="fas fa-times-circle">{{ member.user }}</i>
+                                {% for member in task.members %}
+                                    <span class="btn btn-dark" >
+                                        {{ member.user }}
+                                    {% if member.user != task.owner %}
+                                        <a style="color:white" href="{% url 'todoapp:unshare_task' task.id member.user %}">
+                                                <i class="fas fa-times-circle"></i>
+                                    {% endif %}
                                     </a>
+                                    </span>
                                 {% endfor %}
                             {% endif %}
                         </td>
+                    <tr>
+                        <th>Plan:</th>
+                        <td>
+                            {% if task.plan %}
+                            <a href="{% url 'todoapp:show_plan' task.plan.id %}">
+                            #{{ task.plan.id }}
+                            </a>
+                          {% else %}
+                              None
+                           {% endif %}
+                        </td>
                     </tr>
-                        <th>Created:</td>
+                    </tr>
+                        <th>Created:</th>
                         <td>{{task.created}}</td>
                     </tr>
                     <tr>
@@ -99,9 +119,12 @@
                         Done
                     </button>
                 </form>
+                {% if task.plan is None %}
                 <a href="{% url 'todoapp:add_subtask' task.id %}" class="btn btn-info">
                     Add subtask
                 </a>
+                {% endif %}
+
            {% endif %}
             <form class="inline-block" action="{% url 'todoapp:archive_task' task.id %}" method="post">
                 {% csrf_token %}
