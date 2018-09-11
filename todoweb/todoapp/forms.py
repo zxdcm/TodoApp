@@ -36,7 +36,7 @@ class TaskForm(forms.Form):
     end_date = forms.DateTimeField(initial=datetime.now() + timedelta(days=1))
 
     assigned = forms.ModelChoiceField(User.objects.all(), required=False)
-    folders = forms.TypedMultipleChoiceField(required=False,
+    folders = forms.TypedMultipleChoiceField(required=True,
                                              coerce=int,
                                              empty_value=0)
 
@@ -76,7 +76,7 @@ class SubTaskForm(forms.Form):
 
         choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks
                    if task.status != TaskStatus.ARCHIVED)
-        self.fields['task_id'] = forms.ChoiceField(choices=choices)
+        self.fields['task_id'].choices = choices
 
 
 class MemberForm(forms.Form):
@@ -95,7 +95,7 @@ class PlanForm(forms.Form):
                 planless=True)
             choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks
                        if task.status != TaskStatus.ARCHIVED and not task.subtasks)
-            self.fields['task_id'] = forms.ChoiceField(choices=choices, required=True)
+            self.fields['task_id'].choices = choices
             self.fields['task_id'].label = 'Task'
         else:
             self.fields['task_id'].widget = forms.HiddenInput()
@@ -104,7 +104,7 @@ class PlanForm(forms.Form):
             self.fields['start_date'].required = False
 
 
-    task_id = forms.TypedChoiceField(coerce=int)
+    task_id = forms.TypedChoiceField(coerce=int, required=True)
 
     period_amount = forms.IntegerField(
         validators=[MinValueValidator(1)])
@@ -156,7 +156,7 @@ class ReminderForm(forms.Form):
         tasks = get_service().get_filtered_tasks(user=user)
 
         choices = ((task.id, f'ID: {task.id} Name: {task.name}') for task in tasks)
-        self.fields['task_id'] = forms.ChoiceField(choices=choices)
+        self.fields['task_id'].choices = choices
 
     def clean_date(self):
         if self.cleaned_data['date']:
