@@ -1,11 +1,14 @@
+"""
+    Module contains exceptions and warnings used by library
+"""
 
 class LibError(Exception):
     """Base lib error class"""
     pass
 
 
-class ObjectNotFound(LibError):
-    """Raises when trying to retrieve object that doesnt exist"""
+class ObjectNotFoundError(LibError):
+    """Raises on retrieve object that doesnt exist"""
     pass
 
 
@@ -14,6 +17,6 @@ class LibWarning(Warning):
     pass
 
 
-class RedundancyAction(LibWarning):
-    """Raises when trying to perform action that already has been applied"""
+class RedundancyActionWarning(LibWarning):
+    """Raises when performs action that already has been applied"""
     pass

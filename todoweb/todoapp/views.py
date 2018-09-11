@@ -8,7 +8,7 @@ from functools import wraps
 
 from todolib.models import TaskStatus
 
-from todolib.exceptions import ObjectNotFound
+from todolib.exceptions import ObjectNotFoundError
 from todoapp import get_service
 from .forms import (TaskForm,
                     FolderForm,
@@ -155,7 +155,7 @@ def edit_task(request, task_id):
 
     try:
         task = service.get_task(user=user, task_id=task_id)
-    except ObjectNotFound:
+    except ObjectNotFoundError:
         return redirect('todoapp:index')
 
     # button to edit task would be disabled. but link to edit task
@@ -246,7 +246,7 @@ def show_task(request, task_id):
                                       task_id=task_id)
         subtasks = service.get_subtasks(user=user,
                                         task_id=task_id)
-    except ObjectNotFound:
+    except ObjectNotFoundError:
         return redirect('todoapp:tasks')
     return render(request, 'tasks/show.html',
                   {'task': task, 'subtasks': subtasks})
@@ -540,7 +540,7 @@ def edit_plan(request, plan_id):
     plan_id = int(plan_id)
     try:
         plan = service.get_plan(user=user, plan_id=plan_id)
-    except ObjectNotFound:
+    except ObjectNotFoundError:
         return redirect('todoapp:index')
 
     # deny requests when plan already activated
@@ -588,7 +588,7 @@ def show_plan(request, plan_id):
         plan = service.get_plan(user=user,
                                 plan_id=plan_id)
 
-    except ObjectNotFound:
+    except ObjectNotFoundError:
         return redirect('todoapp:plans')
 
     return render(request, 'plans/show.html',
@@ -643,7 +643,7 @@ def edit_reminder(request, reminder_id):
 
     try:
         reminder = service.get_reminder(user=user, reminder_id=reminder_id)
-    except ObjectNotFound:
+    except ObjectNotFoundError:
         return redirect('todoapp:index')
 
     if request.method == 'POST':
