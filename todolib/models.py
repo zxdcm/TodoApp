@@ -1,3 +1,7 @@
+"""
+    Module contains models used in library.
+"""
+
 from datetime import datetime
 import enum
 
@@ -18,19 +22,31 @@ from sqlalchemy.orm import (relationship,
 from sqlalchemy import create_engine
 
 
-Base = declarative_base()
 FORMAT = '%Y-%m-%d %H:%M'
+BaseModel = declarative_base()
 
 
 def set_up_connection(driver_name, connection_string):
+    """Allows to create session object.
+    Parameters
+    ----------
+    driver_name: str
+    connection_string: str
+    Returns
+    -------
+    session object
+    """
     engine = create_engine(f'{driver_name}:///{connection_string}',
                            connect_args={'check_same_thread': False})
     session = sessionmaker(bind=engine)
-    Base.metadata.create_all(engine)
+    BaseModel.metadata.create_all(engine)
     return scoped_session(session)
 
 
-class TaskUserRelation(Base):
+class TaskUserRelation(BaseModel):
+    """
+    Model that indicate user access to specific task
+    """
     __tablename__ = 'task_users_relation'
     id = Column(Integer, primary_key=True)
     user = Column(String)
@@ -38,7 +54,7 @@ class TaskUserRelation(Base):
 
 
 task_folder_association_table = Table(
-    'task_folders', Base.metadata,
+    'task_folders', BaseModel.metadata,
     Column('task_id', Integer, ForeignKey('tasks.id')),
     Column('folder_id', Integer, ForeignKey('folders.id'))
 )
@@ -57,7 +73,7 @@ class TaskPriority(enum.Enum):
     HIGH = 'High'
 
 
-class Folder(Base):
+class Folder(BaseModel):
     __tablename__ = 'folders'
     id = Column(Integer, primary_key=True)
     user = Column(String)
@@ -76,7 +92,7 @@ class Folder(Base):
                           ])
 
 
-class Task(Base):
+class Task(BaseModel):
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
     owner = Column(String)
@@ -161,7 +177,7 @@ class EndType(enum.Enum):
     DATE = 'Date'
 
 
-class Plan(Base):
+class Plan(BaseModel):
     __tablename__ = 'plans'
     id = Column(Integer, primary_key=True)
     task_id = Column(Integer, ForeignKey('tasks.id'))
@@ -212,7 +228,7 @@ class Plan(Base):
         ]))
 
 
-class Reminder(Base):
+class Reminder(BaseModel):
     __tablename__ = 'reminders'
     id = Column(Integer, primary_key=True)
     date = Column(DateTime)

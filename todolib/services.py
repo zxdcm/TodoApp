@@ -1,3 +1,6 @@
+"""
+    Module contains api for library
+"""
 from typing import List
 from warnings import warn
 from datetime import datetime
@@ -13,8 +16,8 @@ from todolib.models import (
     task_folder_association_table,
     TaskUserRelation,
     Reminder)
-from todolib.exceptions import (ObjectNotFound,
-                                RedundancyAction)
+from todolib.exceptions import (ObjectNotFoundError,
+                                RedundancyActionWarning)
 from todolib.utils import (get_end_type,
                            get_interval,
                            check_object_exist,
@@ -35,10 +38,9 @@ class AppService:
     Methods contains type and logic validators
     Methods might raise exceptions or warnings.
     ----------
-    session : session object that provides interface to database
     Attributes
     ----------
-    session
+    session : session object that provides interface to database
 
     Methods:
         Tasks actions
@@ -262,7 +264,7 @@ class AppService:
         if task.assigned == user_receiver:
             warn(
                 'User already assigned as task executor',
-                RedundancyAction)
+                RedundancyActionWarning)
             return
 
         rel = self.get_task_user_relation(user=user_receiver,
@@ -300,7 +302,7 @@ class AppService:
                                                task_id=task_id)
         if relation:
             warn(f'Task already shared with user',
-                 RedundancyAction)
+                 RedundancyActionWarning)
             return
 
         self.session.add(TaskUserRelation(user=user_receiver,
@@ -714,7 +716,7 @@ class AppService:
         task = self.get_task(user, task_id)
         if task in folder.tasks:
             warn(f'Folder already have this task',
-                 RedundancyAction)
+                 RedundancyActionWarning)
             return
 
         folder.tasks.append(task)
@@ -812,8 +814,8 @@ class AppService:
         check_object_exist(plan, plan_id, 'Plan')
         try:
             self.get_task(user, plan.task_id)
-        except ObjectNotFound as e:
-            raise ObjectNotFound(
+        except ObjectNotFoundError as e:
+            raise ObjectNotFoundError(
                 f'Plan with id : {plan_id} not found') from e
         return plan
 
@@ -1053,7 +1055,7 @@ class AppService:
            After work with object - commit changes via save_updates method
         Parameters
         ----------
-        cls : Library type (type from models.py)
+        cls : Library type (type from models module)
         id : int
             Object id
         Returns

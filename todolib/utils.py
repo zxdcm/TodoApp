@@ -1,15 +1,26 @@
+"""
+    Module contains utils methods used by library
+"""
+
 from dateutil.relativedelta import relativedelta
 
 from todolib.models import EndType, Period
-from todolib.exceptions import ObjectNotFound
+from todolib.exceptions import ObjectNotFoundError
 
 
 def check_object_exist(obj, params, type):
+    """
+    Allow to ensure does the object exist.
+    Throws ObjectNotFoundError
+    """
     if obj is None:
-        raise ObjectNotFound(f'{type} with params: {params} not found')
+        raise ObjectNotFoundError(f'{type} with params: {params} not found')
 
 
 def get_interval(period_type: Period, period_quantity):
+    """
+    Calculates period type according to provided period and quantity.
+    """
     if period_type.value == 'Min':
         return relativedelta(minutes=period_quantity)
     elif period_type.value == 'Hour':
@@ -25,6 +36,10 @@ def get_interval(period_type: Period, period_quantity):
 
 
 def enum_converter(value, type, type_str):
+    """
+    Allows to convert string value to provided enum type.
+    Otherwise throws KeyError exception.
+    """
     try:
         value = type[value.upper()]
     except KeyError as e:
@@ -34,7 +49,9 @@ def enum_converter(value, type, type_str):
 
 def get_end_type(start_date, period_type, period_amount,
                  end_date=None, repetitions_amount=None) -> EndType:
-
+    """
+    Allows to calculate end type by specified params
+    """
     if end_date and repetitions_amount:
         interval = get_interval(period_type, period_amount)
         if interval * repetitions_amount + start_date < end_date:
