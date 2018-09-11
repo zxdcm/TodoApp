@@ -91,7 +91,7 @@ def task_show_parser(show_subparser: argparse):
 
 def task_parser(sup_parser: argparse):
     task_parser = sup_parser.add_parser('task',
-                                        help='Manage tasks')
+                                        help='Manage tasks. Task is the main application object.')
     task_subparser = task_parser.add_subparsers(dest='action',
                                                 metavar='',
                                                 description='Commands to work with tasks')
@@ -286,7 +286,7 @@ def folder_show_parser(show_subparser: argparse):
 def folder_parser(sup_parser: argparse):
 
     folder_parser = sup_parser.add_parser('folder',
-                                          help='Manage folders')
+                                          help='Manage folders. Folders allows to group tasks')
     folder_subparser = folder_parser.add_subparsers(dest='action',
                                                     metavar='',
                                                     description='Commands to work with folders')
@@ -365,7 +365,7 @@ def plan_show_parser(sup_parser: argparse):
 def plan_parser(sup_parser: argparse):
 
     plan_parser = sup_parser.add_parser('plan',
-                                        help='Manage plans')
+                                        help='Manage plans. Plans allows to automate tasks creation')
     plan_subparser = plan_parser.add_subparsers(dest='action',
                                                 metavar='',
                                                 description='Commands to work with plans')
@@ -423,7 +423,7 @@ def plan_parser(sup_parser: argparse):
 
 def user_parser(sup_parser: argparse):
     user_parser = sup_parser.add_parser('user',
-                                        help='Manage users')
+                                        help='Manage users. Sign up, login, logout, list all users')
     user_subparser = user_parser.add_subparsers(dest='action',
                                                 metavar='',
                                                 description='Commands to work with user')
@@ -467,7 +467,7 @@ def reminder_show_parser(sup_parser: argparse):
 
 def reminder_parser(sup_parser: argparse):
     reminder_parser = sup_parser.add_parser('reminder',
-                                            help='Manage reminders')
+                                            help='Manage reminders. Reminders remind you about your tasks')
     reminder_subparser = reminder_parser.add_subparsers(dest='action',
                                                         metavar='',
                                                         description='Commands to work with reminders')
