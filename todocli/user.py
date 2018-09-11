@@ -3,10 +3,10 @@ from sqlalchemy import (
     String,
 )
 
-from todolib.models import Base
+from todolib.models import BaseModel
 
 
-class User(Base):
+class User(BaseModel):
     __tablename__ = 'users'
     username = Column(String, primary_key=True)
 
