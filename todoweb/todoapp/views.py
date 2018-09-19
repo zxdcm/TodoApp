@@ -38,9 +38,7 @@ def error_catcher(func):
 
 
 def index(request):
-    return render(
-        request,
-        'index.html')
+    return render(request, 'index.html')
 
 
 def signup(request):
