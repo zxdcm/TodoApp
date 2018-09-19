@@ -1,3 +1,7 @@
+"""
+    Module contains functions
+"""
+
 from logging import (getLogger,
                      FileHandler,
                      Formatter,
@@ -7,10 +11,16 @@ import os
 
 
 def get_logger():
+    """
+    Returns library logger
+    """
     return getLogger('todolib')
 
 
 def log_decorator(func):
+    """
+    Allows to wrap library methods with logging
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         logger = get_logger()
@@ -33,24 +43,33 @@ def setup_lib_logging(log_file_path='/todoapp.log',
                       format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                       log_level='DEBUG',
                       log_enabled=True):
-
-    if not os.path.exists(os.path.dirname(log_file_path)):
-        os.makedirs(os.path.dirname(log_file_path))
-        try:
-            open(log_file_path, 'r').close()
-        except FileNotFoundError:
-            open(log_file_path, 'w').close()
-
-    handler = FileHandler(log_file_path)
+    """Allows to setup logging settings
+    Parameters
+    ----------
+    log_file_path : str
+    format : str
+    log_level : str
+    log_enabled : Bool
+    """
 
     logger = get_logger()
-    logger.setLevel(getLevelName(log_level))
-
-    formatter = Formatter(format)
-    handler.setFormatter(formatter)
 
     if log_enabled:
+
+        handler = FileHandler(log_file_path)
+
+        formatter = Formatter(format)
+        handler.setFormatter(formatter)
+
+        level = getLevelName(log_level)
+        logger.setLevel(level)
+
+        if logger.hasHandlers():
+            logger.handlers.clear()
+
         logger.disabled = False
         logger.addHandler(handler)
+
     else:
         logger.disabled = True
+
