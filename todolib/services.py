@@ -414,9 +414,9 @@ class AppService:
         query = self.session.query(Task)
 
         if name:
-            query = query.filter(Task.name.ilike(f'{name}'))
+            query = query.filter(Task.name.ilike(f'%{name}%'))
         if description:
-            query = query.filter(Task.description.ilike(f'{description}'))
+            query = query.filter(Task.description.ilike(f'%{description}%'))
 
         if owner:
             query = query.filter(Task.owner == owner)

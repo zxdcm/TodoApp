@@ -221,7 +221,7 @@ def task_handler(service: AppService, namespace):
             print('Task(s) not found', file=sys.stderr)
 
     elif namespace.action == 'filter':
-        if not any([namespace.name, namespace.start_date, namespace.end_date,
+        if not any([namespace.name, namespace.description, namespace.start_date, namespace.end_date,
                     namespace.parent_task_id, namespace.priority, namespace.status,
                     namespace.event]):
             print('You didnt specified filter arguments', file=sys.stderr)
@@ -229,6 +229,7 @@ def task_handler(service: AppService, namespace):
         event = event_converter(namespace.event)
         tasks = service.get_filtered_tasks(user=namespace.user,
                                            name=namespace.name,
+                                           description=namespace.description,
                                            start_date=namespace.start_date,
                                            end_date=namespace.end_date,
                                            parent_task_id=namespace.parent_task_id,
