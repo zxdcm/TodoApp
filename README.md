@@ -7,7 +7,9 @@ Assign executors, set end dates and priorities, group tasks in personal folders.
 You can use todoapp in different ways:
 
 todolib library for embedding capabilities in your own app;
+
 todocli manage your tasks using command-line interface;
+
 todoweb manage your tasks via web interface.
 
 ## Built with 
