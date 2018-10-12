@@ -39,8 +39,6 @@ $ git clone https://zxdcm@bitbucket.org/zxdcm/isppythonlabs.git
 
 Install the application
 
-`` $ cd isppythonlabs``
-
 ``$ python setup.py install``
 
 Now call the cli-app by typing following command
