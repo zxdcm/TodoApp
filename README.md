@@ -2,7 +2,22 @@
 
 Todoapp is a simple task tracker and plan manager.
 It allows you to create and edit tasks, track their progress, share them with other users.
-Assign executors, set end dates and priorities, group tasks in personal folders. Set reminders for significatn tasks
+Assign executors, set end dates and priorities, group tasks in personal folders. Set reminders for significant tasks
+
+You can use todoapp in different ways:
+
+todolib library for embedding capabilities in your own app;
+todocli manage your tasks using command-line interface;
+todoweb manage your tasks via web interface.
+
+## Built with 
+- **Python 3.6.5**  
+- **Django 1.11.15&ast;**
+- **SQLAlchemy** – SQL Toolkit and Object Relational Mapper
+- **dateutil** – powerful extensions to the standard datetime module
+-  **django-bootstrap4&ast;** - https://pypi.org/project/django-bootstrap4/ 
+
+**&ast; - web requirements**
 
 ## Install
 
@@ -22,11 +37,11 @@ Install the application
 
 ``$ python setup.py install``
 
-Now call the app by typing following command
+Now call the cli-app by typing following command
 
 ``$ todoapp``
 
-## Application usage
+## Console application usage
 
 #### First usage
 
@@ -65,8 +80,6 @@ That command will create and print your first task
 #### Configure application settings
 
 You can configure application by editing config.py file. Which location is ``todocli/config.py``
-
-
 
 ## Library usage
 
