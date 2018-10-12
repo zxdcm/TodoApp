@@ -30,6 +30,10 @@ Clone the repository
 ``
 $ git clone https://zxdcm@bitbucket.org/zxdcm/isppythonlabs.git
 ``
+or 
+``
+$ git clone https://github.com/zxdcm/TodoApp/
+``
 
 Install the application
 
