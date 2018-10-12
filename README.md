@@ -28,11 +28,12 @@ Make sure you have installed setuptools
 Clone the repository
 
 ``
-$ git clone https://zxdcm@bitbucket.org/zxdcm/isppythonlabs.git
+$ git clone https://github.com/zxdcm/TodoApp/
 ``
+
 or 
 ``
-$ git clone https://github.com/zxdcm/TodoApp/
+$ git clone https://zxdcm@bitbucket.org/zxdcm/isppythonlabs.git
 ``
 
 Install the application
