@@ -31,7 +31,8 @@ Clone the repository
 $ git clone https://github.com/zxdcm/TodoApp/
 ``
 
-or 
+or
+
 ``
 $ git clone https://zxdcm@bitbucket.org/zxdcm/isppythonlabs.git
 ``
